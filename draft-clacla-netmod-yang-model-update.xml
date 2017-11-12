@@ -1,0 +1,618 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE rfc SYSTEM "rfc2629.dtd" [
+<!ENTITY RFC6020 SYSTEM "reference.RFC.6020.xml">
+<!ENTITY RFC7895 SYSTEM "reference.RFC.7895.xml">
+<!ENTITY RFC7950 SYSTEM "reference.RFC.7950.xml">
+<!ENTITY RFC8199 SYSTEM "reference.RFC.8199.xml"><!ENTITY OPENCONFIG-YANG-CATALOG SYSTEM "http://xml.resource.org/public/rfc/bibxml3/reference.I-D.openconfig-netmod-model-catalog.xml">
+<!ENTITY CLAISE-SEMVER "http://xml.resource.org/public/rfc/bibxml3/reference.I-D.claise-semver.xml">
+<!ENTITY OPENCONFIG-YANG-CATALOG SYSTEM "http://xml.resource.org/public/rfc/bibxml3/reference.I-D.openconfig-netmod-model-catalog.xml">
+<!ENTITY CLACLA-NETMOD-MODEL-CATALOG "http://xml.resource.org/public/rfc/bibxml3/reference.I-D.clacla-netmod-model-catalog.xml">
+<!ENTITY WU-L3SM-RFC8049 "http://xml.resource.org/public/rfc/bibxml3/reference.I-D.wu-l3sm-rfc8049bis.xml">
+]>
+<?xml-stylesheet type="text/xsl" href="rfc2629.xslt" ?>
+<?rfc toc="yes"?>
+<?rfc tocompact="yes"?>
+<?rfc tocdepth="4"?>
+<?rfc tocindent="yes"?>
+<?rfc symrefs="yes"?>
+<?rfc sortrefs="yes"?>
+<?rfc comments="yes"?>
+<?rfc inline="yes"?>
+<?rfc compact="yes"?>
+<?rfc subcompact="no"?>
+<rfc updates="7950" category="std" ipr="trust200902" docName="draft-clacla-netmod-yang-model-update-02">
+<front>
+<title abbrev="YANG Catalog">New YANG Module Update Procedure</title>
+
+<author initials="B." surname="Claise" fullname="Benoit Claise">
+  <organization abbrev="Cisco Systems, Inc.">
+    Cisco Systems, Inc.
+ </organization>
+  <address>
+    <postal>
+<street>De Kleetlaan 6a b1</street>
+<city>1831 Diegem</city>
+<country>Belgium</country>
+    </postal>
+    <phone>+32 2 704 5622</phone>
+    <email>bclaise@cisco.com</email>
+  </address>
+</author>
+
+<author initials="J." surname="Clarke" fullname="Joe Clarke">
+  <organization>Cisco Systems, Inc.</organization>
+  <address>
+    <postal>
+<street>7200-12 Kit Creek Rd</street>
+<city>Research Triangle Park</city>
+<region>North Carolina</region>
+<country>United States of America</country>
+    </postal>
+    <phone>+1-919-392-2867</phone>
+    <email>jclarke@cisco.com</email>
+  </address>
+</author>
+
+<author initials="K." surname="D'Souza" fullname="Kevin D'Souza">
+  <organization>AT&amp;T</organization>
+  <address>
+    <postal>
+<street>200 S. Laurel Ave</street>
+<city>Middletown</city>
+<region>NJ</region>
+<country>United States of America</country>
+    </postal>
+    <phone></phone>
+    <email>kd6913@att.com</email>
+  </address>
+</author>
+
+<date/>
+<abstract>
+  <t>
+  This document specifies a new YANG module update procedure in case of backward-incompatible
+  changes, as an alternative proposal to the YANG 1.1 specifications. This document updates RFC 7950.
+  </t>
+</abstract>
+</front>
+<middle>
+<section anchor="intro" title="Introduction">
+  <t>
+The YANG data modeling language <xref target="RFC7950"/> specifies strict
+rules for updating YANG modules (see section 11 "Updating a Module").
+Citing a few of the relevant rules for this document:
+<list style="numbers">
+<t>
+   "As experience is gained with a module, it may be desirable to revise
+   that module.  However, changes to published modules are not allowed
+   if they have any potential to cause interoperability problems between
+   a client using an original specification and a server using an
+   updated specification."
+</t>
+<t>"Note that definitions contained in a module are available to be
+   imported by any other module and are referenced in "import"
+   statements via the module name.  Thus, a module name MUST NOT be
+   changed.  Furthermore, the "namespace" statement MUST NOT be changed,
+   since all XML elements are qualified by the namespace."
+</t>
+<t>"Otherwise, if the semantics of any previous definition are changed
+   (i.e., if a non-editorial change is made to any definition other than
+   those specifically allowed above), then this MUST be achieved by a
+   new definition with a new identifier."
+</t>
+</list>
+
+What are the consequences?
+<list style="numbers">
+<t>
+   Ideally, the YANG module names should not be changed due the importance of not changing
+   the automation code in case of import statements or service composition at the orchestration layer.
+</t>
+<t>
+   When the same YANG module name is kept, the new YANG module revision must always be updated
+   in a backward-compatible way.
+</t>
+</list>
+</t>
+</section>
+
+  <section anchor="problems" title="The Problems">
+  <t>
+  This section lists a series of problems, hopefully listed in a logical order, which
+  leads to the solution in the next section.
+  </t>
+
+  <section anchor="slow_standardization" title="Slow Standardization">
+    <t>
+    The conclusions drawn in the introduction lead to the logical conclusion that the
+    standardized YANG modules have to be perfect on day one (at least the structure), which in
+    turn might explain why all the IETF YANG modules take so long to standardize. Shooting for
+    perfection (at least in structure) is obviously a noble goal, but if the perfect standard
+    comes too late, it doesn't help the industry.
+    </t>
+  </section>
+
+  <section anchor="some_YANG_modules_are_not_backward_compatible" title="Some YANG Modules are Not Backward Compatible">
+    <t>
+    As we learn from our mistakes, we're going to face more and more backward-incompatible
+    YANG modules. An example is the YANG data model for L3VPN service delivery <xref target="RFC8049"/>,
+    which, based on implementation experience, must be updated in a backward-incompatible way with
+    draft-wu-l3sm-rfc8049bis <xref target="I-D.wu-l3sm-rfc8049bis"/>.
+    </t>
+    <t>
+    While Standards Development Organization (SDO) YANG modules are obviously better
+    for the industry, we must recognize that many YANG modules are actually generated
+    YANG modules (for example, from internal databases), also known as native YANG modules,
+    or vendor modules <xref target="RFC8199"/>. From time to time, the new YANG modules are not
+    backward-compatible.
+    </t>
+    <t>
+    In such cases, it would be better to indicate how backward-compatible a given YANG module
+    actually is.
+    </t>
+  </section>
+
+  <section anchor="a_zoo_of_yang_modules" title="A Zoo of YANG Modules">
+    <t>
+    Even if we focus on the IETF, we have to observe that many SDOs, opensource fora,
+    and vendors develop YANG modules develop YANG modules.
+    This should be considered a success for an IETF developed technoogy. However, the
+    operators are faced with this problem: how to select the YANG modules to take
+    into account for their service developments.
+    </t>
+    <t>
+    The site <eref target="https://www.yangcatalog.org"/> (and the YANG catalog that it provides:
+    YANG module for yangcatalog.org, <xref target="I-D.clacla-netmod-model-catalog"/>) is an attempt to
+    become a reference for all YANG modules available in the industry, for both YANG developers
+    to search on what exists already) and for operators (to discover the more mature YANG models
+    to automate services). This YANG catalog should not only contain pointers to the YANG modules
+    themselves, but also contain metadata related to those YANG modules: What is the module type
+    (service model or not?); what is the maturity level? (e.g., for the IETF: is this an RFC, a
+    working group document or an individual draft?); is this module implemented?; who is the contact?;
+    is there open-source code available? And we expect many more in the future. The industry has
+    begun to understand that the metadata related to YANG models become equally important as the
+    YANG models themselves.
+    </t>
+    <t>
+    The yangcatalog.org instantiation of the catalog provides a means for module authors and
+    vendors implementing modules to upload their metadata, which is then searchable via an API,
+    as well as using a variety of web-based tools.  The instructions for contributing and searching
+    for metadata can be found at <eref target="https://www.yangcatalog.org/contribute.php"/>.
+    </t>
+    <t>
+    The issue is actually the number of YANG modules the operators are offered. At the time of
+    writing this document, the number of unique YANG modules in the catalog is exactly 2596 (and
+    that number keeps growing), while the IETF has standardized or is busy standardizing a small
+    subset of those. Therefore, it's important to distinguish the relevant YANG modules with the
+    pack and to understand the relationship between the YANG modules.
+    </t>
+  </section>
+
+  <section anchor="yang_modules_obsolete_relationship" title="YANG Modules Obsolete Relationship">
+    <t>
+    So the operators use the yangcatalog.org to discover which YANG modules they can use NOW.
+    They base their selection not only on the YANG module content, but also on the related
+    metadata. When faced with the zoo of the YANG modules, it's difficult to understand the
+    relationship between YANG modules. As an example: how could an operator discovers that
+    a YANG-MODULE-B obsoletes YANG-MODULE-A? Indeed, both have different YANG module names.
+    The only available information is an "obsolete" tag in the published RFC containing YANG-MODULE-B:
+    this tag would point to YANG-MODULE-A. In the world of automation, going through a
+    published RFC as a level of indirection to understand the YANG module obsolete relationship
+    is a non starter. Food for thought: the IETF should stop thinking that the metric for success
+    is an RFC number, as opposed to the contained YANG module(s).
+    </t>
+    <t>
+    We need an automatic way to discover that a YANG-MODULE-B obsoletes YANG-MODULE-A, so that
+    YANG-MODULE-A should not be given any attention.
+    </t>
+    <t>
+
+    The following example is not an automatic way.
+    </t>
+    <figure>
+       <artwork>
+    description
+        "This YANG module defines a generic service configuration
+        model for Layer 3 VPNs. This model is common across all
+        vendor implementations. This obsoletes the RFC8049 YANG
+        module, ietf-l3vpn-svc@2017-01-2";
+    revision 2017-09-14 {
+        description
+        "First revision of RFC8049.";
+        reference
+        "RFC xxxx: YANG Data Model for L3VPN Service Delivery";
+       </artwork>
+    </figure>
+    <t>
+    Along the same lines, going through an out-of-band tool such as the yangcatalog.org in order
+    to discover the obsolete relationship is a possible automatic way, but not ideal.
+    </t>
+  </section>
+
+  <section anchor="yang_module_transition_strategy" title="YANG Module Transition Strategy">
+    <t>
+    Let's assume for a moment that we change the YANG module, with the specific example of the
+    ietf-routing, which some propose to update to ietf-routing-2.
+    </t>
+    <t>
+    Here are all the ietf-routing dependent YANG modules (those modules that depend on ietf-routing)
+    <eref target="https://www.yangcatalog.org/yang-search/impact_analysis.php?modules[]=ietf-routing&amp;recurse=0&amp;rfcs=1&amp;show_subm=1&amp;show_dir=dependents"/>.
+    So many YANG modules.
+    </t>
+    <t>
+    Let's look at the difference for ietf-routing-2:
+    <eref target="https://www.yangcatalog.org/yang-search/impact_analysis.php?modules[]=ietf-routing-2&amp;recurse=0&amp;rfcs=1&amp;show_subm=1&amp;show_dir=dependents"/>.
+    </t>
+    <t>
+    Changing the module name from ietf-routing to ietf-routing-2 implies that the we have to warn all draft authors of
+    ietf-routing YANG dependent modules. Firstly, to make sure they are aware of ietf-routing-2 (publishing a RFC8022bis
+    mentioning in the module description that this module is not compatible with the NMDA architecture, and providing
+    a pointer to ietf-routing-2 ... is not an automatic way... so barely useful). And secondly, to ask them to change
+    their import (or service composition) to ietf-routing-2. Hopefully, in the ietf-routing case, all dependent YANG
+    modules are part of the IETF, so the communication is a manageable.
+    </t>
+    <t>
+    Changing the ietf-interfaces YANG module name would be a different challenge, as it's used throughout the industry:
+    <eref target="https://www.yangcatalog.org/yang-search/impact_analysis.php?modules[]=ietf-interfaces&amp;recurse=0&amp;rfcs=1&amp;show_subm=1&amp;show_dir=dependents"/>
+    </t>
+  </section>
+
+</section>
+
+<section anchor="the_solution" title="The Solution">
+  <t>
+  The solution is composed of two mandator aspects, a semantic versioning YANG extension
+  and an update to RFC7950. An optional additional check, validating the semantic versioning
+  from a syntact point of view, can either assist in determining the correct semantic versioning
+  values, or can help in determining the values for YANG modules that don't support this extension.
+  </t>
+  <section anchor="semver_semantic_versioning" title="SEMVER Semantic Versioning">
+    <t>
+    The semantic versioning solution proposed here as already been proposed in
+    <xref target="I-D.openconfig-netmod-model-catalog "/> (cut/paste here with
+    the authors permission)which itself is based on <xref target="openconfigsemver"/>.
+    The goal is to indicate the YANG module backwards (in)compatibility, following semver.org
+    semantic versioning <xref target="semver"/>:
+    </t>
+    <t>
+     <list style="symbol">
+       <t>MAJOR is incremented when the new version of the specification is
+           incompatible with previous versions.</t>
+       <t>MINOR is incremented when new functionality is added in a manner
+            that is backward-compatible with previous versions.</t>
+       <t>PATCH is incremented
+            when bug fixes are made in a backward-compatible manner.</t>
+     </list>
+    </t>
+
+    <figure>
+       <artwork>
+    // extension statements
+     extension openconfig-version {
+       argument "semver" {
+         yin-element false;
+       }
+       description
+         "The OpenConfig version number for the module. This is
+         expressed as a semantic version number of the form:
+           x.y.z
+         where:
+           * x corresponds to the major version,
+           * y corresponds to a minor version,
+           * z corresponds to a patch version.
+         This version corresponds to the model file within which it is
+         defined, and does not cover the whole set of OpenConfig models.
+         Where several modules are used to build up a single block of
+         functionality, the same module version is specified across each
+         file that makes up the module.
+
+         A major version number of 0 indicates that this model is still
+         in development (whether within OpenConfig or with industry
+         partners), and is potentially subject to change.
+
+         Following a release of major version 1, all modules will
+         increment major revision number where backwards incompatible
+         changes to the model are made.
+
+         The minor version is changed when features are added to the
+         model that do not impact current clients use of the model.
+
+         The patch-level version is incremented when non-feature changes
+         (such as bugfixes or clarifications to human-readable
+         descriptions that do not impact model functionality) are made
+         that maintain backwards compatibility.
+
+         The version number is stored in the module meta-data.";
+     }
+       </artwork>
+    </figure>
+    <t>Along these lines, we propose the following YANG 1.1 extension for a more generic
+      semantic version.  The formal definition is found at the end of this document.</t>
+    <figure>
+      <artwork>
+        extension module-version {
+            argument "semver" {
+                yin-element false;
+            }
+        }
+      </artwork>
+    </figure>
+    <t>
+    The extension would typically be used this way:
+    </t>
+    <figure>
+       <artwork>
+    module yang-module-name {
+
+      yang-version "1";
+      namespace "name-space";
+      prefix "prefix-name";
+
+      import ietf-semver-extension { prefix "semver-ext"; }
+
+      organization
+        "to be completed";
+
+      contact
+        "to be completed";
+
+      description
+        "to be completed";
+
+      semver-ext:module-version "1.1.2";
+
+      revision 2017-10-30 {
+        description
+          "Change the module structure";
+        reference "1.1.2";
+      }
+
+      revision 2017-07-30 {
+        description
+          "Fixed unprintable character";
+        reference "0.1.2";
+      }
+
+      revision 2017-04-03 {
+        description
+          "Update copyright notice.";
+        reference "0.1.1";
+      }
+
+      revision 2017-01-26 {
+        description
+          "Initial module for inet types";
+        reference "0.1.0";
+      }
+
+
+      //YANG module definition starts here
+       </artwork>
+    </figure>
+
+    <t>
+    See also "Semantic Versioning and Structure for IETF Specifications" <xref target="I-D.claise-semver"/> for a mechanism
+    to combine the semantic versioning, the github tools, and a potential change to the IETF process.
+    </t>
+  </section>
+  <section anchor="updating_the_YANG_1.1_specifications" title="Updating the YANG 1.1 Specifications">
+    <t>
+    RFC 7950 section 11, must be updated to express:
+    </t>
+    <t>
+    "As experience is gained with a module, it may be desirable to revise that module.
+    Changes to published modules are allowed, even if they have some potential to cause interoperability
+    problems, at the condition that the semantic versioning change are clearly indicated based on the
+    SEMVER YANG extension."
+    </t>
+  </section>
+
+  <section anchor="the_derived_semantic_versioning" title="The Derived Semantic Version">
+   <t>
+   The YANG catalog contains not only the most up-to-date YANG
+   module revision of a given module, but keeps all previous revisions as well. With APIs in mind,
+   it's important to understand whether different YANG module revisions
+   are backward compatible (this is specifically imported for native YANG modules,
+   i.e. the ones where generated-from = native), even for the YANG modules that don't support
+   the YANG extension specified in this document.
+   </t>
+   <t>
+   Two distinct leaves in the YANG module <xref target="I-D.clacla-netmod-model-catalog"/> contain this semver notation:
+   </t>
+   <t>
+     <list style="symbol">
+       <t>the semantic-version leaf contains the value embedded within a YANG module
+           (if it is available).
+       </t>
+       <t>the derived-semantic-version leaf is established by examining the
+          the YANG module themselves.  As such derived-semantic-version only
+          takes syntax into account as opposed to the meaning of various elements
+          when it computes the semantic version.</t>
+
+       <t>The algorithm used to produce the derived-semantic-version is as follows:
+          <list style="numbers">
+            <t>Order all modules of the same name by revision from oldest to newest.</t>
+            <t>If module A, revision N+1 has failed compilation, bump its derived semantic MAJOR version.</t>
+            <t>Else, run "pyang --check-update-from" on module A, revision N and revision N+1 to see if backward-incompatible changes exist.</t>
+            <t>If backward-incompatible changes exist, bump module A, revision N+1's derived MAJOR semantic version.</t>
+            <t>If no backward-incompatible changes exist, compare the pyang trees of module A, revision N and revision N+1.</t>
+            <t>If there are structural differences (e.g., new nodes), bump module A, revision N+1's derived MINOR semantic version.</t>
+            <t>If no structural differences exist, bump module A, revision N+1's derived PATCH semantic version.</t>
+          </list>
+        </t>
+   </list>
+   </t>
+   <t>
+     Note that the absolute numbers in the semantic-version and
+     derived-semantic-version are actually meaningless by themselves.  That is, one must
+     compare two different semver values for a given module to understand the
+     compatibility between them.
+   </t>
+  </section>
+
+</section>
+
+<section anchor="open_issues" title="Open Issues">
+  <t>
+    More work is needed in order to fully flesh out the semantic version requirements
+    for YANG modules.  These include the following.</t>
+
+  <t>
+    <list style="symbol">
+      <t>A new kind of import is required.  Today, we have import by revision (though this is seldomly
+        used).  There should also be an import by module-version (i.e., the semantic version).  This import
+        will not simply be a copy of import by revision.  Consideration needs to be given to expressions such as,
+        "version==X", "version>=X", "major version==X", "major version>=X", etc.</t>
+      <t>Similarly to import-by-version, we may also require a new naming convention for modules.  Today, modules
+        are named in module@revision.yang notation.  Re-using the '@' for version is not ideal.  Perhaps a new
+        character such as '%' is needed (i.e., module%version.yang).  In this manner, both version and revision
+        could be used.</t>
+      <t>Taking another page from Openconfig, the notion of a module bundle should be considered.  That is, there
+        may need to be a way to enumerate modules that are part of a bundle and are known to interoperate.  This
+        may not be as critical if a rich import-by-version is defined.</t>
+      <t>Similarly, the concept of a feature bundle should be considered.  Typically, operators combine and test YANG modules
+        to build value-add services.  These bundles form releases for specific features or services, and it is critical
+        to ensure as the modules evolve, the bundles can coherently evolve with them.</t>
+    </list>
+  </t>
+  <t>More work is needed in order to fully flesh out the semantic version requirements
+    for YANG modules (ultimately, a choice needs to be made as to what the next item is on which to focus).</t>
+</section>
+
+<section anchor="yang_module" title="Semantic Version Extension Module">
+  <t>
+    The extension described in this module is defined in the YANG module
+    below.
+  </t>
+  <t>
+    <figure>
+      <artwork><![CDATA[
+<CODE BEGINS> file "ietf-semver-extension@2017-11-10.yang"
+  module ietf-semver-extension {
+    yang-version 1.1;
+    namespace "urn:ietf:params:xml:ns:yang:ietf-semver-extension";
+    prefix semver-ext;
+
+    organization
+      "IETF NETMOD (Network Modeling) Working Group";
+    contact
+      "WG Web:   <https://datatracker.ietf.org/wg/netmod/>
+       WG List:  <mailto:netmod@ietf.org>
+
+       Author:   Benoit Claise
+                 <mailto:bclaise@cisco.com>
+
+       Author:   Joe Clarke
+                 <mailto:jclarke@cisco.com>
+
+       Author:   Kevin D'Souza
+                 <mailto:kd6913@att.com>";
+    description
+      "This module contains a defintion for a YANG 1.1 extension to
+       express the semantic version of YANG modules.";
+
+    revision 2017-11-10 {
+      description
+        "Initial revision.";
+      reference "draft-clacla-netmod-yang-model-update: New YANG Module Update Procedure";
+    }
+
+    extension module-version {
+      argument semver;
+      description
+        "The version number for the module. This is
+         expressed as a semantic version number of the form:
+          x.y.z
+         where:
+          * x corresponds to the major version,
+          * y corresponds to a minor version,
+          * z corresponds to a patch version.
+         This version corresponds to the model file within which it is
+         defined.
+
+         A major version number of 0 indicates that this model is still
+         in development, and is potentially subject to change.
+
+         Following a release of major version 1, all modules will
+         increment major revision number where backwards incompatible
+         changes to the model are made.
+
+         The minor version is changed when features are added to the
+         model that do not impact current clients use of the model.
+
+         The patch-level version is incremented when non-feature changes
+         (such as bugfixes or clarifications to human-readable
+         descriptions that do not impact model functionality) are made
+         that maintain backwards compatibility.
+
+         The version number is stored in the module meta-data.
+
+         By comparing the module-version between two revisions of a given
+         module, one can know if revision N+1 is backwards compatible or
+         not relative to revision N, as well as whether or not new features
+         have been added to revision N+1.";
+      reference "http://semver.org/ : Semantic Versioning 2.0.0";
+    }
+  }
+<CODE ENDS>
+]]></artwork>
+</figure>
+</t>
+</section>
+
+<section anchor="contributor" title="Contributors">
+  <t>
+   <list style="symbol">
+     <t>Anees Shaikh, Google
+     </t>
+     <t>Rob Shakir, Google
+     </t>
+   </list>
+  </t>
+</section>
+
+<section anchor="security" title="Security Considerations">
+  <t>
+ To be completed
+ </t>
+</section>
+<section anchor="iana" title="IANA Considerations">
+  <t>
+No IANA action is requested.
+</t>
+</section>
+</middle>
+<?rfc needLines="20"?>
+<back>
+<references title="Normative References">
+   <?rfc include='reference.RFC.7950'?>
+</references>
+<references title="Informative References">
+   <?rfc include='reference.RFC.8049'?>
+   <?rfc include='reference.RFC.8199'?>
+   <?rfc include='reference.I-D.openconfig-netmod-model-catalog'?>
+   <?rfc include='reference.I-D.wu-l3sm-rfc8049bis'?>
+   <?rfc include='reference.I-D.claise-semver'?>
+   <?rfc include='reference.I-D.clacla-netmod-model-catalog'?>
+   <reference anchor="openconfigsemver" target="http://www.openconfig.net/docs/semver/">
+     <front>
+      <title>Semantic Versioning for Openconfig Models</title>
+      <author/>
+      <date/>
+    </front>
+   </reference>
+      <reference anchor="semver" target="https://www.semver.org">
+      <front>
+       <title>Semantic Versioning 2.0.0</title>
+       <author/>
+       <date/>
+    </front>
+   </reference>
+</references>
+<?rfc needLines="100"?>
+
+</back>
+</rfc>
+<!-- Local Variables: -->
+<!-- fill-column:72 -->
+<!-- End: -->
