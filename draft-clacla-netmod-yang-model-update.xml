@@ -20,7 +20,7 @@
 <?rfc inline="yes"?>
 <?rfc compact="yes"?>
 <?rfc subcompact="no"?>
-<rfc updates="7950" category="std" ipr="trust200902" docName="draft-clacla-netmod-yang-model-update-03">
+<rfc updates="7950" category="std" ipr="trust200902" docName="draft-clacla-netmod-yang-model-update-04">
 <front>
 <title abbrev="YANG Catalog">New YANG Module Update Procedure</title>
 
@@ -123,8 +123,8 @@ Citing a few of the relevant rules:
 What are the consequences?
 <list style="numbers">
 <t>
-   Ideally, the YANG module names should not be changed due the importance of not changing
-   the automation code in case of import statements or service composition at the orchestration layer.
+   If a YANG module is intended to update another YANG module, the module name should not be changed as it will break existing tooling and
+   code by changing imports statements, service composition at the orchestration layer, general network management applications, etc.
 </t>
 <t>
    When the same YANG module name is kept, its new revision must be updated
@@ -146,15 +146,15 @@ What are the consequences?
 
   <section anchor="slow_standardization" title="Slow Standardization">
     <t>
-    The conclusions drawn in the introduction lead to the logical conclusion that the
-    standardized YANG modules have to be perfect on day one (at least the structure), which in
-    turn might explain why all the IETF YANG modules take so long to standardize. Shooting for
-    perfection (at least in structure) is obviously a noble goal, but if the perfect standard
+    The points made in the introduction lead to the logical conclusion that the
+    standardized YANG modules have to be perfect on day one (at least the structure and meaning), which in
+    turn might explain why IETF YANG modules take so long to standardize. Shooting for
+    perfection is obviously a noble goal, but if the perfect standard
     comes too late, it doesn't help the industry.
     </t>
   </section>
 
-  <section anchor="some_YANG_modules_are_not_backward_compatible" title="Some YANG Modules are Not Backward Compatible">
+  <section anchor="some_YANG_modules_are_not_backward_compatible" title="Some YANG Modules Are Not Backward Compatible">
     <t>
     As we learn from our mistakes, we're going to face more and more backward-incompatible
     YANG modules. An example is the YANG data model for L3VPN service delivery <xref target="RFC8049"/>,
@@ -186,6 +186,8 @@ What are the consequences?
           a module name change.
       </t>
   </section>
+<!--
+EDITOR NOTE: I don't think we need this justification anymore.
 
   <section anchor="a_zoo_of_yang_modules" title="A Zoo of YANG Modules">
     <t>
@@ -263,16 +265,17 @@ What are the consequences?
     to discover the obsolete relationship is a possible automatic way, it is not ideal.
     </t>
   </section>
+-->
 
   <section anchor="yang_module_transition_strategy" title="YANG Module Transition Strategy">
     <t>
-    Let's assume for a moment that we change the YANG module, with the specific example of
-    ietf-routing, which some propose to update to ietf-routing-2.
+    Let's assume for a moment that we change the name of a YANG module when making a backwards-incompatible change, with the specific example of
+    ietf-routing, which some propose to update to ietf-routing-2.  <xref target="yangcatalog"/> provides tooling
+    that shows the interdependencies of YANG modules.
     </t>
     <t>
     Here are all the ietf-routing dependent YANG modules (those modules that depend on ietf-routing)
     <eref target="https://www.yangcatalog.org/yang-search/impact_analysis.php?modules[]=ietf-routing&amp;recurse=0&amp;rfcs=1&amp;show_subm=1&amp;show_dir=dependents"/>.
-    So many YANG modules.
     </t>
     <t>
     Let's look at the difference for ietf-routing-2:
@@ -282,10 +285,11 @@ What are the consequences?
     Changing the module name from ietf-routing to ietf-routing-2 implies that the we have to warn all draft authors of
     ietf-routing YANG dependent modules. First, to make sure they are aware of ietf-routing-2 (publishing a RFC8022bis
     mentioning in the module description that this module is not compatible with the NMDA architecture, and providing
-    a pointer to ietf-routing-2 ... is not an automatic way... so barely useful). And second, to ask them to change
+    a pointer to ietf-routing-2 requires manual, tedius work). And second, to ask them to change
     their import (or service composition) to ietf-routing-2. Hopefully, in the ietf-routing case, most dependent YANG
     modules are part of the IETF, so the communication is a manageable.
-    For the already existing dependent vendor modules the problem is worse.
+    For the already existing dependent vendor modules the problem is worse.  And then there are network management applications
+    that may already be using ietf-routing that would require new code to handle ietf-routing-2.
     </t>
     <t>
     Changing the ietf-interfaces YANG module name would be a different challenge, as it's used throughout the industry:
@@ -295,19 +299,11 @@ What are the consequences?
   <section title="Need to Allow Non-Backward Compatible changes">
       <t>
           As described in the previous sections, there is a need to allow non-backward compatible changes
-          without changing a module's name. This would avoid many of the above problems.
-          In most cases even after non-backward compatible updates a module should keep its name.
-          However, for really major changes renaming the module is still the proper way to go:
-          <list>
-          <t>when splitting a module into two separate modules</t>
-          <t>when removing 80% of a module's schema</t>
-          <t>when a standard module is moved from one organization to another (e.g., from ietf to ieee)</t>
-          <t>when a company's name is changed and new versions of the module are renamed to reflect that</t>
-          </list>
-      </t>
-      <t>Allowing non-backward compatible changes to happen without a module name change will
-      decrease the number of separate modules to handle and will make it a trivial
+          without changing a module's name. This would avoid many of the above problems.  Allowing non-backward compatible changes to happen without a module
+      name change will decrease the number of separate modules to handle and will make it a trivial
       task to track these non-backward compatible changes.</t>
+
+      <!-- EDITOR QUESTION: Do we want to say anything about creating a new module?  That seems to me to be understood. -->
   </section>
 
   <section title="Problematic Handling of Status Statement" anchor="problematic_status">
@@ -365,20 +361,15 @@ comparision of the old and new modules, no easy task.
       </t>
   </section>
 
-  <section title="Early Warning about Removal">
+  <section title="Clear Indication of Node Support">
   <t>If a schema part is considered old/bad we need to be
 able to give advance warning that it will be removed. As this is an advance warning
 the part shall still be present and usable in the
-current revision; however, it will be removed in one of the next revisions. We need
-the advance warning to allow users of the module time enough to plan/execute migration away from
-the deprecated functionality. Often deprecation will be accompanied by information whether the
-functionality will just disappear or that there is an alternative, possibly more
-advanced solution that should be used. </t><t>
-Vendors use such warnings often, but the NMDA related redesign of IETF modules
-is also an example where it would be useful. (As another example see the usage of deprecated in the Java programing language.)
-The current definition of the deprecated status does not serve this purpose as
-described in <xref target='problematic_status'/>.
-The definition of "deprecated" in the status statement shall be changed to address this issue.</t>
+current revision; however, it will be removed in one of the next revisions. As was stated
+in <xref target="problematic_status"/> a client has no definitive way to know if deprecated or obsolete
+nodes are implemented without trying each and every one.  This is compounded by the fact that obsolete nodes
+may return bad or incorrect data.  A client might expect they work by the fact they return something at all.  There must
+ne a clear indication from the server whether or not deprecated and obsolete nodes are implemented as defined.</t>
 </section>
 
 </section>
@@ -394,7 +385,7 @@ The definition of "deprecated" in the status statement shall be changed to addre
   values, or can help in determining the values for YANG modules that don't support this extension.
   </t>
 
-  <section anchor="semver_semantic_versioning" title="SEMVER Semantic Versioning">
+  <section anchor="semver_semantic_versioning" title="Semantic Versioning">
     <t>
     The semantic versioning solution proposed here has already been proposed in
     <xref target="I-D.openconfig-netmod-model-catalog "/> (included here with
@@ -411,7 +402,7 @@ The definition of "deprecated" in the status statement shall be changed to addre
        <t>y is the MINOR version. It is incremented when new functionality is added in a manner
             that is backward-compatible with previous versions.</t>
        <t>z is the PATCH level. It is incremented
-            when bug fixes are made in a backward-compatible manner.</t>
+            when bug fixes are made in a backward-compatible manner."</t>
      </list>
     </t>
     <t>
@@ -420,9 +411,7 @@ The definition of "deprecated" in the status statement shall be changed to addre
     <figure>
       <artwork>
         extension module-version {
-            argument "semver" {
-                yin-element false;
-            }
+            argument semver;
         }
       </artwork>
     </figure>
@@ -451,25 +440,25 @@ The definition of "deprecated" in the status statement shall be changed to addre
       revision 2017-07-30 {
         description
           "Added new feature XXX";
-        semver:module-version "1.2.0";";
+        semver:module-version "1.2.0";
       }
 
       revision 2017-04-03 {
         description
           "Update copyright notice.";
-        semver:module-version "1.0.1";;
+        semver:module-version "1.0.1";
       }
 
       revision 2017-04-03 {
         description
           "First release version.";
-        semver:module-version "1.0.0";;
+        semver:module-version "1.0.0";
       }
 
       revision 2017-01-26 {
         description
           "Initial module for inet types";
-        semver:module-version "0.1.0";;
+        semver:module-version "0.1.0";
       }
 
 
@@ -479,44 +468,11 @@ The definition of "deprecated" in the status statement shall be changed to addre
 
     <t>
     See also "Semantic Versioning and Structure for IETF Specifications" <xref target="I-D.claise-semver"/> for a mechanism
-    to combine the semantic versioning, the github tools, and a potential change to the IETF process.
+    to combine the semantic versioning, the GitHub tools, and a potential change to the IETF process.
     </t>
-  </section>
-
-  <section title="Updates to YANG 1.1 status statement" anchor="update_status">
-      <t>
-          RFC 7950 section 11, must be updated to change the definition of deprecated and obsolete.
-In both cases the client must be able to determine whether the relevant parts are
-implemented or not without probing. The following definition is proposed:
-<list style="symbols">
-    <t>Deprecated schema nodes MUST still work as defined. The deprecated
-status serves only as a a warning that the schema node will be removed or
-obsoleted in the future.</t>
-    <t>Obsolete schema nodes MUST be removed from the implementation. Requests concerning these schema nodes MUST be rejected with:
-    <list>
-    <t>error-tag:      operation-failed</t>
-    <t>error-app-tag:  obsolete element</t>
-    </list>
-    </t>
-</list>
-If there is a need to allow the server to decide whether a deprecated/obsolete schema
-part is implemented YANG already has a facility for that: the feature statement. Use it!
-      </t>
-  </section>
-  <section anchor="updating_the_YANG_1.1_specifications" title="Updating the YANG 1.1 Module Update rules">
-    <t>
-    RFC 7950 section 11, must be updated to express:
-    </t>
-    <t>
-    "As experience is gained with a module, it may be desirable to revise that module.
-    Changes to published modules are allowed, even if they have some potential to cause interoperability
-    problems, if the module-version YANG extension is used in the revision statement to clearly indicate the nature of the change."
-    </t>
-  </section>
-
   <section anchor="the_derived_semantic_versioning" title="The Derived Semantic Version">
    <t>
-   The YANG catalog contains not only the most up-to-date YANG
+   <xref target="yangcatalog"/> contains not only the most up-to-date YANG
    module revision of a given module, but keeps all previous revisions as well. With APIs in mind,
    it's important to understand whether different YANG module revisions
    are backward compatible (this is specifically imported for native YANG modules,
@@ -524,7 +480,7 @@ part is implemented YANG already has a facility for that: the feature statement.
    the YANG extension specified in this document.
    </t>
    <t>
-   Two distinct leaves in the YANG module <xref target="I-D.clacla-netmod-model-catalog"/> contain this semver notation:
+   Two distinct leafs in the YANG module <xref target="I-D.clacla-netmod-model-catalog"/> contain this semver notation:
    </t>
    <t>
      <list style="symbols">
@@ -552,99 +508,200 @@ part is implemented YANG already has a facility for that: the feature statement.
    </list>
    </t>
    <t>
-     Note that the absolute numbers in the semantic-version and
-     derived-semantic-version are actually meaningless by themselves.  That is, one must
-     compare two different semver values for a given module to understand the
-     compatibility between them.
+     While this approach is a good way to programmatically obtain a semantic version number, it does not address all cases
+     whereby a major version number might need to be increased.  For example, a node may have the same name and same type, but
+     its meaning may change from one revision of a module to another.  This represents a semantic change that breaks backwards
+     compatibility, but the above algorithm would not find it.  Therefore, additional, sometimes manual, rigor must be done
+     to ensure a proper version is chosen for a given module revision.
    </t>
   </section>
-
   <section title="Import by Semantic Version" anchor="import_semver">
       <t>
       If a module is imported by another one, it is usually not specified which
-      version of the imported module should be used. However not all versions
-      may be acceptable. Today YANG 1.1 allows us to specify the revision date of the
+      revision of the imported module should be used. However, not all revisions
+      may be acceptable. Today YANG 1.1 allows one to specify the revision date of the
       imported module, but that is too specific, as even a small spelling
       correction of the imported module results in a change to its revision date,
       thus making the module revision ineligible for import.
       </t><t>
       Using semantic versioning to indicate the acceptable imported module versions
-      is much more flexible.
+      is much more flexible.  For example:
       <list style="symbols">
-          <t>We might indicate that any compatible module-version after e.g. 3.1.0 is acceptable</t>
-          <t>We might indicate that any compatible module-version of the 3.1.0, 4.0.0
-          or 5.0.0 major versions is acceptable. Later depending on updates in the
-          6.0.0 series we might allow those revisions also to be imported. As an
-          non-backward compatible change in the 6.0.0 line might just change a small part of
-          the imported module, the non-backward compatible changes may or may not affect the importer.</t>
+          <t>Only a module of a specific MAJOR version is acceptable.  All MINOR and PATCH versions
+            can also be imported.</t>
+          <t>A module at a specific MAJOR version or higher is acceptable.</t>
+          <t>A module at a specific MAJOR.MINOR version is acceptable.  All PATCH versions
+            can also be imported.</t>
+          <t>A module within a certain range of versions are acceptable.  For example, in this
+            case, a module between version 1.0.0 (inclusive) and 3.0.0 (exclusive) are acceptable.</t>
       </list>
-       </t><t>
-       The module-version statement SHOULD be a substatement of the import statement.
-       An import statement MUST NOT contain both a module-version and a revision
-       substatement. The use of the revision substatement of import should be discouraged/deprecated.
+       </t>
+
+       <t>The ietf-semver module provides another extension, import-versions that is a child of
+         import and specifies the rules for an acceptable set of versions of the given module.
+         The structure of this extension is specified as follows:</t>
+
+      <t>TODO: How to specify this? One thought is below, not fully formalized as this
+        should be discussed further.  Note: while this uses a comma to separate discrete versions,
+        we could instead allow for this to be specified multiple times.</t>
+
+       <figure>
+         <artwork><![CDATA[
+[\[(]X[.Y[.Z]][-[X[.Y[.X]]][\])]][,...]
+
+Where the first character MAY be a '[' or '(' to indicate at least inclusive and at least
+ exclusive (respectively).  If this is omitted, a full semantic version must be specified
+ and the import will only support this one version.
+
+The following version, if specified with a '[' or '(' indicates the lower bound.  This can
+ be a full semantic version or a MAJOR only or MAJOR.MINOR only.
+
+The '-', if specified, is a literal hyphen indicating a range will be specified.  If the second portion
+ of the import-versions clause is omitted, then there is no upper bound on what will be considered
+ an acceptable imported version.
+
+After the '-' the upper bound semantic version (or part thereof) follows.
+
+After the upper bound version, one of ']' or ')' MUST follow to indicate whether this limit is inclusive
+ or exclusive of the upper bound respectively.
+
+Finally, a literal comma (',') MAY be specified with additional ranges.  Each range is taken as a logical
+ OR.
+          ]]>
+        </artwork>
+      </figure>
+
+      <t>For example:</t>
+
+      <figure>
+        <artwork><![CDATA[
+import example-module {
+  semver:import-versions "[1.0.0-3.0.0)";
+  // All versions between 1.0.0 (inclusive) and 3.0.0 (exclusive) are acceptable.
+}
+
+import example-module {
+  semver:import-versions "[1";
+  // All versions greater than MAJOR version 1 are acceptable.  This includes any
+  // MINOR or PATCH versions.
+}
+
+import example-module {
+  semver:import-versions "1.0.0";
+  // Only version 1.0.0 is acceptable (this mimics what exists with import by revision).
+}
+
+import example-module {
+  semver:import-versions "[1.1-2)"";
+  // All versions greater than 1.1 (inclusive, and including all PATCH versions off of 1.1)
+  // up to MAJOR version 2 (exclusive) are acceptable.
+}
+
+import example-module {
+  semver:import-versions "[1.1-2),[3";
+  // All versions greater than 1.1 (inclusive, and including all PATCH versions off of 1.1)
+  // up to MAJOR version 2 (exclusive), as well as all versions greater than MAJOR version 3
+  // (inclusive) are acceptable.
+}
+
+import example-module {
+  semver:import-versions "[1.1-2),[3.0.0";
+  // This is equivalent to the example above, simply indicating that a partial semantic version
+  // assumes all missing components are 0.
+}
+        ]]></artwork>
+      </figure>
+
+       <t>
+       The import statement SHOULD include a semver:import-versions statement and MUST NOT
+       include a revision statement.  The use of import by revision SHOULD be discouraged.
       </t>
   </section>
-  </section>
-
-<section anchor="open_issues" title="Open Issues">
-  <t>
-      There are a number of open issues to be disccused.  These include the following:
-  </t>
-
-  <t>
-    <list style="symbols">
-      <t>Do we need include-by-Semver?
-      </t>
-      <t>Should IETF/IANA officially generate derived semantic versions for their own modules?
-      As they are the owner of the modules it should be their responsibility, but how to document it?
-      </t>
-      <t anchor="module_rename">There are cases where the module's name should be changed but we still
-      want to formally document the connection between the old and the new module names.
-      For these cases shall we introduce a new YANG extension statement </t>
-      <t>"replaces-module ietf-vlan;"  ?
-      </t>
-
-      <t>We could consider a new naming convention for module files. Today, module files
-        are named using a  module@revision.yang notation.  We could consider a module%semver.yang variant.
-        Re-using the '@' for version is not ideal, so another separator character should be used.
-        In this manner, both version and revision could be used.
-        </t>
-      <t>Taking another page from Openconfig, the notion of a module bundle could be considered. That is, there
-        may need to be a way to enumerate modules that are part of a bundle and are known to interoperate.  This
-        may not be as critical if a rich import-by-version is defined.
-        <vspace/>
-        While the issue is interesting, it will be not be handled in this document.</t>
-      <t>Similarly, the concept of a feature bundle should be considered.  Typically, operators combine and test YANG modules
-        to build value-add services.  These bundles form releases for specific features or services, and it is critical
-        to ensure as the modules evolve, the bundles can coherently evolve with them.
-        <vspace/>
-        While the issue is interesting, it will be not be handled in this document.
-        </t>
-      <t>When we'll start using this new procedure for a new YANG module revision,
-      will we have to update all the dependent YANG modules to start using this
-      new procedure, along with the new import statement? Is this a moot point,
-      as a new YANG module name would suffer from the same symptoms?
-      <vspace/>
-      We see no need for updating other dependent modules. It is a good idea to
-      update them, as they will benefit from using SEMVER, however there is no specific
-      need to update them.</t>
-    </list>
-  </t>
 </section>
+
+  <section title="Updates to YANG 1.1 Module Update Rules" anchor="update_rules">
+      <t>
+          RFC 7950 section 11, must be updated to allow for non-backwards changes provided they follow the
+          semantic versioning guidelines and increase the MAJOR version number when a backwards incompatible
+          change is made.  The following is proposed text for this change.</t>
+
+      <t>
+      "As experience is gained with a module, it may be desirable to revise that module.
+      Changes to published modules are allowed, even if they have some potential to cause interoperability
+      problems, if the module-version YANG extension is used in the revision statement to clearly indicate the nature of the change."
+      </t>
+  </section>
+
+  <section title="Updates to ietf-yang-library" anchor="ietf_yang_library_updates">
+      <t>The ietf-semver YANG module also specifies additional ietf-yang-library <xref target="RFC7895"/> leafs to be
+        added at the module and submodule levels.  The first is module-version, which augments
+        /yanglib:yang-library/yanglib:module-set/yanglib:module.  This specifies the current semantic version
+        of the associated module and revision in a given module-set.  The related submodule-version leaf is added at
+        /yanglib:yang-library/yanglib:module-set/yanglib:module/yanglib:submodule to indicate the semantic version of
+        a submodule.</t>
+      <t>In order to satisfy the requirement that deprecated and obsolete node presence and operations are easily and clearly
+        known to clients, ietf-semver also augments the ietf-yang-library with two additional boolean leafs at
+        /yanglib:yang-library/yanglib:module-set/yanglib:module.  A client can make one request of the ietf-yang-library and
+        know whether or a not a module that has deprecated or obsolete has those nodes implemented by the server, as opposed to
+        making multiple requests for each node in question.
+        <list style="hanging">
+          <t hangText="deprecated-nodes-present :">A boolean that indicates whether or not this server implements deprecated nodes.
+           The value of this leaf SHOULD be true; and if so, the server MUST implement nodes
+           within this module as they are documented.  If specific deprecated nodes are not
+           implemented as document, then they MUST be listed as deviations.  This leaf defaults to true.</t>
+          <t hangText="obsolete-nodes-present :">A boolean that indicates whether or not this server implements obsolete nodes.
+           The value of this leaf SHOULD be false; and if so, the server MUST NOT implement
+           nodes within this module. If this leaf is true, then all nodes in this module MUST
+           be implemented as documented in the module.  Any variation of this MUST be listed as
+           deviations.  This leaf defaults to false.</t>
+         </list>
+       </t>
+  </section>
+
+  <section title="Deprecated and Obsolete Reasons" anchor="deprecated_and_obsolete_reasons">
+    <t>The ietf-semver module specifies an extension, status-description, that is designed to be used as
+      a substatement of the status statement when the status is deprecated or obsolete.  This argument to
+      this extension is freeform text that explains why the node was deprecated or made obsolete.  It may also
+      point to other schema elements that take the place of the deprecated or obsolete node.  This text
+      is designed for human consumption to aid in the migration away from nodes that will one day no longer work.
+      An example is shown below.</t>
+
+      <figure>
+        <artwork>
+leaf imperial-temperature {
+  type int64;
+  units "degrees Fahrenheit";
+  status deprecated {
+    semver:status-description
+      "Imperial measurements are being phased out in favor
+       of their metric equivalents.  Use metric-temperature
+       instead.";
+  }
+  description
+    "Temperature in degrees Fahrenheit.";
+}
+        </artwork>
+      </figure>
+    </section>
+  </section>
 
 <section anchor="yang_module" title="Semantic Version Extension YANG Module">
   <t>
-    The extension described in this module is defined in the YANG module
-    below.
+    The extension and related ietf-yang-library changes described in this module are
+    defined in the YANG module below.
   </t>
   <t>
     <figure>
       <artwork><![CDATA[
-<CODE BEGINS> file "ietf-semver@2017-12-15.yang"
+<CODE BEGINS> file "ietf-semver@2018-04-05.yang"
   module ietf-semver {
     yang-version 1.1;
     namespace "urn:ietf:params:xml:ns:yang:ietf-semver";
     prefix semver;
+
+    import ietf-yang-library {
+      prefix yanglib;
+    }
 
     organization
       "IETF NETMOD (Network Modeling) Working Group";
@@ -667,19 +724,36 @@ part is implemented YANG already has a facility for that: the feature statement.
       "This module contains a definition for a YANG 1.1 extension to
        express the semantic version of YANG modules.";
 
+    revision 2018-04-05 {
+      description
+        "* Properly import ietf-yang-library.
+         * Fix the name of module-semver => module-version.
+         * Fix regular expression syntax.
+         * Augment yang-library with booleans as to whether or not
+           deprecated and obsolete nodes are present.
+         * Add an extension to enable import by semantic version.
+         * Add an extension status-description to track deprecated
+           and obsolete reasons.
+         * Fix yang-library augments to use 7895bis.";
+      reference
+        "draft-clacla-netmod-yang-model-update:
+         New YANG Module Update Procedure";
+      semver:module-version "0.2.1";
+    }
     revision 2017-12-15 {
       description
         "Initial revision.";
-      reference "draft-clacla-netmod-yang-model-update:
-               New YANG Module Update Procedure";
-      semver:module-semver 0.1.1;
+      reference
+        "draft-clacla-netmod-yang-model-update:
+         New YANG Module Update Procedure";
+      semver:module-version "0.1.1";
     }
 
     extension module-version {
       argument semver;
       description
         "The version number for the module revision it is used in.
-        This is expressed as a semantic version string in the form:
+         This is expressed as a semantic version string in the form:
           x.y.z
          where:
           * x corresponds to the major version,
@@ -715,31 +789,101 @@ part is implemented YANG already has a facility for that: the feature statement.
          module the updated status and update rules as this described in
          RFC XXXX are used.
 
-         The statement MUST only be a substatement of the revision,
-         import or include statements.
-         Zero or One module-version statement is allowed per parent
+         The statement MUST only be a substatement of the revision statement.
+         Zero or one module-version statement is allowed per parent
          statement. NO substatements are allowed.
-         ";
-
+        ";
       reference "http://semver.org/ : Semantic Versioning 2.0.0";
     }
 
-    augment /yanglib:modules-state/yanglib:module {
-        leaf module-version {
-            type string {
-                pattern "[0-9]+.[0-9]+.[0-9]+";
-            }
-        }
+    extension import-versions {
+      argument version-clause;
+      description
+        "This extension specifies an acceptable set of semantic versions of a given module
+         that may be imported.  The version-clause argument is specified in the following
+         format
+
+         [\\[(]X[.Y[.Z]][-[X[.Y[.X]]][\\])]][,...]
+
+         Where the first character MAY be a '[' or '(' to indicate at least inclusive and at least
+          exclusive (respectively).  If this is omitted, a full semantic version must be specified
+          and the import will only support this one version.
+
+         The following version, if specified with a '[' or '(' indicates the lower bound.  This can
+          be a full semantic version or a MAJOR only or MAJOR.MINOR only.
+
+         The '-', if specified, is a literal hyphen indicating a range will be specified.  If the second portion
+          of the import-versions clause is omitted, then there is no upper bound on what will be considered
+          an acceptable imported version.
+
+         After the '-' the upper bound semantic version (or part thereof) follows.
+         After the upper bound version, one of ']' or ')' MUST follow to indicate whether this limit is inclusive
+          or exclusive of the upper bound respectively.
+
+         Finally, a literal comma (',') MAY be specified with additional ranges.  Each range is taken as a logical
+          OR.
+
+         The statement MUST only be a substatement of the import statement.  Zero or one
+         import-versions statement is allowed per import statement.  NO substatements are allowed.";
+      reference "I-D.clacla-netmod-yang-model-update : Import By Semantic Version";
     }
 
-    augment /yanglib:modules-state/yanglib:module/yanglib:submodule {
-        leaf submodule-version {
-            type string {
-                pattern "[0-9]+.[0-9]+.[0-9]+";
-            }
-        }
+    extension status-description {
+      argument description;
+      description
+        "Freeform text that describes why a given node has been deprecated or made obsolete.
+         This may point to other schema elements that can be used in lieu of the given node.
+
+         This statement MUST only be used as a substatement of the status statement, and MUST
+         only be used when the status is deprecated or obsolete.";
+      reference "I-D.clacla-netmod-yang-model-update : Deprecated and Obsolete Reasons";
     }
 
+    augment "/yanglib:yang-library/yanglib:module-set/yanglib:module" {
+      leaf module-version {
+        type string {
+          pattern '[0-9]+\.[0-9]+\.[0-9]+';
+        }
+        description
+          "The semantic version for this module in MAJOR.MINOR.PATCH format.  This version
+           must match the semver:module-version value in specific revision of the module
+           loaded in this module-set.";
+      }
+      leaf deprecated-nodes-present {
+        type boolean;
+        default "true";
+        description
+          "A boolean that indicates whether or not this server implements deprecated nodes.
+           The value of this leaf SHOULD be true; and if so, the server MUST implement nodes
+           within this module as they are documented.  If specific deprecated nodes are not
+           implemented as document, then they MUST be listed as deviations.";
+      }
+      leaf obsolete-nodes-present {
+        type boolean;
+        default "false";
+        description
+          "A boolean that indicates whether or not this server implements obsolete nodes.
+           The value of this leaf SHOULD be false; and if so, the server MUST NOT implement
+           nodes within this module. If this leaf is true, then all nodes in this module MUST
+           be implemented as documented in the module.  Any variation of this MUST be listed as
+           deviations.";
+      }
+      description
+        "Augmentations for the ietf-yang-library module to support semantic versioning.";
+    }
+    augment "/yanglib:yang-library/yanglib:module-set/yanglib:module/yanglib:submodule" {
+      leaf submodule-version {
+        type string {
+          pattern '[0-9]+\.[0-9]+\.[0-9]+';
+        }
+        description
+          "The semantic version for this submodule in MAJOR.MINOR.PATCH format.  This version
+           must match the semver:module-version value in specific revision of the submodule
+           loaded in this module-set.";
+      }
+      description
+        "Augmentations for the ietf-yang-library module/submodule to support semantic versioning.";
+    }
   }
 <CODE ENDS>
 ]]></artwork>
@@ -774,6 +918,7 @@ No IANA action is requested.
 <back>
 <references title="Normative References">
    <?rfc include='reference.RFC.7950'?>
+   <?rfc include='reference.RFC.7895'?>
 </references>
 <references title="Informative References">
    <?rfc include='reference.RFC.8049'?>
@@ -796,9 +941,60 @@ No IANA action is requested.
        <date/>
     </front>
    </reference>
+   <reference anchor="yangcatalog" target="https://yangcatalog.org">
+     <front>
+       <title>YANG Catalog</title>
+       <author/>
+       <date/>
+     </front>
+   </reference>
 </references>
 <?rfc needLines="100"?>
 
+<section anchor="appendix" title="Appendix">
+  <section anchor="open_issues" title="Open Issues">
+    <t>
+        There are a number of open issues to be disccused.  These include the following:
+    </t>
+
+    <t>
+      <list style="symbols">
+        <t>Do we need a new version of YANG?
+          <vspace/>
+          While eventually this will fold into a new version, the belief is this solution can
+          work with extensions alone with an update to the <xref target="RFC7950"/> text concerning
+          module updates.</t>
+        <t>Should IETF/IANA officially generate derived semantic versions for their own modules?
+        As they are the owner of the modules it should be their responsibility, but how to document it?
+        </t>
+        <t>We could consider a new naming convention for module files. Today, module files
+          are named using a  module@revision.yang notation.  We could consider a module%semver.yang variant.
+          Re-using the '@' for version is not ideal, so another separator character should be used.
+          In this manner, both version and revision could be used.
+          </t>
+        <t>Taking another page from Openconfig, the notion of a module bundle could be considered. That is, there
+          may need to be a way to enumerate modules that are part of a bundle and are known to interoperate.  This
+          may not be as critical if a rich import-by-version is defined.
+          <vspace/>
+          While the issue is interesting, it will be not be handled in this document.</t>
+        <t>Similarly, the concept of a feature bundle should be considered.  Typically, operators combine and test YANG modules
+          to build value-add services.  These bundles form releases for specific features or services, and it is critical
+          to ensure as the modules evolve, the bundles can coherently evolve with them.
+          <vspace/>
+          While the issue is interesting, it will be not be handled in this document.
+          </t>
+        <t>When we'll start using this new procedure for a new YANG module revision,
+        will we have to update all the dependent YANG modules to start using this
+        new procedure, along with the new import statement? Is this a moot point,
+        as a new YANG module name would suffer from the same symptoms?
+        <vspace/>
+        We see no need for updating other dependent modules. It is a good idea to
+        update them, as they will benefit from using SEMVER, however there is no specific
+        need to update them.</t>
+      </list>
+    </t>
+  </section>
+</section>
 </back>
 </rfc>
 <!-- Local Variables: -->
