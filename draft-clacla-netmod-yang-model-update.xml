@@ -140,7 +140,7 @@ What are the consequences?
 </section>
   <section anchor="problems" title="The Problems">
   <t>
-  This section lists a series of problems, hopefully listed in a logical order, which
+  This section lists a series of problems, which
   leads to the solution in the next section.
   </t>
 
@@ -274,7 +274,7 @@ EDITOR NOTE: I don't think we need this justification anymore.
     that shows the interdependencies of YANG modules.
     </t>
     <t>
-    Here are all the ietf-routing dependent YANG modules (those modules that depend on ietf-routing)
+    Here are the over 30 modules that depend on ietf-routing
     <eref target="https://www.yangcatalog.org/yang-search/impact_analysis.php?modules[]=ietf-routing&amp;recurse=0&amp;rfcs=1&amp;show_subm=1&amp;show_dir=dependents"/>.
     </t>
     <t>
@@ -324,7 +324,7 @@ deprecated and obsolete mean that a schema node that is either deprecated or
 obsolete may or may not be implemented. The client has no way to
 find out which is the case except for by trying to write or read data at
 the leaf in question. This probing would need to be done for
-each separate data-node, which not a trivial thing to do.  This "may or
+each separate data-node, which is not a trivial thing to do.  This "may or
 may not" is unacceptable in a contract.  In effect, this works as if
 there would be an if-feature statement on each deprecated schema node
 where the server does not advertise whether the feature is supported or
@@ -401,7 +401,7 @@ ne a clear indication from the server whether or not deprecated and obsolete nod
            incompatible with previous versions.</t>
        <t>y is the MINOR version. It is incremented when new functionality is added in a manner
             that is backward-compatible with previous versions.</t>
-       <t>z is the PATCH level. It is incremented
+       <t>z is the PATCH version. It is incremented
             when bug fixes are made in a backward-compatible manner."</t>
      </list>
     </t>
@@ -471,13 +471,17 @@ ne a clear indication from the server whether or not deprecated and obsolete nod
     to combine the semantic versioning, the GitHub tools, and a potential change to the IETF process.
     </t>
   <section anchor="the_derived_semantic_versioning" title="The Derived Semantic Version">
+    <t>
+      If an explicitly defined semantic version is not available it is possible to algoritmically
+      calculate a derived semantic version. This can be used for modules not containing a definitive
+      semantic-version as defined in this document or as a starting value when specifying the definitive semantic-version.
+      Be aware that this algorithm may sometimes incorrectly classify changes between the categories non-compatible, compatible
+      or error-correction.</t>
    <t>
-   <xref target="yangcatalog"/> contains not only the most up-to-date YANG
-   module revision of a given module, but keeps all previous revisions as well. With APIs in mind,
-   it's important to understand whether different YANG module revisions
-   are backward compatible (this is specifically imported for native YANG modules,
-   i.e. the ones where generated-from = native), even for the YANG modules that don't support
-   the YANG extension specified in this document.
+   <xref target="yangcatalog"/> uses the pyang utility to caulculate the derived-semantic-version for all of the modules
+   contained within the catalog.  <xref target="yangcatalog"/> contains many revisions of the same module
+   in order to provide its derived-semantic-version for module consumers to know what has changed between
+   revisions of the same module.
    </t>
    <t>
    Two distinct leafs in the YANG module <xref target="I-D.clacla-netmod-model-catalog"/> contain this semver notation:
@@ -508,6 +512,7 @@ ne a clear indication from the server whether or not deprecated and obsolete nod
    </list>
    </t>
    <t>
+     The pyang utility checks many of the points listed in section 11 of <xref target="RFC7950"/> for known module incompatibilities.
      While this approach is a good way to programmatically obtain a semantic version number, it does not address all cases
      whereby a major version number might need to be increased.  For example, a node may have the same name and same type, but
      its meaning may change from one revision of a module to another.  This represents a semantic change that breaks backwards
@@ -581,6 +586,20 @@ import example-module {
 }
 
 import example-module {
+  semver:import-versions "[2-5]";
+  // All versions between 2.0.0 (inclusive) and 5.y.z (inclusive) where y and z are
+  // any value for MINOR and PATCH versions.
+}
+
+import example-module {
+  semver:import-versions "[1.5-2.0.0),[2.5";
+  // All versions between 1.5.0 (inclusive) and 2.0.0 (exclusive) as well as all versions
+  // greater than 2.5 (inclusive).  In this manner, if 2.0 was branched from 1.4, and a
+  // new feature was added into 1.5, all versions of 1.x.x starting at 1.5 are allowed,
+  // but the feature was not merged into 2.y.z until 2.5.0.
+}
+
+import example-module {
   semver:import-versions "[1";
   // All versions greater than MAJOR version 1 are acceptable.  This includes any
   // MINOR or PATCH versions.
@@ -614,7 +633,9 @@ import example-module {
 
        <t>
        The import statement SHOULD include a semver:import-versions statement and MUST NOT
-       include a revision statement.  The use of import by revision SHOULD be discouraged.
+       include a revision statement.  An import statement MUST NOT contain both a
+       semver:import-versions and a revision substatement.  The use of the revision
+       substatement for import should be discouraged.
       </t>
   </section>
 </section>
@@ -639,7 +660,7 @@ import example-module {
         of the associated module and revision in a given module-set.  The related submodule-version leaf is added at
         /yanglib:yang-library/yanglib:module-set/yanglib:module/yanglib:submodule to indicate the semantic version of
         a submodule.</t>
-      <t>In order to satisfy the requirement that deprecated and obsolete node presence and operations are easily and clearly
+      <t>In order to satisfy the requirement that deprecated and obsolete node presence and operation are easily and clearly
         known to clients, ietf-semver also augments the ietf-yang-library with two additional boolean leafs at
         /yanglib:yang-library/yanglib:module-set/yanglib:module.  A client can make one request of the ietf-yang-library and
         know whether or a not a module that has deprecated or obsolete has those nodes implemented by the server, as opposed to
@@ -656,6 +677,10 @@ import example-module {
            deviations.  This leaf defaults to false.</t>
          </list>
        </t>
+       <t>Module compatibility can be affected if values other than the default are used.  For example, if a server does
+         not implemennt deprecated nodes, then a given module revision will be incompatible with a previous revision where
+         the nodes were not deprecated.  Therefore, when calculating backwards compatibility, the default values of these
+         leafs MUST be considered rather than what a given server may choose to use.</t>
   </section>
 
   <section title="Deprecated and Obsolete Reasons" anchor="deprecated_and_obsolete_reasons">
@@ -771,19 +796,17 @@ leaf imperial-temperature {
          model that do not impact current clients use of the model.
          When major version is stepped, the minor version is reset to 0.
 
-         The patch-level version is incremented when non-feature changes
+         The patch version is incremented when non-feature changes
          (such as bugfixes or clarifications to human-readable
          descriptions that do not impact model functionality) are made
          that maintain backwards compatibility.
-         When major or minor version is stepped, the patch-level is
+         When major or minor version is stepped, the patch is
          reset to 0.
 
-         The version number is stored in the module meta-data.
-
          By comparing the module-version between two revisions of a
-         given module, one can know if revision N+1 is backwards
-         compatible or not relative to revision N, as well as
-         whether or not new features have been added to revision N+1.
+         given module, one can know if different revisions are backwards
+         compatible or not, as well as
+         whether or not new features have been added to a newer revision.
 
          If a module contains this extension it indicates that for this
          module the updated status and update rules as this described in
@@ -835,11 +858,14 @@ leaf imperial-temperature {
          This may point to other schema elements that can be used in lieu of the given node.
 
          This statement MUST only be used as a substatement of the status statement, and MUST
-         only be used when the status is deprecated or obsolete.";
+         only be used when the status is deprecated or obsolete.  Zero or more status-description
+         statements are allowed per parent statement.  NO substatements are allowed.";
       reference "I-D.clacla-netmod-yang-model-update : Deprecated and Obsolete Reasons";
     }
 
     augment "/yanglib:yang-library/yanglib:module-set/yanglib:module" {
+      description
+        "Augmentations for the ietf-yang-library module to support semantic versioning.";
       leaf module-version {
         type string {
           pattern '[0-9]+\.[0-9]+\.[0-9]+';
@@ -868,10 +894,10 @@ leaf imperial-temperature {
            be implemented as documented in the module.  Any variation of this MUST be listed as
            deviations.";
       }
-      description
-        "Augmentations for the ietf-yang-library module to support semantic versioning.";
     }
     augment "/yanglib:yang-library/yanglib:module-set/yanglib:module/yanglib:submodule" {
+      description
+        "Augmentations for the ietf-yang-library module/submodule to support semantic versioning.";
       leaf submodule-version {
         type string {
           pattern '[0-9]+\.[0-9]+\.[0-9]+';
@@ -881,8 +907,6 @@ leaf imperial-temperature {
            must match the semver:module-version value in specific revision of the submodule
            loaded in this module-set.";
       }
-      description
-        "Augmentations for the ietf-yang-library module/submodule to support semantic versioning.";
     }
   }
 <CODE ENDS>
@@ -909,9 +933,19 @@ leaf imperial-temperature {
  </t>
 </section>
 <section anchor="iana" title="IANA Considerations">
-  <t>
-No IANA action is requested.
-</t>
+  <section anchor="yang-module-registrations" title="YANG Module Registrations">
+  <t>The following YANG module is requested to be registred in the “IANA
+  Module Names” registry:</t>
+
+  <t>The ietf-semver module:</t>
+
+  <t><list style="symbols">
+    <t>Name: ietf-semver</t>
+    <t>XML Namespace: urn:ietf:params:xml:ns:yang:ietf-semver</t>
+    <t>Prefix: semver</t>
+    <t>Reference: This memo</t>
+  </list></t>
+</section>
 </section>
 </middle>
 <?rfc needLines="20"?>
@@ -968,7 +1002,8 @@ No IANA action is requested.
         As they are the owner of the modules it should be their responsibility, but how to document it?
         </t>
         <t>We could consider a new naming convention for module files. Today, module files
-          are named using a  module@revision.yang notation.  We could consider a module%semver.yang variant.
+          are named using a  module@revision.yang notation.  We could consider module%semver.yang
+          or module#version.yang variants.
           Re-using the '@' for version is not ideal, so another separator character should be used.
           In this manner, both version and revision could be used.
           </t>
