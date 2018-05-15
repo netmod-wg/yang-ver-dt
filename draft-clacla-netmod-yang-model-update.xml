@@ -7,6 +7,7 @@
 <!ENTITY RFC8199 SYSTEM "reference.RFC.8299.xml">
 <!ENTITY OPENCONFIG-YANG-CATALOG SYSTEM "http://xml.resource.org/public/rfc/bibxml3/reference.I-D.openconfig-netmod-model-catalog.xml">
 <!ENTITY CLAISE-SEMVER "http://xml.resource.org/public/rfc/bibxml3/reference.I-D.claise-semver.xml">
+<!ENTITY CLAISE-SEMVER "http://xml.resource.org/public/rfc/bibxml3/reference.I-D.netconf-rfc7895bis">
 <!ENTITY OPENCONFIG-YANG-CATALOG SYSTEM "http://xml.resource.org/public/rfc/bibxml3/reference.I-D.openconfig-netmod-model-catalog.xml">
 <!ENTITY CLACLA-NETMOD-MODEL-CATALOG "http://xml.resource.org/public/rfc/bibxml3/reference.I-D.clacla-netmod-model-catalog.xml">
 ]>
@@ -91,10 +92,11 @@
 </front>
 <middle>
 <section anchor="intro" title="Introduction">
-  <t>
+<t>
 The YANG data modeling language <xref target="RFC7950"/> specifies strict
 rules for updating YANG modules (see section 11 "Updating a Module").
 Citing a few of the relevant rules:
+
 <list style="numbers">
 <t>
    "As experience is gained with a module, it may be desirable to revise
@@ -122,10 +124,12 @@ Citing a few of the relevant rules:
 </list>
 
 What are the consequences?
+
 <list style="numbers">
 <t>
-   If a YANG module is intended to update another YANG module, the module name should not be changed as it will break existing tooling and
-   code by changing imports statements, service composition at the orchestration layer, general network management applications, etc.
+   If a YANG module is intended to update another YANG module, the module name should not be 
+   changed as it will break existing tooling and code by changing imports statements, 
+   service composition at the orchestration layer, general network management applications, etc.
 </t>
 <t>
    When the same YANG module name is kept, its new revision must be updated
@@ -138,7 +142,17 @@ What are the consequences?
 </t>
 </list>
 </t>
+<t>
+  This document specifies a new YANG module update procedure in case of backward-incompatible
+  changes, as an alternative proposal to the YANG 1.1 specifications. This document updates RFC 7950.
+</t>
+<t>
+  This document does not address the potential need of an automatic way to discover that a YANG-MODULE-B 
+  obsoletes YANG-MODULE-A, so that YANG-MODULE-A should not be given any attention. This problem is 
+  currently solved by RFC obsolete tag as a level of indirection between the YANG modules.
+</t>
 </section>
+
   <section anchor="problems" title="The Problems">
   <t>
   This section lists a series of problems, which
@@ -375,14 +389,21 @@ comparision of the old and new modules, no easy task.
 
 <section anchor="the_solution" title="The Solution">
   <t>
-  The solution is composed of four parts, a semantic versioning YANG extension,
-  updates to the YANG 1.1. status statement and module update rules and the import by version statement.
-  An optional additional check, validating the semantic versioning
-  from a syntactic point of view, can either assist in determining the correct semantic versioning
-  values, or can help in determining the values for YANG modules that don't support this extension.
+  The solution is composed of five parts: 
+       <list style="numbers">
+       <t>A semantic versioning YANG extension, along with an optional additional check that validates 
+	      the semantic versioning from a syntactic point of view, which can either assist in 
+		  determining the correct semantic versioning values, or which can help in determining 
+		  the values for YANG modules that don't support this extension. </t>
+       <t>The import by version statement"</t>
+       <t>Updates to the YANG 1.1 module update rules</t>
+	   <t>Updates to ietf-yang-library</t>
+       <t>The deprecated and obsolotes Reason"</t>
+     </list>
   </t>
 
   <section anchor="semver_semantic_versioning" title="Semantic Versioning">
+    <section anchor="semantic_versioning_as_set_by_the_YANG_module_designer" title="Semantic Versioning, As Set by the YANG Module Designer">
     <t>
     The semantic versioning solution proposed here has already been proposed in
     <xref target="I-D.openconfig-netmod-model-catalog "/> (included here with
@@ -402,7 +423,8 @@ comparision of the old and new modules, no easy task.
             when bug fixes are made in a backward-compatible manner."</t>
      </list>
     </t>
-    <t>
+	<t>
+    The semantic version value is set by the YANG module developer at the design and implementation times.
     Along these lines, we propose the following YANG 1.1 extension for a more generic
       semantic version.  The formal definition is found at the end of this document.</t>
     <figure>
@@ -462,20 +484,24 @@ comparision of the old and new modules, no easy task.
       //YANG module definition starts here
        </artwork>
     </figure>
-
-    <t>
+ 
+	<t>
     See also "Semantic Versioning and Structure for IETF Specifications" <xref target="I-D.claise-semver"/> for a mechanism
     to combine the semantic versioning, the GitHub tools, and a potential change to the IETF process.
     </t>
+  </section>
   <section anchor="the_derived_semantic_versioning" title="The Derived Semantic Version">
     <t>
-      If an explicitly defined semantic version is not available it is possible to algoritmically
-      calculate a derived semantic version. This can be used for modules not containing a definitive
-      semantic-version as defined in this document or as a starting value when specifying the definitive semantic-version.
-      Be aware that this algorithm may sometimes incorrectly classify changes between the categories non-compatible, compatible
-      or error-correction.</t>
+      If an explicitly defined semantic version is not available in the YANG module, it is possible to 
+	  algoritmically calculate a derived semantic version. This can be used for modules not containing 
+	  a definitive semantic-version as defined in this document or as a starting value when specifying 
+	  the definitive semantic-version. Be aware that this algorithm may sometimes incorrectly classify 
+	  changes between the categories non-compatible, compatible or error-correction.
+	</t>
+  </section>
+  <section anchor="implementation_experience" title="Implementation Experience">
    <t>
-   <xref target="yangcatalog"/> uses the pyang utility to caulculate the derived-semantic-version for all of the modules
+   <xref target="yangcatalog"/> uses the pyang utility to calculate the derived-semantic-version for all of the modules
    contained within the catalog.  <xref target="yangcatalog"/> contains many revisions of the same module
    in order to provide its derived-semantic-version for module consumers to know what has changed between
    revisions of the same module.
@@ -517,6 +543,8 @@ comparision of the old and new modules, no easy task.
      to ensure a proper version is chosen for a given module revision.
    </t>
   </section>
+</section>
+
   <section title="Import by Semantic Version" anchor="import_semver">
       <t>
       If a module is imported by another one, it is usually not specified which
@@ -634,7 +662,6 @@ import example-module {
        semver:import-versions and a revision substatement.  The use of the revision
        substatement for import should be discouraged.
       </t>
-  </section>
 </section>
 
   <section title="Updates to YANG 1.1 Module Update Rules" anchor="update_rules">
@@ -651,7 +678,8 @@ import example-module {
   </section>
 
   <section title="Updates to ietf-yang-library" anchor="ietf_yang_library_updates">
-      <t>The ietf-semver YANG module also specifies additional ietf-yang-library <xref target="RFC7895"/> leafs to be
+      <t>The ietf-semver YANG module also specifies additional ietf-yang-library <xref target="RFC7895"/> 
+	    <xref target="I-D.ietf-netconf-rfc7895bis"/> leafs to be
         added at the module and submodule levels.  The first is module-version, which augments
         /yanglib:yang-library/yanglib:module-set/yanglib:module.  This specifies the current semantic version
         of the associated module and revision in a given module-set.  The related submodule-version leaf is added at
@@ -968,6 +996,7 @@ leaf imperial-temperature {
    <?rfc include='reference.I-D.openconfig-netmod-model-catalog'?>
    <?rfc include='reference.I-D.claise-semver'?>
    <?rfc include='reference.I-D.clacla-netmod-model-catalog'?>
+   <?rfc include='reference.I-D.ietf-netconf-rfc7895bis'?>  
    <reference anchor="openconfigsemver" target="http://www.openconfig.net/docs/semver/">
      <front>
       <title>Semantic Versioning for Openconfig Models</title>
@@ -1007,6 +1036,8 @@ leaf imperial-temperature {
           module updates.</t>
         <t>Should IETF/IANA officially generate derived semantic versions for their own modules?
         As they are the owner of the modules it should be their responsibility, but how to document it?
+		Note that next round of funding for the yangcatalog.org could help develop the perfect 
+		derived-semantic-version toolset
         </t>
         <t>We could consider a new naming convention for module files. Today, module files
           are named using a  module@revision.yang notation.  We could consider module%semver.yang
