@@ -153,6 +153,43 @@ What are the consequences?
 </t>
 </section>
 
+<section anchor="how_is_YANG_used_today" title="How is YANG Used Today">
+    <t>
+    TO DO: this is not a complete section, but only the starting point. We must explain how a module change
+	propagates into two dimensions: 1. the import and deviation. 2. the service composition via controller and 
+	orchestrator.
+	We must show all all the scripts are affected and that minimizing the script changes should be a goal
+    </t>    
+	<t>
+    Let's assume for a moment that we change the name of a YANG module when making a backwards-incompatible change, with the specific example of
+    ietf-routing, which some propose to update to ietf-routing-2.  <xref target="yangcatalog"/> provides tooling
+    that shows the interdependencies of YANG modules.
+    </t>
+    <t>
+    Here are the over 30 modules that depend on ietf-routing
+    <eref target="https://www.yangcatalog.org/yang-search/impact_analysis.php?modules[]=ietf-routing&amp;recurse=0&amp;rfcs=1&amp;show_subm=1&amp;show_dir=dependents"/>.
+    </t>
+    <t>
+    Let's look at the difference for ietf-routing-2:
+    <eref target="https://www.yangcatalog.org/yang-search/impact_analysis.php?modules[]=ietf-routing-2&amp;recurse=0&amp;rfcs=1&amp;show_subm=1&amp;show_dir=dependents"/>.
+    </t>
+    <t>
+    Changing the module name from ietf-routing to ietf-routing-2 implies that the we have to warn all draft authors of
+    ietf-routing YANG dependent modules. First, to make sure they are aware of ietf-routing-2 (publishing a RFC8022bis
+    mentioning in the module description that this module is not compatible with the NMDA architecture, and providing
+    a pointer to ietf-routing-2 requires manual, tedius work). And second, to ask them to change
+    their import (or service composition) to ietf-routing-2. Hopefully, in the ietf-routing case, most dependent YANG
+    modules are part of the IETF, so the communication is a manageable.
+    For the already existing dependent vendor modules the problem is worse.  And then there are network management applications
+    that may already be using ietf-routing that would require new code to handle ietf-routing-2.
+    </t>
+    <t>
+    Changing the ietf-interfaces YANG module name would be a different challenge, as it's used throughout the industry:
+    <eref target="https://www.yangcatalog.org/yang-search/impact_analysis.php?modules[]=ietf-interfaces&amp;recurse=0&amp;rfcs=1&amp;show_subm=1&amp;show_dir=dependents"/>
+    </t>
+</section>
+  
+
   <section anchor="problems" title="The Problems">
   <t>
   This section lists a series of problems, which
@@ -282,35 +319,40 @@ EDITOR NOTE: I don't think we need this justification anymore.
   </section>
 -->
 
-  <section anchor="yang_module_transition_strategy" title="YANG Module Transition Strategy">
-    <t>
-    Let's assume for a moment that we change the name of a YANG module when making a backwards-incompatible change, with the specific example of
-    ietf-routing, which some propose to update to ietf-routing-2.  <xref target="yangcatalog"/> provides tooling
-    that shows the interdependencies of YANG modules.
-    </t>
-    <t>
-    Here are the over 30 modules that depend on ietf-routing
-    <eref target="https://www.yangcatalog.org/yang-search/impact_analysis.php?modules[]=ietf-routing&amp;recurse=0&amp;rfcs=1&amp;show_subm=1&amp;show_dir=dependents"/>.
-    </t>
-    <t>
-    Let's look at the difference for ietf-routing-2:
-    <eref target="https://www.yangcatalog.org/yang-search/impact_analysis.php?modules[]=ietf-routing-2&amp;recurse=0&amp;rfcs=1&amp;show_subm=1&amp;show_dir=dependents"/>.
-    </t>
-    <t>
-    Changing the module name from ietf-routing to ietf-routing-2 implies that the we have to warn all draft authors of
-    ietf-routing YANG dependent modules. First, to make sure they are aware of ietf-routing-2 (publishing a RFC8022bis
-    mentioning in the module description that this module is not compatible with the NMDA architecture, and providing
-    a pointer to ietf-routing-2 requires manual, tedius work). And second, to ask them to change
-    their import (or service composition) to ietf-routing-2. Hopefully, in the ietf-routing case, most dependent YANG
-    modules are part of the IETF, so the communication is a manageable.
-    For the already existing dependent vendor modules the problem is worse.  And then there are network management applications
-    that may already be using ietf-routing that would require new code to handle ietf-routing-2.
-    </t>
-    <t>
-    Changing the ietf-interfaces YANG module name would be a different challenge, as it's used throughout the industry:
-    <eref target="https://www.yangcatalog.org/yang-search/impact_analysis.php?modules[]=ietf-interfaces&amp;recurse=0&amp;rfcs=1&amp;show_subm=1&amp;show_dir=dependents"/>
-    </t>
+
+  <section title="No way to easily decide whether a change is Backward Compatible">
+      <t>
+           A management system, SDN controller or any other user of a module should be
+capable of easily determining the compatibility between two module versions.
+Higher level logic for a network function,
+something that can not be implemented in a purely model driven way, is always
+dependent on a specific version of the module. If the client finds that
+the module has been updated on the network node, it has to decide if it tries to
+handle it as it handled the previous version of the model or if it just stops, to
+avoid problems. To make this decision the client needs to know if the module
+was updated in a backward compatible way or not.
+</t>
+<t>
+This is not possible to decide today because of the following:
+<list style="symbols">
+    <t>It is possible to change the semantic behavior of a data node, action or rpc
+while the YANG definition does not change (with the possible exception of the
+description statement). In such a case it is impossible to
+determine whether the change is backward compatible just by looking at the YANG statements.
+Its only the human model designer that
+can decide.</t>
+<t>Problems with the deprecated and obsolete status statement, <xref target='clear_indication_of_node_support'/></t>
+<t>Modelers might decide to violate  YANG 1.1 update rules for some of the reasons above</t>
+</list>
+Finding status changes or violations of update rules need a line by line
+comparision of the old and new modules, no easy task.
+      </t>
   </section>
+  
+</section>
+
+<section anchor="the_requirements" title="The Requirements">
+
   <section title="Need to Allow Non-Backward Compatible changes">
       <t>
           As described in the previous sections, there is a need to allow non-backward compatible changes
@@ -320,7 +362,7 @@ EDITOR NOTE: I don't think we need this justification anymore.
 
       <!-- EDITOR QUESTION: Do we want to say anything about creating a new module?  That seems to me to be understood. -->
   </section>
-
+  
   <section title="Clear Indication of Node Support" anchor="clear_indication_of_node_support">
       <t>
       The current definition of deprecated and obsolete in <xref target="RFC7950"/> (as quoted below) is problematic and should be
@@ -353,39 +395,7 @@ may return bad or incorrect data.  A client might expect they work by the fact
 they return something at all.  There must be a clear indication from the server
 whether or not deprecated and obsolete nodes are implemented as defined.</t>
   </section>
-
-  <section title="No way to easily decide whether a change is Backward Compatible">
-      <t>
-           A management system, SDN controller or any other user of a module should be
-capable of easily determining the compatibility between two module versions.
-Higher level logic for a network function,
-something that can not be implemented in a purely model driven way, is always
-dependent on a specific version of the module. If the client finds that
-the module has been updated on the network node, it has to decide if it tries to
-handle it as it handled the previous version of the model or if it just stops, to
-avoid problems. To make this decision the client needs to know if the module
-was updated in a backward compatible way or not.
-</t>
-<t>
-This is not possible to decide today because of the following:
-<list style="symbols">
-    <t>It is possible to change the semantic behavior of a data node, action or rpc
-while the YANG definition does not change (with the possible exception of the
-description statement). In such a case it is impossible to
-determine whether the change is backward compatible just by looking at the YANG statements.
-Its only the human model designer that
-can decide.</t>
-<t>Problems with the deprecated and obsolete status statement, <xref target='clear_indication_of_node_support'/></t>
-<t>Modelers might decide to violate  YANG 1.1 update rules for some of the reasons above</t>
-</list>
-Finding status changes or violations of update rules need a line by line
-comparision of the old and new modules, no easy task.
-      </t>
-  </section>
-
 </section>
-
-
 
 <section anchor="the_solution" title="The Solution">
   <t>
