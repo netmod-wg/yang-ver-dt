@@ -349,20 +349,80 @@ comparision of the old and new modules, no easy task.
       </t>
   </section>
   
-</section>
-
-<section anchor="the_requirements" title="The Requirements">
-
-  <section title="Need to Allow Non-Backward Compatible changes">
+  <section title="No good way to specify which module revision to import">
+    <t>
+      If a module (MOD-A) is imported by another one (MOD-B) the importer may specify
+which revision must be imported. Even if MOD-A is developed in 
+backward-compatible steps not all revisions will be suitable, 
+e.g. a new MOD-B might need the newest MOD-A. However both specifying or 
+omitting the revision date for import leads to problems.
+    </t>
+    <t>
+If the import by revision-date is specified
+    <list  style="symbols">
       <t>
-          As described in the previous sections, there is a need to allow non-backward compatible changes
-          without changing a module's name. This would avoid many of the above problems.  Allowing non-backward compatible changes to happen without a module
-      name change will decrease the number of separate modules to handle and will make it a trivial
-      task to track these non-backward compatible changes.</t>
-
-      <!-- EDITOR QUESTION: Do we want to say anything about creating a new module?  That seems to me to be understood. -->
+        If corrections are made to MOD-A these would not have any effect as the
+import’s revision date would still point to the un-corrected earlier YAM revision.
+      </t>
+      <t>
+        If MOD-A is developed in a backward-compatible way because another importer (MOD-C)
+needs some functionality, the new MOD-A could be used by MOD-B, but specifying
+the exact import revision-date prevents this. This will force the implementers to
+import two different revisions of MOD-A, forcing them to maintain old MOD-A
+revisions unnecessarily.
+      </t>
+      <t>
+        If multiple modules import different revisions of MOD-A the human user will
+need to understand the subtle differences between the different revisions.
+Small differences would easily lead to operator mistakes as the operator will
+rarely check the documentation.
+      </t>
+      <t>
+        Tooling/SW is often not prepared to handle multiple revisions of the same YAM.
+      </t>
+    </list>
+    </t>
+    <t>
+If the import revision-date is not specified
+    <list  style="symbols">
+      <t>
+        any revision of MOD-A may be used including unsuitable ones. Older revisions
+may be lacking functionality MOD-B needs. Newer MOD-A revisions may obsolete
+definitions used by MOD-B in which case these must not be used by MOD-B anymore.
+      </t>
+      <t>
+        As it is not specified which revisions of MOD-A
+are suitable for MOD-B. The problem has to solved on a case by case basis
+studying all the details of MOD-A and MOD-B which is a big work.
+      </t>
+    </list>
+    </t>
   </section>
   
+    <section title="Early Warning about Removal">
+      <t>
+        If a schema part is considered old/bad we need to be able to give
+advance warning that it will be removed.  As this is an advance
+warning the part must still be present and usable in the current
+revision; however, it will be removed in one of the next revisions.
+The  deprecated statement cannot be reliably used for this purpose 
+both because deprecated nodes may not be implemented and also there 
+is no mandate that text be provided explaining the deprecation.
+    </t>
+    <t>
+We need the advance warning to allow users of the module time
+to plan/execute migration away from the deprecated functionality.
+Deprecation should be accompanied by information whether the
+functionality will just disappear or that there is an alternative,
+possibly more advanced solution that should be used.
+    </t>
+    <t>
+Vendors use such warnings often, but the NMDA related redesign of
+IETF modules is also an example where it would be useful for IETF. As
+another example see the usage of deprecated in the Java programing
+language.  
+      </t>
+    </section>
   <section title="Clear Indication of Node Support" anchor="clear_indication_of_node_support">
       <t>
       The current definition of deprecated and obsolete in <xref target="RFC7950"/> (as quoted below) is problematic and should be
@@ -387,14 +447,22 @@ there would be an if-feature statement on each deprecated schema node
 where the server does not advertise whether the feature is supported or
 not.  Why is it not advertised?
       </t>
-<t>If a schema part is considered old/bad we need to be able to give advance
-warning that it will be removed. As this is an advance warning the part shall
-still be present and usable in the current revision; however, it will be removed
-in one of the next revisions. This is compounded by the fact that obsolete nodes
-may return bad or incorrect data.  A client might expect they work by the fact
-they return something at all.  There must be a clear indication from the server
-whether or not deprecated and obsolete nodes are implemented as defined.</t>
   </section>
+
+</section>
+
+<section anchor="the_requirements" title="The Requirements">
+
+  <section title="Need to Allow Non-Backward Compatible changes">
+      <t>
+          As described in the previous sections, there is a need to allow non-backward compatible changes
+          without changing a module's name. This would avoid many of the above problems.  Allowing non-backward compatible changes to happen without a module
+      name change will decrease the number of separate modules to handle and will make it a trivial
+      task to track these non-backward compatible changes.</t>
+
+      <!-- EDITOR QUESTION: Do we want to say anything about creating a new module?  That seems to me to be understood. -->
+  </section>
+  
 </section>
 
 <section anchor="the_solution" title="The Solution">
