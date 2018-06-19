@@ -1,0 +1,301 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE rfc SYSTEM "rfc2629.dtd" [
+  <!ENTITY RFC6020 SYSTEM "reference.RFC.6020.xml">
+  <!ENTITY RFC7895 SYSTEM "reference.RFC.7895.xml">
+  <!ENTITY RFC7950 SYSTEM "reference.RFC.7950.xml">
+  <!ENTITY RFC8199 SYSTEM "reference.RFC.8199.xml">
+  <!ENTITY RFC8299 SYSTEM "reference.RFC.8299.xml">
+  <!ENTITY RFC8049 SYSTEM "reference.RFC.8049.xml">
+  <!ENTITY RFC2119 SYSTEM "reference.RFC.2119.xml">
+  <!ENTITY CLACLA-NETMOD-YANG-MODEL-UPDATE "http://xml.resource.org/public/rfc/bibxml3/reference.I-D.clacla-netmod-yang-model-update.xml">
+]>
+<?xml-stylesheet type="text/xsl" href="rfc2629.xslt" ?>
+<?rfc toc="yes"?>
+<?rfc tocompact="yes"?>
+<?rfc tocdepth="4"?>
+<?rfc tocindent="yes"?>
+<?rfc symrefs="yes"?>
+<?rfc sortrefs="yes"?>
+<?rfc comments="yes"?>
+<?rfc inline="yes"?>
+<?rfc compact="yes"?>
+<?rfc subcompact="no"?>
+<rfc category="std" ipr="trust200902" docName="draft-verdt-netmod-yang-versioning-reqs-00">
+  <front>
+    <title abbrev="YANG Catalog">YANG Module Versioning Requirements</title>
+
+    <author initials="J." surname="Clarke" fullname="Joe Clarke" role="editor">
+      <organization>Cisco Systems, Inc.</organization>
+      <address>
+        <postal>
+          <street>7200-12 Kit Creek Rd</street>
+          <city>Research Triangle Park</city>
+          <region>North Carolina</region>
+          <country>United States of America</country>
+        </postal>
+        <phone>+1-919-392-2867</phone>
+        <email>jclarke@cisco.com</email>
+      </address>
+    </author>
+
+    <date/>
+    <abstract>
+      <t>
+        This document specifies the problems that arise today because all updates to YANG modules must preserve backwards compatibility. In addition to explaining the implications of these problems, this document defines a number of requirements that a
+        versioning scheme for YANG MUST and SHOULD have to be robust enough to address the problems. No solutions are presented here currently, though the design team focusing on these problems and requirements are considering a number of them.
+      </t>
+    </abstract>
+
+  </front>
+  <middle>
+    <section anchor="intro" title="Introduction">
+      <t>
+        The YANG data modeling language
+        <xref target="RFC7950"/>
+        specifies strict rules for updating YANG modules (see section 11 "Updating a Module"). Citing a few of the relevant rules:
+
+        <list style="numbers">
+          <t>
+            "As experience is gained with a module, it may be desirable to revise that module. However, changes to published modules are not allowed if they have any potential to cause interoperability problems between a client using an original specification
+            and a server using an updated specification."
+          </t>
+          <t>"Note that definitions contained in a module are available to be imported by any other module and are referenced in "import" statements via the module name. Thus, a module name MUST NOT be changed. Furthermore, the "namespace" statement MUST NOT
+            be changed, since all XML elements are qualified by the namespace."
+          </t>
+          <t>"Otherwise, if the semantics of any previous definition are changed (i.e., if a non-editorial change is made to any definition other than those specifically allowed above), then this MUST be achieved by a new definition with a new identifier."
+          </t>
+          <t>
+            "deprecated indicates an obsolete definition, but it permits new/continued implementation in order to foster interoperability with older/existing implementations."
+          </t>
+        </list>
+      </t>
+    </section>
+    <section anchor="terminology" title="Terminology and Conventions">
+      <t>The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "SHOULD NOT", "RECOMMENDED", "MAY", and "OPTIONAL" in this document are to be interpreted as described in
+        <xref target="RFC2119"/>.</t>
+    </section>
+    <section anchor="problems" title="The Problem Statement">
+      <t>
+        This section enumerates the problems encountered thus far because of the rigid update rules. Much of this text is taken from
+        <xref target="I-D.clacla-netmod-yang-model-update"/>.
+      </t>
+
+      <section anchor="slow_standardization" title="Slow Standardization">
+        <t>
+          The points made in the introduction lead to the logical conclusion that the standardized YANG modules have to be perfect on day one (at least the structure and meaning), which in turn might explain why IETF YANG modules take so long to standardize.
+          Shooting for perfection is obviously a noble goal, but if the perfect standard comes too late, it doesn't help the industry.
+        </t>
+      </section>
+
+      <section anchor="some_YANG_modules_are_not_backward_compatible" title="Some YANG Modules Are Not Backward Compatible">
+        <t>
+          As we learn from our mistakes, we're going to face more and more backward-incompatible YANG modules. An example is the YANG data model for L3VPN service delivery
+          <xref target="RFC8049"/>, which, based on implementation experience, has been updated in a backward-incompatible way by
+          <xref target="RFC8299"/>.
+        </t>
+        <t>
+          While Standards Development Organization (SDO) YANG modules are obviously better for the industry, we must recognize that many YANG modules are actually generated YANG modules (for example, from internal databases), also known as native YANG modules,
+          or vendor modules
+          <xref target="RFC8199"/>. From time to time, the new YANG modules are not backward-compatible.
+        </t>
+        <t>
+          Old module parts that are no longer needed, no longer supported, or are not used by consumers need to be removed from modules. It is often hard to decide which parts are no longer needed/used; still the need and practice of removing old parts exist.
+          While it is rare in standard modules it is more common in vendor YANG modules where the usage of modules is more controlled.
+        </t>
+        <t>
+          The problems described in
+          <xref target="clear_indication_of_node_support"/>
+          may also result in incompatible changes.
+        </t>
+        <t>
+          In such cases, it would be better to indicate how backward-compatible a given YANG module actually is.
+        </t>
+        <t>As modules are sometimes updated in an incompatible way the current assumption that once a YANG module is defined all further revisions can be freely used as they are compatible is not valid.</t>
+      </section>
+
+      <section title="Non-Backward Compatible Errors">
+        <t>
+          Sometimes small errors force us to make non-backward compatible updates. As an example imagine that we have a string with a complex pattern (e.g., an IP address). Let's assume the initial pattern incorrectly allows IP addresses to start with 355. In
+          the next version this is corrected to disallow addresses starting with 355. Formally this is an non-backward compatible change as the value space of the string is decreased. In reality an IP address and the implementation behind it was never capable
+          of handling an address starting with 355. So practically this is a backward compatible change, just like a correction of the description statement. Still current YANG rules would force a module name change.
+        </t>
+      </section>
+      <section title="No way to easily decide whether a change is Backward Compatible">
+        <t>
+          A management system, SDN controller, or any other user of a module should be capable of easily determining the compatibility between two module versions. Higher level logic for a network function, something that can not be implemented in a purely
+          model driven way, is always dependent on a specific version of the module. If the client finds that the module has been updated on the network node, it has to decide if it tries to handle it as it handled the previous version of the model or if it
+          just stops, to avoid problems. To make this decision the client needs to know if the module was updated in a backward compatible way or not.
+        </t>
+        <t>
+          This is not possible to decide today because of the following:
+          <list style="symbols">
+            <t>It is possible to change the semantic behavior of a data node, action or rpc while the YANG definition does not change (with the possible exception of the description statement). In such a case it is impossible to determine whether the change is
+              backward compatible just by looking at the YANG statements. Its only the human model designer that can decide.</t>
+            <t>Problems with the deprecated and obsolete status statement,
+              <xref target="clear_indication_of_node_support"/></t>
+            <t>Modelers might decide to violate YANG 1.1 update rules for some of the reasons above.</t>
+          </list>
+          Finding status changes or violations of update rules need a line-by-line comparision of the old and new modules is a tedious task.
+        </t>
+      </section>
+
+      <section title="No good way to specify which module revision to import">
+        <t>
+          If a module (MOD-A) is imported by another one (MOD-B) the importer may specify which revision must be imported. Even if MOD-A is developed in backward-compatible way not all revisions will be suitable, e.g., a new MOD-B might need the newest MOD-A.
+          However, both specifying or omitting the revision date for import leads to problems.
+        </t>
+        <t>
+          If the import by revision-date is specified
+          <list style="symbols">
+            <t>
+              If corrections are made to MOD-A these would not have any effect as the import’s revision date would still point to the un-corrected earlier YANG module revision.
+            </t>
+            <t>
+              If MOD-A is developed in a backward-compatible way because another importer (MOD-C) needs some functionality, the new MOD-A could be used by MOD-B, but specifying the exact import revision-date prevents this. This will force the implementers to
+              import two different revisions of MOD-A, forcing them to maintain old MOD-A revisions unnecessarily.
+            </t>
+            <t>
+              If multiple modules import different revisions of MOD-A the human user will need to understand the subtle differences between the different revisions. Small differences would easily lead to operator mistakes as the operator will rarely check the
+              documentation.
+            </t>
+            <t>
+              Tooling/SW is often not prepared to handle multiple revisions of the same YANG module.
+            </t>
+          </list>
+        </t>
+        <t>
+          If the import revision-date is not specified
+          <list style="symbols">
+            <t>
+              any revision of MOD-A may be used including unsuitable ones. Older revisions may be lacking functionality MOD-B needs. Newer MOD-A revisions may obsolete definitions used by MOD-B in which case these must not be used by MOD-B anymore.
+            </t>
+            <t>
+              As it is not specified which revisions of MOD-A are suitable for MOD-B. The problem has to solved on a case by case basis studying all the details of MOD-A and MOD-B which is a big work.
+            </t>
+          </list>
+        </t>
+      </section>
+
+      <section title="Early Warning about Removal">
+        <t>
+          If a schema part is considered old/bad we need to be able to give advance warning that it will be removed. As this is an advance warning the part must still be present and usable in the current revision; however, it will be removed in one of the next
+          revisions. The deprecated statement cannot be reliably used for this purpose both because deprecated nodes may not be implemented and also there is no mandate that text be provided explaining the deprecation.
+        </t>
+        <t>
+          We need the advance warning to allow users of the module time to plan/execute migration away from the deprecated functionality. Deprecation should be accompanied by information whether the functionality will just disappear or that there is an
+          alternative, possibly more advanced solution that should be used.
+        </t>
+        <t>
+          Vendors use such warnings often, but the NMDA related redesign of IETF modules is also an example where it would be useful for IETF. As another example, see the usage of deprecated in the Java programing language.
+        </t>
+      </section>
+      <section title="Clear Indication of Node Support" anchor="clear_indication_of_node_support">
+        <t>
+          The current definition of deprecated and obsolete in
+          <xref target="RFC7950"/>
+          (as quoted below) is problematic and should be corrected.
+          <list style="symbols">
+            <t>"deprecated" indicates an obsolete definition, but it permits new/continued implementation in order to foster interoperability with older/existing implementations.</t>
+            <t>"obsolete" means that the definition is obsolete and SHOULD NOT be implemented and/or can be removed from implementations.</t>
+          </list>
+        </t>
+        <t>YANG is considered an interface contract between the server and the client. The current definitions of deprecated and obsolete mean that a schema node that is either deprecated or obsolete may or may not be implemented. The client has no way to
+          find out which is the case except for by trying to write or read data at the leaf in question. This probing would need to be done for each separate data-node, which is not a trivial thing to do. This "may or may not" is unacceptable in a contract. In
+          effect, this works as if there would be an if-feature statement on each deprecated schema node where the server does not advertise whether the feature is supported or not. Why is it not advertised?
+        </t>
+      </section>
+
+    </section>
+    <section anchor="requirements" title="Requirements of a YANG Versioning Solution">
+      <t>The following is a list of requirements that a solution to the problems mentioned above MUST or SHOULD have. The list is grouped by similar requirements, but is not presented in a set priority order.
+
+        <list style="numbers">
+          <t>Requirements related to making non backwards compatible updates to modules:
+            <list style="format 1.%d">
+              <t>A mechanism is REQUIRED to update a module in a non backwards compatible way without forcing all modules with import dependencies on the updated module from being updated at the same time (e.g. to change its import to use a new module name).</t>
+              <t>A mechanism is REQUIRED to update a module in a non backwards compatible way without forcing all clients/servers to access data nodes in the model on new paths, or in a new namespace. Specifically, if a particular data node has not been updated in
+                a non backwards compatible way then it must be available on the same path, and in the same namespace. Even if a particular node has been updated in a non backwards compatible way (e.g. due to a bug fix) then it may still be desirable for it to be
+                available on the same path and in the same namespace.</t>
+              <t>A refined form of YANG's 'import' statement MUST be provided that is more restrictive than "import any revision" and less restrictive than "import a specific revision". Once non backwards compatible changes to modules are allowed, the refined
+                import statement is helpful to express the correct dependency between modules.</t>
+            </list>
+          </t>
+          <t>Requirements related to identifying changes between different module revisions:
+            <list style="format 2.%d">
+              <t>Readers of modules, and tools that use modules, MUST be able to determine whether changes between two revisions of a module constitute a backwards compatible or not backwards compatible version change. In addition, it MAY be helpful to identify
+                whether change represents bug fixes, new functionality, or both.</t>
+              <t>A mechanism SHOULD be defined to determine whether particular data nodes between two arbitrary YANG module versions have been (i) not changed, (ii) changed in a backwards compatible way, (iii) changed in a non backwards compatible way.</t>
+            </list>
+          </t>
+          <t>Requirements related to supporting existing clients in a backwards compatible way:
+            <list style="format 3.%d">
+              <t>The solution MUST provide a mechanism to allow servers to support existing clients in a backwards compatible way.</t>
+              <t>The solution MUST provide a mechanism to allow servers to simultaneously support client using different versions of modules. A clients choice of particular version of one or more modules may restict the particular version of other modules that may
+                be used in the same request or session.</t>
+            </list>
+          </t>
+          <t>Requirements related to managing and documenting the life cycle of data nodes. Data nodes may be deprecated or become obsolete over time. These requirements relate to how these deprecated and obsolete data nodes are handled:
+            <list style="format 4.%d">
+              <t>A mechanism is REQUIRED to allow a client to determine whether deprecated nodes are implemented by the server. Solutions that require all deprecated nodes to be handled in the same way are acceptable. If servers are allowed to implement a subset
+                of the deprecated nodes, then the mechanism MUST allow clients to determine whether individual deprecated nodes are implemented.</t>
+              <t>A mechanism is REQUIRED to allow a client to determine whether obsolete nodes are implemented by the server. Solutions that require all obsolete nodes to be handled in the same way are acceptable. If servers are allowed to implement a subset of
+                the obsolete nodes, then the mechanism MUST allow it to determine whether individual obsolete nodes are implemented.</t>
+              <t>If a data node is deprecated or obsolete then it SHOULD be possible for the YANG module to indicate what alternatives exist.</t>
+              <t>For any data node that is currently supported, it SHOULD be possible to indicate that it will become unsupported in a future version.</t>
+              <t>If multiple revisions of a YANG module are published and currently supported, then the solution SHOULD allow for bug fixes to be made to an older revision of the module. Specifically, the solution SHOULD NOT require that all non backwards
+                compatible bug fixes are only made to the latest revision of the module.</t>
+            </list>
+          </t>
+          <t>Requirements related to documentation and education:
+            <list style="format 5.%d">
+              <t>The solution SHOULD provide guidance to model authors and clients on how to use the new YANG versioning scheme.</t>
+            </list>
+          </t>
+        </list>
+      </t>
+    </section>
+    <section anchor="contributor" title="Contributors">
+      <t>This document grew out of the YANG module versioning design team that started after IETF 101. The following people are members of that design team and have contributed to the defining the problem and specifying the requirements:</t>
+      <t>
+        <list style="symbols">
+          <t>Balazs Lengyel
+          </t>
+          <t>Benoit Claise
+          </t>
+          <t>Ebben Aries</t>
+          <t>Joe Clarke</t>
+          <t>Juergen Schoenwaelder</t>
+          <t>Mahesh Jethanandani</t>
+          <t>Michael (Wangzitao)</t>
+          <t>Qin Wu</t>
+          <t>Reshad Rahman</t>
+          <t>Rob Wilton</t>
+        </list>
+      </t>
+    </section>
+
+    <section anchor="security" title="Security Considerations">
+      <t>
+        The document does not define any new protocol or data model. There is no secutiry impact.
+      </t>
+    </section>
+    <section anchor="iana" title="IANA Considerations">
+      <t>None</t>
+    </section>
+
+  </middle>
+  <?rfc needLines="20"?>
+  <back>
+    <references title="Normative References">
+      <?rfc include="reference.RFC.7950"?>
+      <?rfc include="reference.RFC.2119"?>
+    </references>
+    <references title="Informative References">
+      <?rfc include="reference.RFC.8049"?>
+      <?rfc include="reference.RFC.8199"?>
+      <?rfc include="reference.RFC.8299"?>
+      <?rfc include="reference.I-D.clacla-netmod-yang-model-update"?>
+    </references>
+    <?rfc needLines="100"?>
+  </back>
+</rfc>
