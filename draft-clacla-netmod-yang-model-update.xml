@@ -3,13 +3,12 @@
 <!ENTITY RFC6020 SYSTEM "reference.RFC.6020.xml">
 <!ENTITY RFC7895 SYSTEM "reference.RFC.7895.xml">
 <!ENTITY RFC7950 SYSTEM "reference.RFC.7950.xml">
-<!ENTITY RFC8199 SYSTEM "reference.RFC.8199.xml">
-<!ENTITY RFC8199 SYSTEM "reference.RFC.8299.xml">
 <!ENTITY OPENCONFIG-YANG-CATALOG SYSTEM "http://xml.resource.org/public/rfc/bibxml3/reference.I-D.openconfig-netmod-model-catalog.xml">
 <!ENTITY CLAISE-SEMVER "http://xml.resource.org/public/rfc/bibxml3/reference.I-D.claise-semver.xml">
 <!ENTITY CLAISE-SEMVER "http://xml.resource.org/public/rfc/bibxml3/reference.I-D.netconf-rfc7895bis">
 <!ENTITY OPENCONFIG-YANG-CATALOG SYSTEM "http://xml.resource.org/public/rfc/bibxml3/reference.I-D.openconfig-netmod-model-catalog.xml">
 <!ENTITY CLACLA-NETMOD-MODEL-CATALOG "http://xml.resource.org/public/rfc/bibxml3/reference.I-D.clacla-netmod-model-catalog.xml">
+<!ENTITY VERDT-NETMOD-YANG-VERSIONING-REQS "http://xml.resource.org/public/rfc/bibxml3/reference.I-D.verdt-netmod-yang-versioning-reqs.xml">
 ]>
 <?xml-stylesheet type="text/xsl" href="rfc2629.xslt" ?>
 <?rfc toc="yes"?>
@@ -92,422 +91,23 @@
 </front>
 <middle>
 <section anchor="intro" title="Introduction">
-<t>
-The YANG data modeling language <xref target="RFC7950"/> specifies strict
-rules for updating YANG modules (see section 11 "Updating a Module").
-Citing a few of the relevant rules:
-
-<list style="numbers">
-<t>
-   "As experience is gained with a module, it may be desirable to revise
-   that module.  However, changes to published modules are not allowed
-   if they have any potential to cause interoperability problems between
-   a client using an original specification and a server using an
-   updated specification."
-</t>
-<t>"Note that definitions contained in a module are available to be
-   imported by any other module and are referenced in "import"
-   statements via the module name.  Thus, a module name MUST NOT be
-   changed.  Furthermore, the "namespace" statement MUST NOT be changed,
-   since all XML elements are qualified by the namespace."
-</t>
-<t>"Otherwise, if the semantics of any previous definition are changed
-   (i.e., if a non-editorial change is made to any definition other than
-   those specifically allowed above), then this MUST be achieved by a
-   new definition with a new identifier."
-</t>
-<t>
-    "deprecated indicates an obsolete definition, but it permits
-      new/continued implementation in order to foster interoperability
-      with older/existing implementations."
-</t>
-</list>
-
-What are the consequences?
-
-<list style="numbers">
-<t>
-   If a YANG module is intended to update another YANG module, the module name should not be
-   changed as it will break existing tooling and code by changing imports statements,
-   service composition at the orchestration layer, general network management applications, etc.
-</t>
-<t>
-   When the same YANG module name is kept, its new revision must be updated
-   in a backward-compatible way.
-</t>
-<t>
-    While most of the non-backward compatible changes are prohibited, a client still does not know if a
-    changed module is backward compatible, as a server may remove parts of a module after
-    marking it deprecated or obsolete.
-</t>
-</list>
-</t>
-<t>
-  This document specifies a new YANG module update procedure in case of backward-incompatible
-  changes, as an alternative proposal to the YANG 1.1 specifications. This document updates RFC 7950.
-</t>
-<t>
-  This document does not address the potential need of an automatic way to discover that a YANG-MODULE-B
-  obsoletes YANG-MODULE-A, so that YANG-MODULE-A should not be given any attention. This problem is
-  currently solved by RFC obsolete tag as a level of indirection between the YANG modules.
-</t>
+<t>This document puts forth a solution to the problems described in <xref target="I-D.verdt-netmod-yang-versioning-reqs"/>
+ by proposing changes to <xref target="RFC7950"/> to address the various requirements that <xref target="I-D.verdt-netmod-yang-versioning-reqs"/> specifies.
+At this time, the solution herein addresses requirements 1.1, 1.2, 1.3, 2.1, 4.1, 4.2, 4.3, 5.1, and 5.2.  Current gaps are documented in
+<xref target="open_issues_reqs"/> below.</t>
 </section>
-
-<section anchor="how_is_YANG_used_today" title="How is YANG Used Today">
-    <t>
-    TO DO: this is not a complete section, but only the starting point. We must explain how a module change
-	propagates into two dimensions: 1. the import and deviation. 2. the service composition via controller and
-	orchestrator.
-	We must show all all the scripts are affected and that minimizing the script changes should be a goal
-    </t>
-	<t>
-    Let's assume for a moment that we change the name of a YANG module when making a backwards-incompatible change, with the specific example of
-    ietf-routing, which some propose to update to ietf-routing-2.  <xref target="yangcatalog"/> provides tooling
-    that shows the interdependencies of YANG modules.
-    </t>
-    <t>
-    Here are the over 30 modules that depend on ietf-routing
-    <eref target="https://www.yangcatalog.org/yang-search/impact_analysis.php?modules[]=ietf-routing&amp;recurse=0&amp;rfcs=1&amp;show_subm=1&amp;show_dir=dependents"/>.
-    </t>
-    <t>
-    Let's look at the difference for ietf-routing-2:
-    <eref target="https://www.yangcatalog.org/yang-search/impact_analysis.php?modules[]=ietf-routing-2&amp;recurse=0&amp;rfcs=1&amp;show_subm=1&amp;show_dir=dependents"/>.
-    </t>
-    <t>
-    Changing the module name from ietf-routing to ietf-routing-2 implies that the we have to warn all draft authors of
-    ietf-routing YANG dependent modules. First, to make sure they are aware of ietf-routing-2 (publishing a RFC8022bis
-    mentioning in the module description that this module is not compatible with the NMDA architecture, and providing
-    a pointer to ietf-routing-2 requires manual, tedius work). And second, to ask them to change
-    their import (or service composition) to ietf-routing-2. Hopefully, in the ietf-routing case, most dependent YANG
-    modules are part of the IETF, so the communication is a manageable.
-    For the already existing dependent vendor modules the problem is worse.  And then there are network management applications
-    that may already be using ietf-routing that would require new code to handle ietf-routing-2.
-    </t>
-    <t>
-    Changing the ietf-interfaces YANG module name would be a different challenge, as it's used throughout the industry:
-    <eref target="https://www.yangcatalog.org/yang-search/impact_analysis.php?modules[]=ietf-interfaces&amp;recurse=0&amp;rfcs=1&amp;show_subm=1&amp;show_dir=dependents"/>
-    </t>
-      <section title="Client Behavoir - Need to Check Revisions and More">
-        <t>
-          When a client contacts a YANG server,
-it first needs to read data from ietf-yang-library including supported modules, their
-revisions, deviations, and supported features. While theoretically just the
-module name and the path would identify a YANG schema node, in practice a schema
-node MAY NOT be available if
-          <list style="symbols">
-            <t>it was introduced or modified by a newer revision of the YANG module than
-            what is supported by the server</t>
-            <t>a feature covering it is not supported</t>
-            <t>a deviation removes it</t>
-          </list>
-So even if a YANG module is developed in a fully compatible way the client must check
-at least the three items above before it can reliably use a schema node.
-        </t>
-      </section>
-    </section>
-
-
-  <section anchor="problems" title="The Problems">
-  <t>
-  This section lists a series of problems, which
-  leads to the solution in the next section.
-  </t>
-
-  <section anchor="slow_standardization" title="Slow Standardization">
-    <t>
-    The points made in the introduction lead to the logical conclusion that the
-    standardized YANG modules have to be perfect on day one (at least the structure and meaning), which in
-    turn might explain why IETF YANG modules take so long to standardize. Shooting for
-    perfection is obviously a noble goal, but if the perfect standard
-    comes too late, it doesn't help the industry.
-    </t>
-  </section>
-
-  <section anchor="some_YANG_modules_are_not_backward_compatible" title="Some YANG Modules Are Not Backward Compatible">
-    <t>
-    As we learn from our mistakes, we're going to face more and more backward-incompatible
-    YANG modules. An example is the YANG data model for L3VPN service delivery <xref target="RFC8049"/>,
-    which, based on implementation experience, has been updated in a backward-incompatible
-    way by <xref target="RFC8299"/>.
-    </t>
-    <t>
-    While Standards Development Organization (SDO) YANG modules are obviously better
-    for the industry, we must recognize that many YANG modules are actually generated
-    YANG modules (for example, from internal databases), also known as native YANG modules,
-    or vendor modules <xref target="RFC8199"/>. From time to time, the new YANG modules are not
-    backward-compatible.
-    </t>
-    <t>
-      Old module parts that are no longer needed, no longer supported, or are
-not used by consumers need to be removed from modules. It is often hard
-to decide which parts are no longer needed/used; still the need and
-practice of removing old parts exist. While it is rare in standard modules it
-is more common in vendor YANG modules where the usage of modules is more controlled.
-    </t>
-    <t>
-      The problems described in <xref target='clear_indication_of_node_support'/>
-      may also result in incompatible changes.
-    </t>
-    <t>
-    In such cases, it would be better to indicate how backward-compatible a given YANG module
-    actually is.
-    </t>
-    <t>As modules are sometimes updated in an incompatible way the current
-    assumption that once a YANG module is defined all further revisions can be freely
-    used as they are compatible is not valid.</t>
-  </section>
-
-  <section title="Non-Backward Compatible Errors">
-      <t>
-          Sometimes small errors force us to make non-backward compatible updates. As an example imagine that we have
-          a string with a complex pattern (e.g., an IP address). Let's assume the initial pattern
-          incorrectly allows IP addresses to start with 355. In the next version this is corrected to
-          disallow addresses starting with 355. Formally this is an non-backward compatible change as the value space
-          of the string is decreased. In reality an IP address and the implementation behind it
-          was never capable of handling an address starting with 355. So practically this is a backward compatible change,
-          just like a correction of the description statement. Still current YANG rules would force
-          a module name change.
-      </t>
-  </section>
-<!--
-EDITOR NOTE: I don't think we need this justification anymore.
-
-  <section anchor="a_zoo_of_yang_modules" title="A Zoo of YANG Modules">
-    <t>
-    Even if we focus on the IETF, we have to observe that many SDOs, opensource fora,
-    and vendors develop YANG modules.
-    This should be considered a success for an IETF developed technology. However, the
-    operators are faced with this problem: how to select the YANG modules to take
-    into account for their service developments.
-    </t>
-    <t>
-    The site <eref target="https://www.yangcatalog.org"/> (and the YANG catalog that it provides:
-    YANG module for yangcatalog.org, <xref target="I-D.clacla-netmod-model-catalog"/>) is an attempt to
-    become a reference for all YANG modules available in the industry, for both YANG developers
-    to search on what exists already) and for operators (to discover the more mature YANG models
-    to automate services). This YANG catalog should not only contain pointers to the YANG modules
-    themselves, but also contain metadata related to those YANG modules: What is the module type
-    (service model or not?); what is the maturity level? (e.g., for the IETF: is this an RFC, a
-    working group document or an individual draft?); is this module implemented?; who is the contact?;
-    is there open-source code available? And we expect many more in the future. The industry has
-    begun to understand that the metadata related to YANG models become equally important as the
-    YANG models themselves.
-    </t>
-    <t>
-    The yangcatalog.org instantiation of the catalog provides a means for module authors and
-    vendors implementing modules to upload their metadata, which is then searchable via an API,
-    as well as using a variety of web-based tools.  The instructions for contributing and searching
-    for metadata can be found at <eref target="https://www.yangcatalog.org/contribute.php"/>.
-    </t>
-    <t>
-    The issue is actually the number of YANG modules the operators are offered. At the time of
-    writing this document, the number of unique YANG modules in the catalog is exactly 2596 (and
-    that number keeps growing), while the IETF has standardized or is busy standardizing a small
-    subset of those. Therefore, it's important to distinguish the relevant YANG modules with the
-    pack and to understand the relationship between the YANG modules.
-    </t>
-  </section>
-
-  <section anchor="yang_modules_obsolete_relationship" title="YANG Modules Obsolete Relationship">
-    <t>
-    So the operators use the yangcatalog.org to discover which YANG modules they can use NOW.
-    They base their selection not only on the YANG module content, but also on the related
-    metadata. When faced with the zoo of the YANG modules, it's difficult to understand the
-    relationship between YANG modules. As an example: how could an operator discover that
-    YANG-MODULE-B obsoletes YANG-MODULE-A? Indeed, both have different YANG module names.
-    The only available information is an "obsolete" tag in the published RFC containing YANG-MODULE-B:
-    this tag would point to YANG-MODULE-A. In the world of automation, going through a
-    published RFC as a level of indirection to understand the YANG module obsolete relationship
-    is a non-starter. Food for thought: the IETF should stop thinking that the metric for success
-    is an RFC number, as opposed to the contained YANG module(s).
-    </t>
-    <t>
-    We need an automatic way to discover that a YANG-MODULE-B obsoletes YANG-MODULE-A, so that
-    YANG-MODULE-A should not be given any attention.
-    </t>
-    <t>
-
-    The following example is not an automatic way.
-    </t>
-    <figure>
-       <artwork>
-    description
-        "This YANG module defines a generic service configuration
-        model for Layer 3 VPNs. This model is common across all
-        vendor implementations. This obsoletes the RFC8049 YANG
-        module, ietf-l3vpn-svc@2017-01-2";
-    revision 2017-09-14 {
-        description
-        "First revision of RFC8049.";
-        reference
-        "RFC xxxx: YANG Data Model for L3VPN Service Delivery";
-       </artwork>
-    </figure>
-    <t>
-    Along the same lines, while going through an out-of-band tool such as the yangcatalog.org in order
-    to discover the obsolete relationship is a possible automatic way, it is not ideal.
-    </t>
-  </section>
--->
-
-
-  <section title="No way to easily decide whether a change is Backward Compatible">
-      <t>
-           A management system, SDN controller or any other user of a module should be
-capable of easily determining the compatibility between two module versions.
-Higher level logic for a network function,
-something that can not be implemented in a purely model driven way, is always
-dependent on a specific version of the module. If the client finds that
-the module has been updated on the network node, it has to decide if it tries to
-handle it as it handled the previous version of the model or if it just stops, to
-avoid problems. To make this decision the client needs to know if the module
-was updated in a backward compatible way or not.
-</t>
-<t>
-This is not possible to decide today because of the following:
-<list style="symbols">
-    <t>It is possible to change the semantic behavior of a data node, action or rpc
-while the YANG definition does not change (with the possible exception of the
-description statement). In such a case it is impossible to
-determine whether the change is backward compatible just by looking at the YANG statements.
-Its only the human model designer that
-can decide.</t>
-<t>Problems with the deprecated and obsolete status statement, <xref target='clear_indication_of_node_support'/></t>
-<t>Modelers might decide to violate  YANG 1.1 update rules for some of the reasons above</t>
-</list>
-Finding status changes or violations of update rules need a line by line
-comparision of the old and new modules, no easy task.
-      </t>
-  </section>
-
-  <section title="No good way to specify which module revision to import">
-    <t>
-      If a module (MOD-A) is imported by another one (MOD-B) the importer may specify
-which revision must be imported. Even if MOD-A is developed in
-backward-compatible way not all revisions will be suitable,
-e.g., a new MOD-B might need the newest MOD-A. However, both specifying or
-omitting the revision date for import leads to problems.
-    </t>
-    <t>
-If the import by revision-date is specified
-    <list  style="symbols">
-      <t>
-        If corrections are made to MOD-A these would not have any effect as the
-import’s revision date would still point to the un-corrected earlier YANG module revision.
-      </t>
-      <t>
-        If MOD-A is developed in a backward-compatible way because another importer (MOD-C)
-needs some functionality, the new MOD-A could be used by MOD-B, but specifying
-the exact import revision-date prevents this. This will force the implementers to
-import two different revisions of MOD-A, forcing them to maintain old MOD-A
-revisions unnecessarily.
-      </t>
-      <t>
-        If multiple modules import different revisions of MOD-A the human user will
-need to understand the subtle differences between the different revisions.
-Small differences would easily lead to operator mistakes as the operator will
-rarely check the documentation.
-      </t>
-      <t>
-        Tooling/SW is often not prepared to handle multiple revisions of the same YAM.
-      </t>
-    </list>
-    </t>
-    <t>
-If the import revision-date is not specified
-    <list  style="symbols">
-      <t>
-        any revision of MOD-A may be used including unsuitable ones. Older revisions
-may be lacking functionality MOD-B needs. Newer MOD-A revisions may obsolete
-definitions used by MOD-B in which case these must not be used by MOD-B anymore.
-      </t>
-      <t>
-        As it is not specified which revisions of MOD-A
-are suitable for MOD-B. The problem has to solved on a case by case basis
-studying all the details of MOD-A and MOD-B which is a big work.
-      </t>
-    </list>
-    </t>
-  </section>
-
-    <section title="Early Warning about Removal">
-      <t>
-        If a schema part is considered old/bad we need to be able to give
-advance warning that it will be removed.  As this is an advance
-warning the part must still be present and usable in the current
-revision; however, it will be removed in one of the next revisions.
-The  deprecated statement cannot be reliably used for this purpose
-both because deprecated nodes may not be implemented and also there
-is no mandate that text be provided explaining the deprecation.
-    </t>
-    <t>
-We need the advance warning to allow users of the module time
-to plan/execute migration away from the deprecated functionality.
-Deprecation should be accompanied by information whether the
-functionality will just disappear or that there is an alternative,
-possibly more advanced solution that should be used.
-    </t>
-    <t>
-Vendors use such warnings often, but the NMDA related redesign of
-IETF modules is also an example where it would be useful for IETF. As
-another example, see the usage of deprecated in the Java programing
-language.
-      </t>
-    </section>
-  <section title="Clear Indication of Node Support" anchor="clear_indication_of_node_support">
-      <t>
-      The current definition of deprecated and obsolete in <xref target="RFC7950"/> (as quoted below) is problematic and should be
-corrected.
-<list style="symbols">
-<t>"deprecated" indicates an obsolete definition, but it permits
-      new/continued implementation in order to foster interoperability
-      with older/existing implementations.</t>
-<t>"obsolete" means that the definition is obsolete and SHOULD NOT be
-      implemented and/or can be removed from implementations.</t>
-</list>
-</t>
-<t>YANG is considered an interface contract
-between the server and the client.  The current definitions of
-deprecated and obsolete mean that a schema node that is either deprecated or
-obsolete may or may not be implemented. The client has no way to
-find out which is the case except for by trying to write or read data at
-the leaf in question. This probing would need to be done for
-each separate data-node, which is not a trivial thing to do.  This "may or
-may not" is unacceptable in a contract.  In effect, this works as if
-there would be an if-feature statement on each deprecated schema node
-where the server does not advertise whether the feature is supported or
-not.  Why is it not advertised?
-      </t>
-  </section>
-
-</section>
-
-<section anchor="the_requirements" title="The Requirements">
-
-  <section title="Need to Allow Non-Backward Compatible changes">
-      <t>
-          As described in the previous sections, there is a need to allow non-backward compatible changes
-          without changing a module's name. This would avoid many of the problems stated above.  Allowing non-backward compatible changes to happen without a module
-      name change will decrease the number of separate modules to handle and will make it a trivial
-      task to track these non-backward compatible changes.</t>
-
-      <!-- EDITOR QUESTION: Do we want to say anything about creating a new module?  That seems to me to be understood. -->
-  </section>
-
-</section>
-
 <section anchor="the_solution" title="The Solution">
   <t>
   The solution is composed of five parts:
        <list style="numbers">
        <t>A semantic versioning YANG extension, along with an optional additional check that validates
 	      the semantic versioning from a syntactic point of view, which can either assist in
-		  determining the correct semantic versioning values, or which can help in determining
-		  the values for YANG modules that don't support this extension. </t>
-       <t>The import by version statement"</t>
+		  determining the correct semantic versioning value, or which can help in determining
+		  the values for YANG modules that do not support this extension. </t>
+       <t>An import by semantic version statement</t>
        <t>Updates to the YANG 1.1 module update rules</t>
-	   <t>Updates to ietf-yang-library</t>
-       <t>The deprecated and obsolotes Reason"</t>
+	     <t>Updates to ietf-yang-library</t>
+       <t>An introduction of deprecated and obsolote reason clauses</t>
      </list>
   </t>
 
@@ -517,7 +117,7 @@ not.  Why is it not advertised?
     The semantic versioning solution proposed here has already been proposed in
     <xref target="I-D.openconfig-netmod-model-catalog "/> (included here with
     the authors' permission) which itself is based on <xref target="openconfigsemver"/>.
-    The goal is to indicate the YANG module backwards (in)compatibility, following semver.org
+    The goal is to indicate the YANG module backward (in)compatibility, following semver.org
     semantic versioning <xref target="semver"/>:
     </t>
     <t>
@@ -535,7 +135,8 @@ not.  Why is it not advertised?
 	<t>
     The semantic version value is set by the YANG module developer at the design and implementation times.
     Along these lines, we propose the following YANG 1.1 extension for a more generic
-      semantic version.  The formal definition is found at the end of this document.</t>
+      semantic version.  The formal definition is found at the end of this document.  This semantic version
+    extension and the text below address requirements 1.1, 1.2, 2.1, 5.1 and 5.2 of <xref target="I-D.verdt-netmod-yang-versioning-reqs"/>.</t>
     <figure>
       <artwork>
         extension module-version {
@@ -647,7 +248,7 @@ not.  Why is it not advertised?
      The pyang utility checks many of the points listed in section 11 of <xref target="RFC7950"/> for known module incompatibilities.
      While this approach is a good way to programmatically obtain a semantic version number, it does not address all cases
      whereby a major version number might need to be increased.  For example, a node may have the same name and same type, but
-     its meaning may change from one revision of a module to another.  This represents a semantic change that breaks backwards
+     its meaning may change from one revision of a module to another.  This represents a semantic change that breaks backward
      compatibility, but the above algorithm would not find it.  Therefore, additional, sometimes manual, rigor must be done
      to ensure a proper version is chosen for a given module revision.
    </t>
@@ -678,6 +279,7 @@ not.  Why is it not advertised?
 
        <t>The ietf-semver module provides another extension, import-versions that is a child of
          import and specifies the rules for an acceptable set of versions of the given module.
+         This extension addresses requirement 1.3 of <xref target="I-D.verdt-netmod-yang-versioning-reqs"/>.
          The structure of this extension is specified as follows:</t>
 
       <t>TODO: How to specify this? One thought is below, not fully formalized as this
@@ -775,9 +377,10 @@ import example-module {
 
   <section title="Updates to YANG 1.1 Module Update Rules" anchor="update_rules">
       <t>
-          RFC 7950 section 11, must be updated to allow for non-backwards changes provided they follow the
-          semantic versioning guidelines and increase the MAJOR version number when a backwards incompatible
-          change is made.  The following is proposed text for this change.</t>
+          RFC 7950 section 11, must be updated to allow for non-backward changes provided they follow the
+          semantic versioning guidelines and increase the MAJOR version number when a backward incompatible
+          change is made.  This change is in the spirit of requirement 5.1 from <xref target="I-D.verdt-netmod-yang-versioning-reqs"/>.
+          The following is proposed text for this change.</t>
 
       <t>
       "As experience is gained with a module, it may be desirable to revise that module.
@@ -794,7 +397,7 @@ import example-module {
         of the associated module and revision in a given module-set.  The related submodule-version leaf is added at
         /yanglib:yang-library/yanglib:module-set/yanglib:module/yanglib:submodule to indicate the semantic version of
         a submodule.</t>
-      <t>In order to satisfy the requirement that deprecated and obsolete node presence and operation are easily and clearly
+      <t>In order to satisfy the requirements 4.1 and 4.3 of <xref target="I-D.verdt-netmod-yang-versioning-reqs"/> that deprecated and obsolete node presence and operation are easily and clearly
         known to clients, ietf-semver also augments the ietf-yang-library with two additional boolean leafs at
         /yanglib:yang-library/yanglib:module-set/yanglib:module.  A client can make one request of the ietf-yang-library and
         know whether or a not a module that has deprecated or obsolete has those nodes implemented by the server, as opposed to
@@ -803,7 +406,7 @@ import example-module {
           <t hangText="deprecated-nodes-present :">A boolean that indicates whether or not this server implements deprecated nodes.
            The value of this leaf SHOULD be true; and if so, the server MUST implement nodes
            within this module as they are documented.  If specific deprecated nodes are not
-           implemented as document, then they MUST be listed as deviations.  This leaf defaults to true.</t>
+           implemented as documented, then they MUST be listed as deviations.  This leaf defaults to true.</t>
           <t hangText="obsolete-nodes-present :">A boolean that indicates whether or not this server implements obsolete nodes.
            The value of this leaf SHOULD be false; and if so, the server MUST NOT implement
            nodes within this module. If this leaf is true, then all nodes in this module MUST
@@ -819,7 +422,7 @@ import example-module {
        <t>Module compatibility can be affected if values other than the default are used for the leafs described here.
          For example, if a server does
          not implemennt deprecated nodes, then a given module revision may be incompatible with a previous revision where
-         the nodes were not deprecated.  When calculating backwards compatibility, the default values of these
+         the nodes were not deprecated.  When calculating backward compatibility, the default values of these
          leafs MUST be considered.  From a client's point of view, if two module revisions have the same MAJOR version
          but the run-time value of deprecated-nodes-present (as read from the ietf-yang-library) is false, then
          compatibility MUST NOT be assumed based on the module-version alone.</t>
@@ -827,10 +430,11 @@ import example-module {
 
   <section title="Deprecated and Obsolete Reasons" anchor="deprecated_and_obsolete_reasons">
     <t>The ietf-semver module specifies an extension, status-description, that is designed to be used as
-      a substatement of the status statement when the status is deprecated or obsolete.  This argument to
+      a substatement of the status statement when the status is deprecated or obsolete.  The argument to
       this extension is freeform text that explains why the node was deprecated or made obsolete.  It may also
       point to other schema elements that take the place of the deprecated or obsolete node.  This text
       is designed for human consumption to aid in the migration away from nodes that will one day no longer work.
+      These extensions address requirement 4.2 of <xref target="I-D.verdt-netmod-yang-versioning-reqs"/>.
       An example is shown below.</t>
 
       <figure>
@@ -931,7 +535,7 @@ leaf imperial-temperature {
          in development, and is potentially subject to change.
 
          Following a release of major version 1, all modules will
-         increment major revision number where backwards incompatible
+         increment major revision number where backward incompatible
          changes to the model are made.
 
          The minor version is changed when features are added to the
@@ -941,12 +545,12 @@ leaf imperial-temperature {
          The patch-level version is incremented when non-feature changes
          (such as bugfixes or clarifications to human-readable
          descriptions that do not impact model functionality) are made
-         that maintain backwards compatibility.
+         that maintain backward compatibility.
          When major or minor version is stepped, the patch-level is
          reset to 0.
 
          By comparing the module-version between two revisions of a
-         given module, one can know if different revisions are backwards
+         given module, one can know if different revisions are backward
          compatible or not, as well as
          whether or not new features have been added to a newer revision.
 
@@ -1097,11 +701,9 @@ leaf imperial-temperature {
 <references title="Normative References">
    <?rfc include='reference.RFC.7950'?>
    <?rfc include='reference.RFC.7895'?>
+   <?ref include='reference.I-D.verdt-netmod-yang-versioning-reqs'?>
 </references>
 <references title="Informative References">
-   <?rfc include='reference.RFC.8049'?>
-   <?rfc include='reference.RFC.8199'?>
-   <?rfc include='reference.RFC.8299'?>
    <?rfc include='reference.I-D.openconfig-netmod-model-catalog'?>
    <?rfc include='reference.I-D.claise-semver'?>
    <?rfc include='reference.I-D.clacla-netmod-model-catalog'?>
@@ -1131,10 +733,28 @@ leaf imperial-temperature {
 <?rfc needLines="100"?>
 
 <section anchor="appendix" title="Appendix">
-  <section anchor="open_issues" title="Open Issues">
+  <section anchor="open_issues_reqs" title="Open Issues: Requirements to be Addressed">
     <t>
-        There are a number of open issues to be disccused.  These include the following:
+        There are a few requirements of
+        <xref target="I-D.verdt-netmod-yang-versioning-reqs"/> still to be addressed.  These include the following:
     </t>
+
+    <t>
+      <list style="symbols">
+        <t>A solution is required for client compatibility to address requirements 3.1 and 3.2 from <xref target="I-D.verdt-netmod-yang-versioning-reqs"/>.
+        This could include adding "module sets" support to ietf-yang-library where the client can choose one set with which to use.</t>
+        <t>A solution for instance data to satisfy requirement 5.3 of <xref target="I-D.verdt-netmod-yang-versioning-reqs"/> is also required.</t>
+        <t>While it is believed one could work within this semver scheme to support multiple parallel trains of development within a given
+          YANG module, some thought should be given to how this would work in support of optional requirement 4.4 of
+          <xref target="I-D.verdt-netmod-yang-versioning-reqs"/>.</t>
+        <t>While not mandatory, requirement 2.2 of <xref target="I-D.verdt-netmod-yang-versioning-reqs"/> looks to provide a way to determine,
+        at the node level, whether or not changes have occurred between revisions of a given YANG module.  This may require application
+        of semver at the node level.</t>
+      </list>
+    </t>
+  </section>
+  <section anchor="open_issues" title="Open Issues">
+    <t>Additionally, there are a few open issues to be discussed and settled.  These include the following:</t>
 
     <t>
       <list style="symbols">
@@ -1154,25 +774,6 @@ leaf imperial-temperature {
           Re-using the '@' for version is not ideal, so another separator character should be used.
           In this manner, both version and revision could be used.
           </t>
-        <t>Taking another page from Openconfig, the notion of a module bundle could be considered. That is, there
-          may need to be a way to enumerate modules that are part of a bundle and are known to interoperate.  This
-          may not be as critical if a rich import-by-version is defined.
-          <vspace/>
-          While the issue is interesting, it will be not be handled in this document.</t>
-        <t>Similarly, the concept of a feature bundle should be considered.  Typically, operators combine and test YANG modules
-          to build value-add services.  These bundles form releases for specific features or services, and it is critical
-          to ensure as the modules evolve, the bundles can coherently evolve with them.
-          <vspace/>
-          While the issue is interesting, it will be not be handled in this document.
-          </t>
-        <t>When we'll start using this new procedure for a new YANG module revision,
-        will we have to update all the dependent YANG modules to start using this
-        new procedure, along with the new import statement? Is this a moot point,
-        as a new YANG module name would suffer from the same symptoms?
-        <vspace/>
-        We see no need for updating other dependent modules. It is a good idea to
-        update them, as they will benefit from using SEMVER, however there is no specific
-        need to update them.</t>
       </list>
     </t>
   </section>
