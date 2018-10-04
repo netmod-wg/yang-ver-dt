@@ -1,0 +1,530 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE rfc SYSTEM "rfc2629.dtd" [
+  <!ENTITY RFC6020 SYSTEM "reference.RFC.6020.xml">
+  <!ENTITY RFC7895 SYSTEM "reference.RFC.7895.xml">
+  <!ENTITY RFC7950 SYSTEM "reference.RFC.7950.xml">
+  <!ENTITY RFC8199 SYSTEM "reference.RFC.8199.xml">
+  <!ENTITY RFC8299 SYSTEM "reference.RFC.8299.xml">
+  <!ENTITY RFC8049 SYSTEM "reference.RFC.8049.xml">
+  <!ENTITY RFC2119 SYSTEM "reference.RFC.2119.xml">
+]>
+<?xml-stylesheet type="text/xsl" href="rfc2629.xslt" ?>
+<?rfc toc="yes"?>
+<?rfc tocompact="yes"?>
+<?rfc tocdepth="4"?>
+<?rfc tocindent="yes"?>
+<?rfc symrefs="yes"?>
+<?rfc sortrefs="yes"?>
+<?rfc comments="yes"?>
+<?rfc inline="yes"?>
+<?rfc compact="yes"?>
+<?rfc subcompact="no"?>
+<rfc category="info" ipr="trust200902" docName="draft-verdt-netmod-yang-solutions-00">
+  <front>
+    <title abbrev="YANG Versioning Potential Solutions">YANG Versioning Potential Solutions</title>
+
+    <author initials="R." surname="Wilton" fullname="Robert Wilton">
+      <organization>Cisco Systems, Inc.</organization>
+    </author>
+  <!--
+    <author initials="J." surname="Clarke" fullname="Joe Clarke">
+      <organization>Cisco Systems, Inc.</organization>
+      <address>
+        <postal>
+          <street>7200-12 Kit Creek Rd</street>
+          <city>Research Triangle Park</city>
+          <region>North Carolina</region>
+          <country>United States of America</country>
+        </postal>
+        <phone>+1-919-392-2867</phone>
+        <email>jclarke@cisco.com</email>
+      </address>
+    </author>
+-->
+    <date/>
+    <abstract>
+      <t>
+	This document describes and compares the different types
+	of solution to the requirements stated in section 5 of the
+	YANG versioning requirements draft.  The aim of this draft is
+	to aid both the Netmod WG and YANG versioning design team in
+	choosing, and subsequently progressing, a particular solution
+	to the YANG versioning requirements.
+      </t>
+    </abstract>
+
+  </front>
+  <middle>
+    <section anchor="terminology" title="Terminology and Conventions">
+      <t>The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "SHOULD NOT", "RECOMMENDED", "MAY", and "OPTIONAL" in this document are to be interpreted as described in
+        <xref target="RFC2119"/>.</t>
+	<t>
+	  This document also makes use of the terminology introduced in the YANG versioning requirements draft (REF REQUIRED).
+	  In addition, this document introduces the following terminology:
+        <list style="symbols">
+          <t>bc: Used as an abbreviation for a backwards compatible change.</t>
+	  <t>nbc: Used as an abbreviation for a non backwards compatible change.</t>
+        </list>
+      </t>
+    </section>
+    <section anchor="intro" title="Introduction">
+      <t>This document initially considers the types of different
+      solution, along with any significant variants, that
+      may be able to address the requirements in the YANG versioning
+      requirements draft.</t>
+
+      <t>It then objectively considers the benefits and drawbacks of
+      each solution for addressing each of the requirements.</t>
+
+      <t>Finally, it recommends the basis of a particular solution
+      that the YANG versioning design team considers should be progressed
+      to a WG adopted document.</t>
+    </section>
+    <section anchor="background" title="Background">
+      <t>
+	The design team already has a potential solution that some
+	members of the design team believe is on the right track.  The
+	purpose of this document is to help show that the design team
+	has properly considered all available options before
+	converging on a particular solution.
+      </t>
+    </section>
+
+    <section anchor="reqs" title="Summary of requirements">
+      <t>The requirement themselves are documented in section 5 of
+      XXX.  A shortened, non normative, summary of each of the
+      requirements (using the same requirement numbers) is provided
+      below to aid comprehension of the following sections. [Full
+      requirement text is also currently in an appendix.]</t>
+      
+      <t>
+        <list style="Bullets">
+              <t>Req 1.1 - MUST support nbc updates without breaking imports.</t>
+              <t>Req 1.2 - MUST support nbc updates without breaking paths.</t>
+              <t>Req 1.3 - MUST support import stmt restricted to only some revisions.</t>
+              <t>Req 2.1 - MUST be able to determine if two arbitrary versions of any MODULE are unchanged, bc, or nbc.</t>
+              <t>Req 2.1 - SHOULD be able to determine if two arbitrary versions of any DATA NODE are unchanged, bc, or nbc.</t>
+              <t>Req 3.1 - MUST allow servers to support existing clients.</t>
+	      <t>Req 3.2 - MUST allow for simultaneously support of clients using different (perhaps restricted) revisions.</t>
+              <t>Req 4.1 - MUST provide way to indicate if deprecated nodes are implemented.</t>
+	      <t>Req 4.2 - MUST be able to document reason for lifecycle changes, and possible alternative data nodes.</t>
+	      <t>Req 4.3 - MUST be able to forewarn of future lifecycle changes.</t>
+	      <t>Req 4.4 - SHOULD allow bugfixes to older revision of a module.</t>
+              <t>Req 5.1 - MUST provide guidance on how to use the new scheme.</t>
+	      <t>Req 5.2 - MUST provide, and document, an upgrade path from exising YANG/protocols.</t>
+	      <t>Req 5.3 - MUST consider versioning impact on instance data.</t>
+        </list>
+      </t>
+    </section>
+    <section anchor="det_solutions" title="Potential solutions">
+      <t>
+	This first part of this section considers solutions that are
+	aimed at solving the main YANG versioning requirements.  The
+	second part of this section lists other partial solutions that
+	aim to solve particular requirements and would need to be used
+	in conjunction with one of the main solutions described above.</t>
+      <section title="Potential solutions to core YANG versioning issues">
+      <t>The main solutions that are considered to potentially address
+      the main YANG versioning requirements are:
+        <list style="numbers">
+          <t>A module level semantic versioning based solution.</t>
+	  <t>A module level non-semantic versioning based solution.</t>
+          <t>Major version numbers are encoded into the module name.</t>
+          <t>Follow existing RFC 7950 rules, i.e. new revisions are always backwards compatible.</t>
+        </list>
+      </t>
+      <section title="Solution 1: A module level semantic versioning based solution">
+	<t>This solution introduces a module level version number that follows semantic versioning rules.</t>
+	<t>Significant advantages:
+	<list style="numbers">
+	  <t></t>
+        </list>
+	</t>
+	<t>Significant disadvantages:
+	<list style="numbers">
+	  <t></t>
+        </list></t>
+
+	<t>Variants:
+	<list>
+	  <t>A 4 part semantic version number has been suggested
+	  instead of the 3 part semantic version number described at
+	  semver.org, with 2 major version change components.  The
+	  idea here is to allow different product release trains to
+	  modify the first digit, which would still allow major
+	  version changes to occur within a release train.
+	  </t>
+	  <t>Should all nbc bugfixes be strictly regarded as major
+	  version changes?  Or should there be some leeway here?
+	  </t>
+	  <t>How closely the semantic version number follow the
+	  semver.org rules?  The clacla draft currently has a
+	  slightly different interpretation.
+	  </t>
+	</list>
+	</t>
+      </section>
+      <section title="Solution 2: A module level non-semantic versioning based solution">
+	<t>This solution introduces a module level version number (or
+	string), but the version number is not tied to whether nbc
+	changes have been made.  Instead, a separate mechanim,
+	e.g. data node level nbc checks, must be used to determine
+	whether changes between two revisions are backwards compatible
+	or not.</t>
+	<t>Significant advantages:
+	<list style="numbers">
+	  <t></t>
+        </list>
+	</t>
+	<t>Significant disadvantages:
+	<list style="numbers">
+	  <t></t>
+        </list></t>
+
+	<t>Variants:
+	<list>
+	  <t>The main question is what semantics the version number takes, and what rules, if any, it follows.</t>
+	</list>
+	</t>
+      </section>
+      <section title="Solution 3: Major version numbers are encoded into the module name">
+	<t>The idea here is require new YANG module versions whenever
+	a nbc change is made, but introduce changes to the protocols
+	(and perhaps YANG import/namespace rules) to minimize the
+	impact of making such a change.  Naming of modules would have to follow a rigid convention, (e.g. version X of a module would be 'module-name-X', if X is 2 or greater.) </t>
+	<t>Significant advantages:
+	<list style="numbers">
+	  <t></t>
+        </list>
+	</t>
+	<t>Significant disadvantages:
+	<list style="numbers">
+	  <t></t>
+        </list></t>
+
+	<t>Variants:
+	<list>
+	  <t></t>
+	</list>
+	</t>
+      </section>
+      <section title="Solution 4: Follow existing RFC 7950 rules">
+	<t>The first 'solution' is to decide that the existing
+	mechnaism described in RFC 7950, that disallows any non
+	backwards compatible changes in a given model, is the best way
+	forward. Instead of making a nbc chagne, the modeller can
+	introduce new parallel nodes, and deprecate the existing nodes
+	within the same module.  Alternatively an entirely new module,
+	with a separate name and namespace can be introduced. </t>
+	<t>As a solution, this cannot meet all of the requirements
+	stated in the requirements draft.</t>
+	<t>If this solution was sufficent, then the YANG versioning
+	design team would not have been formed.  However, some vendors
+	are pragmatically ignoring the strict YANG module update rules
+	(e.g. for vendor modules).</t>
+	<t>Significant advantages:
+	<list style="numbers">
+	   <t>No significant change in YANG language semantics
+	   required.  Changes, or perhaps extensions, could be made to
+	   the YANG language to address some of other requirements
+	   that have independent solutions.</t>
+        </list>
+	</t>
+	<t>Significant disadvantages:
+	<list style="numbers">
+	   <t>If an nbc has to be made (even for a minor feature)
+	   then there is a high impact to all clients using the
+	   module, servers implementing the module, and other YANG
+	   modules that import from the module.  This impact would be
+	   particularly acute for a core YANG module that is
+	   being updated in an nbc way, that is imported by many other
+	   YANG modules.  Hence, choosing this solution really means
+	   that there can be no nbc changes to a module unless the
+	   module is being restructed in a major way when a separate
+	   name for the module makes sense regardless.</t>
+	   <t>Seems to make standardization slow because participants
+	   are seeminly try harder to get the perfect model first
+	   because the cost of having to change it seems so high.</t>
+	   <t>Old, dead definitions can potentially never be removed
+	   from a module.</t>
+	   <t>Does not work well for vendor generated YANG models,
+	   since they cannot easily have the level or control and
+	   stability requried for it to never change.</t>
+	   <t>Does not solve the problem where deviations are used to
+	   introduce nbc changes.</t>
+	   <t>Introduces a problem where a single underlying property
+	   is represented by two (or more) independent data nodes in
+	   the same schema.  There does not appear to be a clean
+	   solution on how to manage the relationship between these
+	   two nodes (e.g. if both an old and new client are
+	   interacting with a server).  Other solutions have the
+	   potential of handling this better.</t>
+        </list></t>
+
+	<t>Variants:
+	<list>
+	<t>One variant of this solution is to agree on the rules for
+	making bugfixes to published YANG modules, and determine
+	whether that requires any changes to the section 11 text in
+	RFC 950.</t>
+	</list>
+	</t>
+      </section>
+      </section>
+      <section title="Solutions to related YANG versioning issues">
+      <t>These partial solutions address particular point
+      requirements.  How they address the requirements is described in
+      the next chapter.  The partial solutions are:
+        <list style="numbers">
+          <t>Deprecated flag - Add a flag to YANG library to indicate
+          whether deprecated nodes are implemented or not.</t>
+          <t>Redefine deprecated stmt - Change the definition of the
+          YANG deprecated statement to indicate that deprecated data
+          nodes must be implemented, or otherwise deviated.</t>
+          <t>Status description - Allow the "description" statement
+          under the YANG "status" statement to document data node
+          lifecycle, and allow for forward guidance.</t>
+	  <t>Alternative node path - Introduce a new YANG statement to
+	  provide an alternative path for a deprecated, or obsolete,
+	  data node.</t>
+	  <t>Datanode backwards compatibility detection - Tooling is
+	  used to compare two different schema trees (taking into
+	  account both features and deviations) to determine whether
+	  there are any nbc between any of the data nodes. An
+	  additional YANG statement only used in the cases that the
+	  tooling cannot spot an nbc change (e.g. change in semantics
+	  embodied in the description).  This may be the only robust
+	  solution that allows a client to know whether it is impacted
+	  by a server upgrade or not.  The comparison between schemas
+	  could be optimized to only compare the data nodes that are
+	  used by the client.</t>
+        </list>
+      </t>
+      </section>
+    </section>
+    <section anchor="solutions" title="Mapping requirements to potential solutions">
+      <section title="Req 1.1 - MUST support nbc updates without breaking imports">
+	<t>
+	</t>
+      </section>
+      <section title="Req 1.2 - MUST support nbc updates without breaking paths">
+	<t>
+	</t>
+      </section>
+      <section title="Req 1.3 - MUST support import stmt restricted to only some revisions">
+	<t>
+	</t>
+      </section>
+      <section title="Req 2.1 - MUST be able to determine if two arbitrary versions of any MODULE are unchanged, bc, or nbc.  MAY indicate type of change (bugfix or enhancement)">
+	<t>
+	</t>
+      </section>
+      <section title="Req 2.1 - SHOULD be able to determine if two arbitrary versions of any DATA NODE are unchanged, bc, or nbc">
+	<t>
+	</t>
+      </section>
+      <section title="Req 3.1 - MUST allow servers to support existing clients">
+	<t>
+	</t>
+      </section>
+      <section title="Req 3.2 - MUST allow for simultaneously support of clients using different (perhaps restricted) revisions">
+	<t>
+	</t>
+      </section>
+
+      <section title="Req 4.1 - MUST provide way to indicate if deprecated nodes are implemented.">
+	<t>This requirement has two simple solutions available:
+	<list>
+          <t>One trivial, and fully backwards compatible, solution is
+          to augment YANG library with a flag that indicates whether
+          or not deprecated nodes are implemented.  This allows a
+          server to communicate the necessary information to a
+          client.</t>
+          <t>A potentially cleaner, but not backwards compatible,
+          alternative is to change the definition of the status
+          "deprecated" statement in YANG to mean that a server must
+          still implement the data node, or otherwise explicitly
+          indicate that it is unsupported via a YANG deviation.
+          However, to be useful, it is likely that this change in
+          definition would need to be applied to all language versions
+          of YANG, rather than being restricted to a particular
+          further language version.</t>
+	</list>
+	</t>
+      </section>
+
+      <section title="Req 4.2 - MUST be able to document reason for lifecycle changes, and possible alternative data nodes.">
+        <t>This requirement could be satisfied by allowing the
+        description statement under the status statement in a YANG
+        model.</t>
+	<t>A more sophisticated solution could be to allow for an
+	additional new optional YANG statement (potentially defined in
+	a YANG extension) that specifies a absolute or relative XPath
+	to an alternative node.  This extension statement would not be
+	usable in all lifecycle changes, some would be too complex to
+	express.</t>
+      </section>
+
+      <section title="Req 4.3 - MUST be able to forewarn of future lifecycle changes.">
+        <t>This requirement could be satisfied by allowing the
+        description statement under the status statement in a YANG
+        model.</t>
+      </section>
+
+      <section title="Req 4.4 - SHOULD allow bugfixes to older revision of a module.">
+        <t>Not all solutions are likely to be able to meet this
+        requirement.  For example, a module level semver based
+        solution would not allow a non backwards compatible bugfix to
+        a older release, since it would require a new major version
+        number, and hence would need to be based on the most recent
+        major version.</t>
+	<t>There is also a discussion point concerning whether a
+	bugfix constitues a major version change at all.  This is
+	likely to entirely dependent on what the type of fix is being
+	made.  E.g. could a bugfix be to the change the type
+	associated with a leaf?</t>
+      </section>
+
+      <section title="Req 5.1 - MUST provide guidance on how to use the new scheme">
+	<t>All solutions should be able to meet this requirement
+	either via a well written solution draft, or possibly updates
+	to YANG Author Guidelines (REF required).
+	</t>
+      </section>
+
+      
+      <section title="Req 5.2 - MUST provide, and document, an upgrade path from exising YANG/protocols">
+	<t>
+	</t>
+      </section>
+
+      <section title="Req 5.3 - MUST consider versioning impact on instance data">
+	<t>
+	</t>
+      </section>
+      
+    </section>
+    <section anchor="questions" title="Open Questions">
+      <t>This section lists some of the open questions that the design
+      team is still grappling with.</t>
+      <section anchor="q1" title="Is YANG module revision date preserved?">
+	<t>With the introduction of the new versioning scheme, should
+	every YANG module still have a revision statement, or is that
+	entirely superceded by a new version statement?
+	</t>
+	<t>If preserved, then is there a requirement that all unique
+	YANG modules MUST have a unique revision date?</t>
+	<t>If preserved, and unique, then is it acceptable to break
+	the existing monotonically increasing property of the current
+	module revision date?</t>
+      </section>
+      <section anchor="q2" title="Do YANG update rules allow for bugfixes?">
+	<t>Does YANG (RFC 7950) section 11 allow nbc bugfixes to
+	existing models, and if so, are there any limits as to what
+	form those bugfixes can take, or are these strictly prohibited
+	by the module update rules?</t>
+      </section>
+      <section anchor="q3" title="Does one size fit all?">
+	<t>Potentially different types of YANG modules may want to follow different versioning semantics.</t>
+	<t>E.g. it may be right that standardized YANG modules are very slow changing and conservative in their backwards compatibility</t>
+	<t>Conversely, it is potentially more pragmatic that vendor YANG modules need to change in more significant ways mirroring changes in underlying implementations or hardware.</t>
+      </section>
+      <section anchor="q4" title="Should vendors we allowed to version YANG modules as part of a release train?">
+	<t>Some of the solutions described in this document probably
+	require vendors to version native YANG modules outside of
+	release trains, which is likely to be different to how
+	some vendors are managing this today.  Is it a reasonable
+	contraint to put on vendors that they MUST version YANG
+	modules outside of a release train to provide a cleaner
+	version history?</t>
+      </section>
+    </section>
+    <section anchor="contributor" title="Contributors">
+      <t>This document grew out of the YANG module versioning design team that started after IETF 101. The following people are members of that design team and have contributed to defining the problem and specifying the requirements:</t>
+      <t>
+        <list style="symbols">
+          <t>Balazs Lengyel</t>
+          <t>Benoit Claise</t>
+          <t>Ebben Aries</t>
+	  <t>Jason Sterne</t>
+          <t>Joe Clarke</t>
+          <t>Juergen Schoenwaelder</t>
+          <t>Mahesh Jethanandani</t>
+          <t>Michael (Wangzitao)</t>
+          <t>Qin Wu</t>
+          <t>Reshad Rahman</t>
+          <t>Rob Wilton</t>
+	  <t>Susan Hares</t>
+        </list>
+      </t>
+    </section>
+
+    <section anchor="security" title="Security Considerations">
+      <t>
+        The document does not define any new protocol or data model. There is no security impact.
+      </t>
+    </section>
+    <section anchor="iana" title="IANA Considerations">
+      <t>None</t>
+    </section>
+
+  </middle>
+  <?rfc needLines="20"?>
+  <back>
+    <references title="Normative References">
+      <?rfc include="reference.RFC.7950"?>
+      <?rfc include="reference.RFC.2119"?>
+    </references>
+    <references title="Informative References">
+      <?rfc include="reference.RFC.8049"?>
+      <?rfc include="reference.RFC.8199"?>
+      <?rfc include="reference.RFC.8299"?>
+    </references>
+    <section anchor="requirements" title="Requirements of a YANG Versioning Solution">
+      <t>The following is a list of requirements that a solution to the problems mentioned above MUST or SHOULD have. The list is grouped by similar requirements but is not presented in a set priority order.
+
+        <list style="numbers">
+          <t>Requirements related to making non-backward compatible updates to modules:
+            <list style="format 1.%d">
+              <t>A mechanism is REQUIRED to update a module in a non-backward compatible way without forcing all modules with import dependencies on the updated module from being updated at the same time (e.g. to change its import to use a new module name).</t>
+              <t>A mechanism is REQUIRED to update a module in a non-backward compatible way without forcing all clients/servers to access data nodes in the model on new paths, or in a new module namespace. Specifically, if a particular data node is updated in a
+                non-backward compatible way then it may be desirable for it to be available on the same path and in the same module namespace.</t>
+              <t>A refined form of YANG's 'import' statement MUST be provided that is more restrictive than "import any revision" and less restrictive than "import a specific revision". Once non-backward compatible changes to modules are allowed, the refined
+                import statement is used to express the correct dependency between modules.</t>
+            </list>
+          </t>
+          <t>Requirements related to identifying changes between different module revisions:
+            <list style="format 2.%d">
+              <t>Readers of modules, and tools that use modules, MUST be able to determine whether changes between two revisions of a module constitute a backward compatible or non-backward compatible version change. In addition, it MAY be helpful to identify
+                whether changes represent bug fixes, new functionality, or both.</t>
+              <t>A mechanism SHOULD be defined to determine whether data nodes between two arbitrary YANG module revisions have (i) not changed, (ii) changed in a backward compatible way, (iii) changed in a non-backward compatible way.</t>
+            </list>
+          </t>
+          <t>Requirements related to supporting existing clients in a backward compatible way:
+            <list style="format 3.%d">
+              <t>The solution MUST provide a mechanism to allow servers to support existing clients in a backward compatible way.</t>
+              <t>The solution MUST provide a mechanism to allow servers to simultaneously support clients using different revisions of modules. A client's choice of particular revision of one or more modules may restrict the particular revision of other modules
+                that may be used in the same request or session.</t>
+            </list>
+          </t>
+          <t>Requirements related to managing and documenting the life cycle of data nodes:
+            <list style="format 4.%d">
+              <t>A mechanism is REQUIRED to allow a client to determine whether deprecated nodes are implemented by the server.</t>
+              <t>If a data node is deprecated or obsolete then it MUST be possible to document in the YANG module what alternatives exist, the reason for the status change, or any other status related information.</t>
+              <t>A mechanism is REQUIRED to indicate that certain definitions in a YANG module will become status obsolete in future revisions but definitions marked as such MUST still be implemented by compliant servers.</t>
+              <t>If multiple revisions of a YANG module are published, then the solution SHOULD allow for bug fixes to be made to an older revision of the module.</t>
+            </list>
+          </t>
+          <t>Requirements related to documentation and education:
+            <list style="format 5.%d">
+              <t>The solution MUST provide guidance to model authors and clients on how to use the new YANG versioning scheme.</t>
+              <t>The solution is REQUIRED to describe how to transition from the existing YANG 1.0/1.1 versioning scheme to the new scheme.</t>
+              <t>The solution MUST describe how the versioning scheme affects the interpretation of instance data and references to instance data, for which the schema definition has been updated in a non backward compatible way.</t>
+            </list>
+          </t>
+        </list>
+      </t>
+    </section>
+    <?rfc needLines="100"?>
+  </back>
+</rfc>
