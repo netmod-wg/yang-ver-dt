@@ -1,0 +1,1288 @@
+
+
+
+
+Network Working Group                                          B. Claise
+Internet-Draft                                                 J. Clarke
+Updates: 7950 (if approved)                          Cisco Systems, Inc.
+Intended status: Standards Track                              B. Lengyel
+Expires: August 3, 2019                                         Ericsson
+                                                              K. D'Souza
+                                                                    AT&T
+                                                        January 30, 2019
+
+
+                    New YANG Module Update Procedure
+                   draft-verdt-netmod-yang-semver-00
+
+Abstract
+
+   This document specifies a new YANG module update procedure in case of
+   non-backwards-compatible changes, as an alternative proposal to the
+   YANG 1.1 specifications.  This document updates RFC 7950.
+
+Status of This Memo
+
+   This Internet-Draft is submitted in full conformance with the
+   provisions of BCP 78 and BCP 79.
+
+   Internet-Drafts are working documents of the Internet Engineering
+   Task Force (IETF).  Note that other groups may also distribute
+   working documents as Internet-Drafts.  The list of current Internet-
+   Drafts is at https://datatracker.ietf.org/drafts/current/.
+
+   Internet-Drafts are draft documents valid for a maximum of six months
+   and may be updated, replaced, or obsoleted by other documents at any
+   time.  It is inappropriate to use Internet-Drafts as reference
+   material or to cite them other than as "work in progress."
+
+   This Internet-Draft will expire on August 3, 2019.
+
+Copyright Notice
+
+   Copyright (c) 2019 IETF Trust and the persons identified as the
+   document authors.  All rights reserved.
+
+   This document is subject to BCP 78 and the IETF Trust's Legal
+   Provisions Relating to IETF Documents
+   (https://trustee.ietf.org/license-info) in effect on the date of
+   publication of this document.  Please review these documents
+   carefully, as they describe your rights and restrictions with respect
+   to this document.  Code Components extracted from this document must
+   include Simplified BSD License text as described in Section 4.e of
+
+
+
+Claise, et al.           Expires August 3, 2019                 [Page 1]
+
+Internet-Draft                YANG Catalog                  January 2019
+
+
+   the Trust Legal Provisions and are provided without warranty as
+   described in the Simplified BSD License.
+
+Table of Contents
+
+   1.  Introduction  . . . . . . . . . . . . . . . . . . . . . . . .   2
+   2.  The Solution  . . . . . . . . . . . . . . . . . . . . . . . .   3
+     2.1.  Changes to RFC7950  . . . . . . . . . . . . . . . . . . .   3
+     2.2.  Semantic Versioning . . . . . . . . . . . . . . . . . . .   3
+       2.2.1.  Semantic Versioning, As Set by the YANG Module
+               Designer  . . . . . . . . . . . . . . . . . . . . . .   3
+       2.2.2.  The Derived Semantic Version  . . . . . . . . . . . .   6
+       2.2.3.  Implementation Experience . . . . . . . . . . . . . .   6
+     2.3.  Import by Semantic Version  . . . . . . . . . . . . . . .   7
+     2.4.  Updates to YANG 1.1 Module Update Rules . . . . . . . . .  10
+     2.5.  Updates to ietf-yang-library  . . . . . . . . . . . . . .  10
+     2.6.  Deprecated and Obsolete Reasons . . . . . . . . . . . . .  11
+   3.  Guidelines  . . . . . . . . . . . . . . . . . . . . . . . . .  12
+     3.1.  Guidelines to YANG model authors  . . . . . . . . . . . .  12
+       3.1.1.  Use of semantic versioning  . . . . . . . . . . . . .  12
+       3.1.2.  Making non-backwards-compatible changes to a YANG
+               module  . . . . . . . . . . . . . . . . . . . . . . .  13
+         3.1.2.1.  Removing a node . . . . . . . . . . . . . . . . .  14
+         3.1.2.2.  Changing the type of a leaf node  . . . . . . . .  14
+         3.1.2.3.  Reducing the range of a leaf node . . . . . . . .  15
+         3.1.2.4.  Changing the key of a list  . . . . . . . . . . .  15
+         3.1.2.5.  Renaming a node . . . . . . . . . . . . . . . . .  15
+         3.1.2.6.  Changing a default value  . . . . . . . . . . . .  15
+     3.2.  Guidelines to YANG model clients  . . . . . . . . . . . .  15
+   4.  Semantic Version Extension YANG Module  . . . . . . . . . . .  15
+   5.  Contributors  . . . . . . . . . . . . . . . . . . . . . . . .  19
+   6.  Security Considerations . . . . . . . . . . . . . . . . . . .  20
+   7.  IANA Considerations . . . . . . . . . . . . . . . . . . . . .  20
+     7.1.  YANG Module Registrations . . . . . . . . . . . . . . . .  20
+   8.  References  . . . . . . . . . . . . . . . . . . . . . . . . .  20
+     8.1.  Normative References  . . . . . . . . . . . . . . . . . .  20
+     8.2.  Informative References  . . . . . . . . . . . . . . . . .  21
+   Appendix A.  Appendix . . . . . . . . . . . . . . . . . . . . . .  21
+     A.1.  Open Issues: Requirements to be Addressed . . . . . . . .  21
+     A.2.  Open Issues . . . . . . . . . . . . . . . . . . . . . . .  22
+   Authors' Addresses  . . . . . . . . . . . . . . . . . . . . . . .  22
+
+1.  Introduction
+
+   This document puts forth a solution to the problems described in
+   [I-D.verdt-netmod-yang-versioning-reqs] by proposing changes to
+   [RFC7950] to address the various requirements that
+   [I-D.verdt-netmod-yang-versioning-reqs] specifies.  At this time, the
+
+
+
+Claise, et al.           Expires August 3, 2019                 [Page 2]
+
+Internet-Draft                YANG Catalog                  January 2019
+
+
+   solution herein addresses requirements 1.1, 1.2, 1.3, 2.1, 4.1, 4.2,
+   4.3, 5.1, and 5.2.  Current gaps are documented in Appendix A.1
+   below.
+
+2.  The Solution
+
+   The solution is composed of five parts:
+
+   1.  A semantic versioning YANG extension, along with an optional
+       additional check that validates the semantic versioning from a
+       syntactic point of view, which can either assist in determining
+       the correct semantic versioning value, or which can help in
+       determining the values for YANG modules that do not support this
+       extension.
+
+   2.  An import by semantic version statement
+
+   3.  Updates to the YANG 1.1 module update rules
+
+   4.  Updates to ietf-yang-library
+
+   5.  An introduction of deprecated and obsolote reason clauses
+
+2.1.  Changes to RFC7950
+
+   The sections listed below provide updates to [RFC7950].  However, the
+   design team does not believe any of the will require a new version of
+   the YANG language.  It is believed that the extensions as they are
+   defined can coexist with existing YANG 1.1 clients.
+
+   o  Section 2.4 which describes modification to the [RFC7950]
+      Section 11 module update text to advise the use of semantic
+      versioning as described in this document
+
+   o  Section 2.3 which describes an extension to do import by semantic
+      version
+
+   o  Section 2.6 defines an extension that adds a child element to
+      "status"
+
+2.2.  Semantic Versioning
+
+2.2.1.  Semantic Versioning, As Set by the YANG Module Designer
+
+   The semantic versioning solution proposed here has already been
+   proposed in [I-D.openconfig-netmod-model-catalog] (included here with
+   the authors' permission) which itself is based on [openconfigsemver].
+
+
+
+
+Claise, et al.           Expires August 3, 2019                 [Page 3]
+
+Internet-Draft                YANG Catalog                  January 2019
+
+
+   The goal is to indicate the YANG module backward (in)compatibility,
+   following semver.org semantic versioning [semver]:
+
+   "The SEMVER version number for the module is introduced.  This is
+   expressed as a semantic version number of the form: x.y.z
+
+   o  x is the MAJOR version.  It is incremented when the new version of
+      the specification is incompatible with previous versions.
+
+   o  y is the MINOR version.  It is incremented when new functionality
+      is added in a manner that is backward-compatible with previous
+      versions.
+
+   o  z is the PATCH version.  It is incremented when bug fixes are made
+      in a backward-compatible manner."
+
+   The semantic version value is set by the YANG module developer at the
+   design and implementation times.  Along these lines, we propose the
+   following YANG 1.1 extension for a more generic semantic version.
+   The formal definition is found at the end of this document.  This
+   semantic version extension and the text below address requirements
+   1.1, 1.2, 2.1, 5.1 and 5.2 of
+   [I-D.verdt-netmod-yang-versioning-reqs].
+
+           extension module-version {
+               argument semver;
+           }
+
+   The extension would typically be used this way:
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Claise, et al.           Expires August 3, 2019                 [Page 4]
+
+Internet-Draft                YANG Catalog                  January 2019
+
+
+       module yang-module-name {
+
+         namespace "name-space";
+         prefix "prefix-name";
+
+         import ietf-semver { prefix "semver"; }
+
+         description
+           "to be completed";
+
+
+         revision 2017-10-30 {
+           description
+             "Change the module structure";
+           semver:module-version "2.0.0";
+         }
+
+         revision 2017-07-30 {
+           description
+             "Added new feature XXX";
+           semver:module-version "1.2.0";
+         }
+
+         revision 2017-04-03 {
+           description
+             "Update copyright notice.";
+           semver:module-version "1.0.1";
+         }
+
+         revision 2017-04-03 {
+           description
+             "First release version.";
+           semver:module-version "1.0.0";
+         }
+
+         revision 2017-01-26 {
+           description
+             "Initial module for inet types";
+           semver:module-version "0.1.0";
+         }
+
+
+         //YANG module definition starts here
+
+   See also "Semantic Versioning and Structure for IETF Specifications"
+   [I-D.claise-semver] for a mechanism to combine the semantic
+   versioning, the GitHub tools, and a potential change to the IETF
+   process.
+
+
+
+Claise, et al.           Expires August 3, 2019                 [Page 5]
+
+Internet-Draft                YANG Catalog                  January 2019
+
+
+2.2.2.  The Derived Semantic Version
+
+   If an explicitly defined semantic version is not available in the
+   YANG module, it is possible to algoritmically calculate a derived
+   semantic version.  This can be used for modules not containing a
+   definitive semantic-version as defined in this document or as a
+   starting value when specifying the definitive semantic-version.  Be
+   aware that this algorithm may sometimes incorrectly classify changes
+   between the categories non-compatible, compatible or error-
+   correction.
+
+2.2.3.  Implementation Experience
+
+   [yangcatalog] uses the pyang utility to calculate the derived-
+   semantic-version for all of the modules contained within the catalog.
+   [yangcatalog] contains many revisions of the same module in order to
+   provide its derived-semantic-version for module consumers to know
+   what has changed between revisions of the same module.
+
+   Two distinct leafs in the YANG module
+   [I-D.clacla-netmod-model-catalog] contain this semver notation:
+
+   o  the semantic-version leaf contains the value embedded within a
+      YANG module (if it is available).
+
+   o  the derived-semantic-version leaf is established by examining the
+      the YANG module themselves.  As such derived-semantic-version only
+      takes syntax into account as opposed to the meaning of various
+      elements when it computes the semantic version.
+
+   o  The algorithm used to produce the derived-semantic-version is as
+      follows:
+
+      1.  Order all modules of the same name by revision from oldest to
+          newest.  Include module revisions that are not available, but
+          which are defined in the revision statements in one of the
+          available module versions.
+
+      2.  If module A, revision N+1 has failed compilation, bump its
+          derived semantic MAJOR version.  For unavailable module
+          versions assume non-backward compatible changes were done.,
+          thus bump its derived semantic MAJOR version.
+
+      3.  Else, run "pyang --check-update-from" on module A, revision N
+          and revision N+1 to see if non-backwards-compatible changes
+          exist.
+
+
+
+
+
+Claise, et al.           Expires August 3, 2019                 [Page 6]
+
+Internet-Draft                YANG Catalog                  January 2019
+
+
+      4.  If non-backwards-incompatible changes exist, bump module A,
+          revision N+1's derived MAJOR semantic version.
+
+      5.  If no non-backwards-incompatible changes exist, compare the
+          pyang trees of module A, revision N and revision N+1.
+
+      6.  If there are structural differences (e.g., new nodes), bump
+          module A, revision N+1's derived MINOR semantic version.
+
+      7.  If no structural differences exist, bump module A, revision
+          N+1's derived PATCH semantic version.
+
+   The pyang utility checks many of the points listed in section 11 of
+   [RFC7950] for known module incompatibilities.  While this approach is
+   a good way to programmatically obtain a semantic version number, it
+   does not address all cases whereby a major version number might need
+   to be increased.  For example, a node may have the same name and same
+   type, but its meaning may change from one revision of a module to
+   another.  This represents a semantic change that breaks backward
+   compatibility, but the above algorithm would not find it.  Therefore,
+   additional, sometimes manual, rigor must be done to ensure a proper
+   version is chosen for a given module revision.
+
+2.3.  Import by Semantic Version
+
+   If a module is imported by another one, it is usually not specified
+   which revision of the imported module should be used.  However, not
+   all revisions may be acceptable.  Today YANG 1.1 allows one to
+   specify the revision date of the imported module, but that is too
+   specific, as even a small spelling correction of the imported module
+   results in a change to its revision date, thus making the module
+   revision ineligible for import.
+
+   Using semantic versioning to indicate the acceptable imported module
+   versions is much more flexible.  For example:
+
+   o  Only a module of a specific MAJOR version is acceptable.  All
+      MINOR and PATCH versions can also be imported.
+
+   o  A module at a specific MAJOR version or higher is acceptable.
+
+   o  A module at a specific MAJOR.MINOR version is acceptable.  All
+      PATCH versions can also be imported.
+
+   o  A module within a certain range of versions are acceptable.  For
+      example, in this case, a module between version 1.0.0 (inclusive)
+      and 3.0.0 (exclusive) are acceptable.
+
+
+
+
+Claise, et al.           Expires August 3, 2019                 [Page 7]
+
+Internet-Draft                YANG Catalog                  January 2019
+
+
+   The ietf-semver module provides another extension, import-versions
+   that is a child of import and specifies the rules for an acceptable
+   set of versions of the given module.  This extension addresses
+   requirement 1.3 of [I-D.verdt-netmod-yang-versioning-reqs].  The
+   structure of this extension is specified as follows:
+
+   TODO: How to specify this?  One thought is below, not fully
+   formalized as this should be discussed further.  Note: while this
+   uses a comma to separate discrete versions, we could instead allow
+   for this to be specified multiple times.
+
+[\[(]X[.Y[.Z]][-[X[.Y[.X]]][\])]][,...]
+
+Where the first character MAY be a '[' or '(' to indicate at least inclusive and at least
+ exclusive (respectively).  If this is omitted, a full semantic version must be specified
+ and the import will only support this one version.
+
+The following version, if specified with a '[' or '(' indicates the lower bound.  This can
+ be a full semantic version or a MAJOR only or MAJOR.MINOR only.
+
+The '-', if specified, is a literal hyphen indicating a range will be specified.  If the second portion
+ of the import-versions clause is omitted, then there is no upper bound on what will be considered
+ an acceptable imported version.
+
+After the '-' the upper bound semantic version (or part thereof) follows.
+
+After the upper bound version, one of ']' or ')' MUST follow to indicate whether this limit is inclusive
+ or exclusive of the upper bound respectively.
+
+Finally, a literal comma (',') MAY be specified with additional ranges.  Each range is taken as a logical
+ OR.
+
+
+   For example:
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Claise, et al.           Expires August 3, 2019                 [Page 8]
+
+Internet-Draft                YANG Catalog                  January 2019
+
+
+import example-module {
+  semver:import-versions "[1.0.0-3.0.0)";
+  // All versions between 1.0.0 (inclusive) and 3.0.0 (exclusive) are acceptable.
+}
+
+import example-module {
+  semver:import-versions "[2-5]";
+  // All versions between 2.0.0 (inclusive) and 5.y.z (inclusive) where y and z are
+  // any value for MINOR and PATCH versions.
+}
+
+import example-module {
+  semver:import-versions "[1.5-2.0.0),[2.5";
+  // All versions between 1.5.0 (inclusive) and 2.0.0 (exclusive) as well as all versions
+  // greater than 2.5 (inclusive).  In this manner, if 2.0 was branched from 1.4, and a
+  // new feature was added into 1.5, all versions of 1.x.x starting at 1.5 are allowed,
+  // but the feature was not merged into 2.y.z until 2.5.0.
+}
+
+import example-module {
+  semver:import-versions "[1";
+  // All versions greater than MAJOR version 1 are acceptable.  This includes any
+  // MINOR or PATCH versions.
+}
+
+import example-module {
+  semver:import-versions "1.0.0";
+  // Only version 1.0.0 is acceptable (this mimics what exists with import by revision).
+}
+
+import example-module {
+  semver:import-versions "[1.1-2)"";
+  // All versions greater than 1.1 (inclusive, and including all PATCH versions off of 1.1)
+  // up to MAJOR version 2 (exclusive) are acceptable.
+}
+
+import example-module {
+  semver:import-versions "[1.1-2),[3";
+  // All versions greater than 1.1 (inclusive, and including all PATCH versions off of 1.1)
+  // up to MAJOR version 2 (exclusive), as well as all versions greater than MAJOR version 3
+  // (inclusive) are acceptable.
+}
+
+import example-module {
+  semver:import-versions "[1.1-2),[3.0.0";
+  // This is equivalent to the example above, simply indicating that a partial semantic version
+  // assumes all missing components are 0.
+}
+
+
+
+Claise, et al.           Expires August 3, 2019                 [Page 9]
+
+Internet-Draft                YANG Catalog                  January 2019
+
+
+   The import statement SHOULD include a semver:import-versions
+   statement and MUST NOT include a revision statement.  An import
+   statement MUST NOT contain both a semver:import-versions and a
+   revision substatement.  The use of the revision substatement for
+   import should be discouraged.
+
+2.4.  Updates to YANG 1.1 Module Update Rules
+
+   RFC 7950 section 11, must be updated to allow for non-backward
+   changes provided they follow the semantic versioning guidelines and
+   increase the MAJOR version number when a backward incompatible change
+   is made.  This change is in the spirit of requirement 5.1 from
+   [I-D.verdt-netmod-yang-versioning-reqs].  The following is proposed
+   text for this change.
+
+   "As experience is gained with a module, it may be desirable to revise
+   that module.  Changes to published modules are allowed, even if they
+   have some potential to cause interoperability problems, if the
+   module-version YANG extension is used in the revision statement to
+   clearly indicate the nature of the change."
+
+2.5.  Updates to ietf-yang-library
+
+   The ietf-semver YANG module also specifies additional ietf-yang-
+   library [RFC7895] [I-D.ietf-netconf-rfc7895bis] leafs to be added at
+   the module and submodule levels.  The first is module-version, which
+   augments /yanglib:yang-library/yanglib:module-set/yanglib:module.
+   This specifies the current semantic version of the associated module
+   and revision in a given module-set.  The related submodule-version
+   leaf is added at /yanglib:yang-library/yanglib:module-
+   set/yanglib:module/yanglib:submodule to indicate the semantic version
+   of a submodule.
+
+   In order to satisfy the requirements 4.1 and 4.3 of
+   [I-D.verdt-netmod-yang-versioning-reqs] that deprecated and obsolete
+   node presence and operation are easily and clearly known to clients,
+   ietf-semver also augments the ietf-yang-library with two additional
+   boolean leafs at /yanglib:yang-library/yanglib:module-set/
+   yanglib:module.  A client can make one request of the ietf-yang-
+   library and know whether or a not a module that has deprecated or
+   obsolete has those nodes implemented by the server, as opposed to
+   making multiple requests for each node in question.
+
+   deprecated-nodes-present :  A boolean that indicates whether or not
+      this server implements deprecated nodes.  The value of this leaf
+      SHOULD be true; and if so, the server MUST implement nodes within
+      this module as they are documented.  If specific deprecated nodes
+
+
+
+
+Claise, et al.           Expires August 3, 2019                [Page 10]
+
+Internet-Draft                YANG Catalog                  January 2019
+
+
+      are not implemented as documented, then they MUST be listed as
+      deviations.  This leaf defaults to true.
+
+   obsolete-nodes-present :  A boolean that indicates whether or not
+      this server implements obsolete nodes.  The value of this leaf
+      SHOULD be false; and if so, the server MUST NOT implement nodes
+      within this module.  If this leaf is true, then all nodes in this
+      module MUST be implemented as documented in the module.  Any
+      variation of this MUST be listed as deviations.  This leaf
+      defaults to false.
+
+   If a module does not have any deprecated or obsolete nodes, the
+   server SHOULD set the corresponding leaf above to true.  This is
+   helpful to clients, such that if the MAJOR version number has not
+   changed, and these booleans are true, then a client does not have to
+   check the status of any node for the module.
+
+   Module compatibility can be affected if values other than the default
+   are used for the leafs described here.  For example, if a server does
+   not implemennt deprecated nodes, then a given module revision may be
+   incompatible with a previous revision where the nodes were not
+   deprecated.  When calculating backward compatibility, the default
+   values of these leafs MUST be considered.  From a client's point of
+   view, if two module revisions have the same MAJOR version but the
+   run-time value of deprecated-nodes-present (as read from the ietf-
+   yang-library) is false, then compatibility MUST NOT be assumed based
+   on the module-version alone.
+
+2.6.  Deprecated and Obsolete Reasons
+
+   The ietf-semver module specifies an extension, status-description,
+   that is designed to be used as a substatement of the status statement
+   when the status is deprecated or obsolete.  The argument to this
+   extension is freeform text that explains why the node was deprecated
+   or made obsolete.  It may also point to other schema elements that
+   take the place of the deprecated or obsolete node.  This text is
+   designed for human consumption to aid in the migration away from
+   nodes that will one day no longer work.  These extensions address
+   requirement 4.2 of [I-D.verdt-netmod-yang-versioning-reqs].  An
+   example is shown below.
+
+
+
+
+
+
+
+
+
+
+
+Claise, et al.           Expires August 3, 2019                [Page 11]
+
+Internet-Draft                YANG Catalog                  January 2019
+
+
+   leaf imperial-temperature {
+     type int64;
+     units "degrees Fahrenheit";
+     status deprecated {
+       semver:status-description
+         "Imperial measurements are being phased out in favor
+          of their metric equivalents.  Use metric-temperature
+          instead.";
+     }
+     description
+       "Temperature in degrees Fahrenheit.";
+   }
+
+3.  Guidelines
+
+3.1.  Guidelines to YANG model authors
+
+3.1.1.  Use of semantic versioning
+
+   From a published revision N of a module, the next published revision
+   N+1 of the module SHOULD have one of:
+
+   1.  MAJOR version incremented by 1, MINOR and PATCH versions set to
+       0.  This indicates that in revision N+1:
+
+       *  There have been one or more non-backwards-compatible changes
+
+       *  There may also be new functionality which have been added in a
+          backwards-compatible manner
+
+       *  There may also be bug fixes which have been made in a
+          backwards-compatible manner
+
+   2.  MAJOR version unchanged, MINOR version incremented by 1 and PATCH
+       version set to 0.  This indicates that in revision N+1:
+
+       *  There are no non-backwards-compatible changes
+
+       *  There have been one or more new functionality which have been
+          added in a backwards compatible-manner
+
+       *  There may also be bug fixes which have been made in a
+          backwards-compatible manner
+
+   3.  MAJOR and MINOR versions unchanged, PATCH version incremented by
+       1.  This indicates that in revision N+1:
+
+       *  There are no non-backwards-compatible changes
+
+
+
+Claise, et al.           Expires August 3, 2019                [Page 12]
+
+Internet-Draft                YANG Catalog                  January 2019
+
+
+       *  There is no new functionality which has been added in a
+          backwards compatible-manner
+
+       *  Ther are 1 or more bug fixes which have been made in a
+          backwards-compatible manner
+
+   As explained in Section 2.2.3, while programatically determining a
+   semantic version is possible using the pyang utility, human overisght
+   is highly recommended because of some special cases which can not be
+   detected by pyang.  Therefore, a model author SHOULD use both means
+   to determine a model's semantic version.
+
+3.1.2.  Making non-backwards-compatible changes to a YANG module
+
+   There are various valid situations where a YANG module has to be
+   modified in a non-backwards-compatible way.  Here are some guidelines
+   on how non-backwards compatible changes SHOULD be made:
+
+   1.  The changes should be made incrementally, e.g. a data node's
+       status SHOULD NOT be changed directly from "current" to
+       "obsolete" (see Section 4.7 of [RFC8407]), instead the status
+       SHOULD first be marked "deprecated" and then when support is
+       removed its status MUST be changed to "obsolete".
+
+   2.  A node with status "deprecated" MUST be supported.  Q: if we keep
+       this, do we still need the deprecated-nodes-supported leaf?
+
+   3.  A node with status "deprecated" SHOULD be available for at least
+       one year before its status is changed to "obsolete", see
+       Section 4.7 of [RFC8407].
+
+   4.  Support for a node which is "obsolete" is indicated by the node
+       "obsolete-nodes-present, see Section 2.5.
+
+   5.  The new extension "status-description" MUST be used for nodes
+       which are "obsolete" or "deprecated".
+
+   6.  For status "deprecated", the "status-description" SHOULD also
+       indicate until when support for the node is guaranteed.
+
+   7.  When a container's status is changed to "deprecated" or
+       "obsolete", the same status statement SHOULD be added to all the
+       leaf nodes in the container.  This is to avoid ambiguity.
+
+   The following sections have examples on how non-backwards-compatible
+   changes can be made.
+
+
+
+
+
+Claise, et al.           Expires August 3, 2019                [Page 13]
+
+Internet-Draft                YANG Catalog                  January 2019
+
+
+3.1.2.1.  Removing a node
+
+   Removing a node, leaf or container, from the data tree, e.g. because
+   support for the corresponding feature is being removed:
+
+   1.  The node's status SHOULD be changed to "deprecated" and it MUST
+       be supported for at least one year.  This is a backwards-
+       compatible change.
+
+   2.  When the node is not available anymore, its status MUST be
+       changed to "obsolete" and the "status-description" updated, this
+       is a non-backwards-compatible change.  The "status-description"
+       MUST be used to explain why the node is not available anymore.
+
+3.1.2.2.  Changing the type of a leaf node
+
+   Changing the type of a leaf-node. e.g. consider a "vpn-id" node of
+   type integer being changed to a string:
+
+   1.  The status of node "vpn-id" SHOULD be changed to "deprecated" and
+       the node SHOULD be available for at least one year.  This is a
+       backwards-compatible change.
+
+   2.  A new node, e.g. "vpn-name", of type string is added to the same
+       location as the existing node "vpn-id".  This new node has status
+       "current" and its description SHOULD explain that it is replacing
+       node "vpn-id".
+
+   3.  During the period of time where both nodes are available, how the
+       server behaves when either node is set is outside the scope of
+       this document.  Here are some options:
+
+       1.  A server MAY prevent the new node from being set if the old
+           node is already set (and vice-versa).  The new node MAY have
+           a when statement to achieve this.  The old node MUST NOT have
+           a when statement since this would be a non-backwards-
+           compatible change, but the server MAY reject the old node
+           from being set if the new node is already set.
+
+       2.  If the new node is set and a client does a get or get-config
+           operation on the old node, the server MAY map the value.  For
+           example, if the new node "vpn-name" has value "123" then the
+           server MAY return integer value 123 for the old node "vpn-
+           id".  However, if the value can not be mapped, we need a way
+           of returning "unsupported" TBD.
+
+
+
+
+
+
+Claise, et al.           Expires August 3, 2019                [Page 14]
+
+Internet-Draft                YANG Catalog                  January 2019
+
+
+   4.  When node "vpn-id" is not available anymore, its status MUST be
+       changed to "obsolete" and the "status-description" is updated.
+       This is a non-backwards-compatible change.
+
+3.1.2.3.  Reducing the range of a leaf node
+
+3.1.2.4.  Changing the key of a list
+
+3.1.2.5.  Renaming a node
+
+3.1.2.6.  Changing a default value
+
+3.2.  Guidelines to YANG model clients
+
+   Here are some guidelines for YANG model clients:
+
+   o  Clients SHOULD be liberal when processing data received from a
+      server.  For example, the server may have increased the range of
+      an operational node causing the client to receive a value whch is
+      outside the range of the YANG model revision it was coded against
+
+   o  Clients SHOULD look for status changes in new revisions of YANG
+      models they support.
+
+   o  Clients SHOULD plan to make changes to match published status
+      changes.  When a node's status changes from "current" to
+      "deprecated", clients SHOULD plan to stop using that node in a
+      timely fashion.  When a node's status changes to "obsolete",
+      clients MUST stop using that node.
+
+   o  Q: what should a client do if the version advertised by the server
+      is non-backwards-compatible with the version the client supports?
+
+4.  Semantic Version Extension YANG Module
+
+   The extension and related ietf-yang-library changes described in this
+   module are defined in the YANG module below.
+
+<CODE BEGINS> file "ietf-semver@2018-04-05.yang"
+  module ietf-semver {
+    yang-version 1.1;
+    namespace "urn:ietf:params:xml:ns:yang:ietf-semver";
+    prefix semver;
+
+    import ietf-yang-library {
+      prefix yanglib;
+    }
+
+
+
+
+Claise, et al.           Expires August 3, 2019                [Page 15]
+
+Internet-Draft                YANG Catalog                  January 2019
+
+
+    organization
+      "IETF NETMOD (Network Modeling) Working Group";
+    contact
+      "WG Web:   <https://datatracker.ietf.org/wg/netmod/>
+       WG List:  <mailto:netmod@ietf.org>
+
+       Author:   Benoit Claise
+                 <mailto:bclaise@cisco.com>
+
+       Author:   Joe Clarke
+                 <mailto:jclarke@cisco.com>
+
+       Author:   Kevin D'Souza
+                 <mailto:kd6913@att.com>
+
+       Author:   Balazs Lengyel
+                 <mailto:balazs.lengyel@ericsson.com>";
+    description
+      "This module contains a definition for a YANG 1.1 extension to
+       express the semantic version of YANG modules.";
+
+    revision 2018-04-05 {
+      description
+        "* Properly import ietf-yang-library.
+         * Fix the name of module-semver => module-version.
+         * Fix regular expression syntax.
+         * Augment yang-library with booleans as to whether or not
+           deprecated and obsolete nodes are present.
+         * Add an extension to enable import by semantic version.
+         * Add an extension status-description to track deprecated
+           and obsolete reasons.
+         * Fix yang-library augments to use 7895bis.";
+      reference
+        "draft-clacla-netmod-yang-model-update:
+         New YANG Module Update Procedure";
+      semver:module-version "0.2.1";
+    }
+    revision 2017-12-15 {
+      description
+        "Initial revision.";
+      reference
+        "draft-clacla-netmod-yang-model-update:
+         New YANG Module Update Procedure";
+      semver:module-version "0.1.1";
+    }
+
+    extension module-version {
+      argument semver;
+
+
+
+Claise, et al.           Expires August 3, 2019                [Page 16]
+
+Internet-Draft                YANG Catalog                  January 2019
+
+
+      description
+        "The version number for the module revision it is used in.
+         This is expressed as a semantic version string in the form:
+          x.y.z
+         where:
+          * x corresponds to the major version,
+          * y corresponds to a minor version,
+          * z corresponds to a patch version.
+
+         A major version number of 0 indicates that this model is still
+         in development, and is potentially subject to change.
+
+         Following a release of major version 1, all modules will
+         increment major revision number where backward incompatible
+         changes to the model are made.
+
+         The minor version is changed when features are added to the
+         model that do not impact current clients use of the model.
+         When major version is stepped, the minor version is reset to 0.
+
+         The patch-level version is incremented when non-feature changes
+         (such as bugfixes or clarifications to human-readable
+         descriptions that do not impact model functionality) are made
+         that maintain backward compatibility.
+         When major or minor version is stepped, the patch-level is
+         reset to 0.
+
+         By comparing the module-version between two revisions of a
+         given module, one can know if different revisions are backward
+         compatible or not, as well as
+         whether or not new features have been added to a newer revision.
+
+         If a module contains this extension it indicates that for this
+         module the updated status and update rules as this described in
+         RFC XXXX are used.
+
+         The statement MUST only be a substatement of the revision statement.
+         Zero or one module-version statement is allowed per parent
+         statement. NO substatements are allowed.
+        ";
+      reference "http://semver.org/ : Semantic Versioning 2.0.0";
+    }
+
+    extension import-versions {
+      argument version-clause;
+      description
+        "This extension specifies an acceptable set of semantic versions of a given module
+         that may be imported.  The version-clause argument is specified in the following
+
+
+
+Claise, et al.           Expires August 3, 2019                [Page 17]
+
+Internet-Draft                YANG Catalog                  January 2019
+
+
+         format
+
+         [\\[(]X[.Y[.Z]][-[X[.Y[.X]]][\\])]][,...]
+
+         Where the first character MAY be a '[' or '(' to indicate at least inclusive and at least
+          exclusive (respectively).  If this is omitted, a full semantic version must be specified
+          and the import will only support this one version.
+
+         The following version, if specified with a '[' or '(' indicates the lower bound.  This can
+          be a full semantic version or a MAJOR only or MAJOR.MINOR only.
+
+         The '-', if specified, is a literal hyphen indicating a range will be specified.  If the second portion
+          of the import-versions clause is omitted, then there is no upper bound on what will be considered
+          an acceptable imported version.
+
+         After the '-' the upper bound semantic version (or part thereof) follows.
+         After the upper bound version, one of ']' or ')' MUST follow to indicate whether this limit is inclusive
+          or exclusive of the upper bound respectively.
+
+         Finally, a literal comma (',') MAY be specified with additional ranges.  Each range is taken as a logical
+          OR.
+
+         The statement MUST only be a substatement of the import statement.  Zero or one
+         import-versions statement is allowed per import statement.  NO substatements are allowed.";
+      reference "I-D.clacla-netmod-yang-model-update : Import By Semantic Version";
+    }
+
+    extension status-description {
+      argument description;
+      description
+        "Freeform text that describes why a given node has been deprecated or made obsolete.
+         This may point to other schema elements that can be used in lieu of the given node.
+
+         This statement MUST only be used as a substatement of the status statement, and MUST
+         only be used when the status is deprecated or obsolete.  Zero or more status-description
+         statements are allowed per parent statement.  NO substatements are allowed.";
+      reference "I-D.clacla-netmod-yang-model-update : Deprecated and Obsolete Reasons";
+    }
+
+    augment "/yanglib:yang-library/yanglib:module-set/yanglib:module" {
+      description
+        "Augmentations for the ietf-yang-library module to support semantic versioning.";
+      leaf module-version {
+        type string {
+          pattern '[0-9]+\.[0-9]+\.[0-9]+';
+        }
+        description
+          "The semantic version for this module in MAJOR.MINOR.PATCH format.  This version
+
+
+
+Claise, et al.           Expires August 3, 2019                [Page 18]
+
+Internet-Draft                YANG Catalog                  January 2019
+
+
+           must match the semver:module-version value in specific revision of the module
+           loaded in this module-set.";
+      }
+      leaf deprecated-nodes-present {
+        type boolean;
+        default "true";
+        description
+          "A boolean that indicates whether or not this server implements deprecated nodes.
+           The value of this leaf SHOULD be true; and if so, the server MUST implement nodes
+           within this module as they are documented.  If specific deprecated nodes are not
+           implemented as document, then they MUST be listed as deviations.  If a module does
+           not currently contain any deprecated nodes, then this leaf SHOULD be set to true.";
+      }
+      leaf obsolete-nodes-present {
+        type boolean;
+        default "false";
+        description
+          "A boolean that indicates whether or not this server implements obsolete nodes.
+           The value of this leaf SHOULD be false; and if so, the server MUST NOT implement
+           nodes within this module. If this leaf is true, then all nodes in this module MUST
+           be implemented as documented in the module.  Any variation of this MUST be listed as
+           deviations.  If a module does not currently contain any obsolete nodes, then this
+           leaf SHOULD be set to true.";
+      }
+    }
+    augment "/yanglib:yang-library/yanglib:module-set/yanglib:module/yanglib:submodule" {
+      description
+        "Augmentations for the ietf-yang-library module/submodule to support semantic versioning.";
+      leaf submodule-version {
+        type string {
+          pattern '[0-9]+\.[0-9]+\.[0-9]+';
+        }
+        description
+          "The semantic version for this submodule in MAJOR.MINOR.PATCH format.  This version
+           must match the semver:module-version value in specific revision of the submodule
+           loaded in this module-set.";
+      }
+    }
+  }
+<CODE ENDS>
+
+5.  Contributors
+
+   o  Anees Shaikh, Google
+
+   o  Rob Shakir, Google
+
+
+
+
+
+Claise, et al.           Expires August 3, 2019                [Page 19]
+
+Internet-Draft                YANG Catalog                  January 2019
+
+
+6.  Security Considerations
+
+   The document does not define any new protocol or data model.  There
+   are no security impacts.
+
+7.  IANA Considerations
+
+7.1.  YANG Module Registrations
+
+   The following YANG module is requested to be registred in the "IANA
+   Module Names" registry:
+
+   The ietf-semver module:
+
+   o  Name: ietf-semver
+
+   o  XML Namespace: urn:ietf:params:xml:ns:yang:ietf-semver
+
+   o  Prefix: semver
+
+   o  Reference: [RFCXXXX]
+
+8.  References
+
+8.1.  Normative References
+
+   [I-D.verdt-netmod-yang-versioning-reqs]
+              Clarke, J., "YANG Module Versioning Requirements", draft-
+              verdt-netmod-yang-versioning-reqs-02 (work in progress),
+              November 2018.
+
+   [RFC7895]  Bierman, A., Bjorklund, M., and K. Watsen, "YANG Module
+              Library", RFC 7895, DOI 10.17487/RFC7895, June 2016,
+              <https://www.rfc-editor.org/info/rfc7895>.
+
+   [RFC7950]  Bjorklund, M., Ed., "The YANG 1.1 Data Modeling Language",
+              RFC 7950, DOI 10.17487/RFC7950, August 2016,
+              <https://www.rfc-editor.org/info/rfc7950>.
+
+   [RFC8407]  Bierman, A., "Guidelines for Authors and Reviewers of
+              Documents Containing YANG Data Models", BCP 216, RFC 8407,
+              DOI 10.17487/RFC8407, October 2018,
+              <https://www.rfc-editor.org/info/rfc8407>.
+
+
+
+
+
+
+
+
+Claise, et al.           Expires August 3, 2019                [Page 20]
+
+Internet-Draft                YANG Catalog                  January 2019
+
+
+8.2.  Informative References
+
+   [I-D.clacla-netmod-model-catalog]
+              Clarke, J. and B. Claise, "YANG module for
+              yangcatalog.org", draft-clacla-netmod-model-catalog-03
+              (work in progress), April 2018.
+
+   [I-D.claise-semver]
+              Claise, B., Barnes, R., and J. Clarke, "Semantic
+              Versioning and Structure for IETF Specifications", draft-
+              claise-semver-02 (work in progress), January 2018.
+
+   [I-D.ietf-netconf-rfc7895bis]
+              Bierman, A., Bjorklund, M., Schoenwaelder, J., Watsen, K.,
+              and R. Wilton, "YANG Library", draft-ietf-netconf-
+              rfc7895bis-07 (work in progress), October 2018.
+
+   [I-D.openconfig-netmod-model-catalog]
+              Shaikh, A., Shakir, R., and K. D'Souza, "Catalog and
+              registry for YANG models", draft-openconfig-netmod-model-
+              catalog-02 (work in progress), March 2017.
+
+   [openconfigsemver]
+              "Semantic Versioning for Openconfig Models",
+              <http://www.openconfig.net/docs/semver/>.
+
+   [semver]   "Semantic Versioning 2.0.0", <https://www.semver.org>.
+
+   [yangcatalog]
+              "YANG Catalog", <https://yangcatalog.org>.
+
+Appendix A.  Appendix
+
+A.1.  Open Issues: Requirements to be Addressed
+
+   There are a few requirements of
+   [I-D.verdt-netmod-yang-versioning-reqs] still to be addressed.  These
+   include the following:
+
+   o  A solution is required for client compatibility to address
+      requirements 3.1 and 3.2 from
+      [I-D.verdt-netmod-yang-versioning-reqs].  This could include
+      adding "module sets" support to ietf-yang-library where the client
+      can choose one set with which to use.
+
+   o  A solution for instance data to satisfy requirement 5.3 of
+      [I-D.verdt-netmod-yang-versioning-reqs] is also required.
+
+
+
+
+Claise, et al.           Expires August 3, 2019                [Page 21]
+
+Internet-Draft                YANG Catalog                  January 2019
+
+
+   o  While not mandatory, requirement 2.2 of
+      [I-D.verdt-netmod-yang-versioning-reqs] looks to provide a way to
+      determine, at the node level, whether or not changes have occurred
+      between revisions of a given YANG module.  This may require
+      application of semver at the node level.
+
+A.2.  Open Issues
+
+   Additionally, there are a few open issues to be discussed and
+   settled.  These include the following:
+
+   o  Do we need a new version of YANG?
+      While eventually this will fold into a new version, the belief is
+      this solution can work with extensions alone with an update to the
+      [RFC7950] text concerning module updates.
+
+   o  Should IETF/IANA officially generate derived semantic versions for
+      their own modules?  As they are the owner of the modules it should
+      be their responsibility, but how to document it?  Note that next
+      round of funding for the yangcatalog.org could help develop the
+      perfect derived-semantic-version toolset
+
+   o  We could consider a new naming convention for module files.
+      Today, module files are named using a module@revision.yang
+      notation.  We could consider module%semver.yang or
+      module#version.yang variants.  Re-using the '@' for version is not
+      ideal, so another separator character should be used.  In this
+      manner, both version and revision could be used.
+
+Authors' Addresses
+
+   Benoit Claise
+   Cisco Systems, Inc.
+   De Kleetlaan 6a b1
+   1831 Diegem
+   Belgium
+
+   Phone: +32 2 704 5622
+   Email: bclaise@cisco.com
+
+
+
+
+
+
+
+
+
+
+
+
+Claise, et al.           Expires August 3, 2019                [Page 22]
+
+Internet-Draft                YANG Catalog                  January 2019
+
+
+   Joe Clarke
+   Cisco Systems, Inc.
+   7200-12 Kit Creek Rd
+   Research Triangle Park, North Carolina
+   United States of America
+
+   Phone: +1-919-392-2867
+   Email: jclarke@cisco.com
+
+
+   Balazs Lengyel
+   Ericsson
+   Magyar Tudosok Korutja
+   1117 Budapest
+   Hungary
+
+   Phone: +36-70-330-7909
+   Email: balazs.lengyel@ericsson.com
+
+
+   Kevin D'Souza
+   AT&T
+   200 S. Laurel Ave
+   Middletown, NJ
+   United States of America
+
+   Email: kd6913@att.com
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Claise, et al.           Expires August 3, 2019                [Page 23]

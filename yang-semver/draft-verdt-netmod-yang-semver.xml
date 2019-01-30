@@ -503,22 +503,67 @@ leaf imperial-temperature {
          Therefore, a model author SHOULD use both means to determine a model's semantic version.</t>
        </section>
        <section title="Making non-backwards-compatible changes to a YANG module">
-       <t>There are various valid situations where a YANG module has to be modified in a non-backwards-compatible way, such changes SHOULD be done gradually. Here are some examples and guidelines on how the changes should be made:
-         <list style="symbols">
-            <t>Removing a node from the data tree, e.g. because support for the corresponding feature is being removed: 
+       <t>There are various valid situations where a YANG module has to be modified in a non-backwards-compatible way. Here are some guidelines on how non-backwards compatible changes SHOULD be made:
+          <list style ="numbers">
+             <t>The changes should be made incrementally, e.g. a data node's status SHOULD NOT be changed directly from "current" to "obsolete" (see Section 4.7 of <xref target="RFC8407"/>), instead the status SHOULD first be marked "deprecated" and then when support is removed its status MUST be changed to "obsolete".</t>
+             <t>A node with status "deprecated" MUST be supported. Q: if we keep this, do we still need the deprecated-nodes-supported leaf?</t>
+             <t>A node with status "deprecated" SHOULD be available for at least one year before its status is changed to "obsolete", see Section 4.7 of <xref target="RFC8407"/>.</t>
+             <t>Support for a node which is "obsolete" is indicated by the node "obsolete-nodes-present, see <xref target="ietf_yang_library_updates"/>.</t>
+             <t>The new extension "status-description" MUST be used for nodes which are "obsolete" or "deprecated".</t>
+             <t>For status "deprecated", the "status-description" SHOULD also indicate until when support for the node is guaranteed.</t>
+             <t>When a container's status is changed to "deprecated" or "obsolete", the same status statement SHOULD be added to all the leaf nodes in the container. This is to avoid ambiguity.</t>            
+          </list>
+          </t>
+         <t>The following sections have examples on how non-backwards-compatible changes can be made.</t>
+
+         <section anchor="remove_bode" title="Removing a node">
+            <t>Removing a node, leaf or container, from the data tree, e.g. because support for the corresponding feature is being removed:
             <list style="numbers">
-               <t>The node's status SHOULD be changed to "deprecated" and it MUST be supported for a mandatory amount of time acceptable to the consumers of the YANG model. This is a backwards-compatible change.</t>
-               <t>When the mandatory amount of time has passed, the node's status MAY be changed to "obsolete" and it is not supported anymore. This is a non-backwards-compatible change.</t>
+               <t>The node's status SHOULD be changed to "deprecated" and it MUST be supported for at least one year. This is a backwards-compatible change.</t>
+               <t>When the node is not available anymore, its status MUST be changed to "obsolete" and the "status-description" updated, this is a non-backwards-compatible change. The "status-description" MUST be used to explain why the node is not available anymore.</t>
             </list>
             </t>
-            <t>Changing the type of a leaf-node</t>
-            <t>Reducing the range of a leaf node</t>
-            <t>Changing the key of a list</t>
-         </list>
-       </t>
+         </section>
+
+         <section anchor="type_change" title="Changing the type of a leaf node">            
+            <t>Changing the type of a leaf-node. e.g. consider a "vpn-id" node of type integer being changed to a string:
+            <list style="numbers">
+               <t>The status of node "vpn-id" SHOULD be changed to "deprecated" and the node SHOULD be available for at least one year. This is a backwards-compatible change.</t>
+               <t>A new node, e.g. "vpn-name", of type string is added to the same location as the existing node "vpn-id". This new node has status "current" and its description SHOULD explain that it is replacing node "vpn-id".</t>
+               <t>During the period of time where both nodes are available, how the server behaves when either node is set is outside the scope of this document. Here are some options:
+               <list style="numbers">
+                  <t>A server MAY prevent the new node from being set if the old node is already set (and vice-versa). The new node MAY have a when statement to achieve this. The old node MUST NOT have a when statement since this would be a non-backwards-compatible change, but the server MAY reject the old node from being set if the new node is already set.</t>
+                  <t>If the new node is set and a client does a get or get-config operation on the old node, the server MAY map the value. For example, if the new node "vpn-name" has value "123" then the server MAY return integer value 123 for the old node "vpn-id". However, if the value can not be mapped, we need a way of returning "unsupported" TBD.</t>
+               </list>
+               </t>
+               <t>When node "vpn-id" is not available anymore, its status MUST be changed to "obsolete" and the "status-description" is updated. This is a non-backwards-compatible change.</t>
+            </list>
+            </t>
+         </section>
+         
+         <section anchor="range_reduction" title="Reducing the range of a leaf node">
+         </section>
+
+         <section anchor="key_change" title="Changing the key of a list">
+         </section>
+
+         <section anchor="rename_node" title="Renaming a node">
+         </section>
+
+         <section anchor="default_change" title="Changing a default value">
+         </section>
+
        </section>
    </section>
    <section anchor="guidelines_clients" title="Guidelines to YANG model clients">
+      <t>Here are some guidelines for YANG model clients:
+         <list style="symbols">
+            <t>Clients SHOULD be liberal when processing data received from a server. For example, the server may have increased the range of an operational node causing the client to receive a value whch is outside the range of the YANG model revision it was coded against</t>
+            <t>Clients SHOULD look for status changes in new revisions of YANG models they support.</t>
+            <t>Clients SHOULD plan to make changes to match published status changes. When a node's status changes from "current" to "deprecated", clients SHOULD plan to stop using that node in a timely fashion. When a node's status changes to "obsolete", clients MUST stop using that node.</t>
+            <t>Q: what should a client do if the version advertised by the server is non-backwards-compatible with the version the client supports?</t>
+         </list> 
+      </t>
    </section>
 </section>
 
@@ -767,6 +812,7 @@ leaf imperial-temperature {
 <references title="Normative References">
    <?rfc include='reference.RFC.7950'?>
    <?rfc include='reference.RFC.7895'?>
+   <?rfc include='reference.RFC.8407'?>
    <?ref include='reference.I-D.verdt-netmod-yang-versioning-reqs'?>
 </references>
 <references title="Informative References">
