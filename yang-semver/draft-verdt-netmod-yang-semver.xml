@@ -379,124 +379,146 @@ At this time, the solution herein addresses requirements 1.1, 1.2, 1.3, 2.1, 4.1
   </section>
 </section>
 
-  <section title="Import by Semantic Version" anchor="import_semver">
-      <t>
-      If a module is imported by another one, it is usually not specified which
-      revision of the imported module should be used. However, not all revisions
-      may be acceptable. Today YANG 1.1 allows one to specify the revision date of the
-      imported module, but that is too specific, as even a small spelling
-      correction of the imported module results in a change to its revision date,
-      thus making the module revision ineligible for import.
-      </t><t>
-      Using semantic versioning to indicate the acceptable imported module versions
-      is much more flexible.  For example:
-      <list style="symbols">
-          <t>Only a module of a specific MAJOR version is acceptable.  All MINOR and PATCH versions
-            can also be imported.</t>
-          <t>A module at a specific MAJOR version or higher is acceptable.</t>
-          <t>A module at a specific MAJOR.MINOR version is acceptable.  All PATCH versions
-            can also be imported.</t>
-          <t>A module within a certain range of versions are acceptable.  For example, in this
-            case, a module between version 1.0.0 (inclusive) and 3.0.0 (exclusive) are acceptable.</t>
-      </list>
-       </t>
+<section title="Import by Semantic Version" anchor="import_semver">
+  <t>RFC 7950 allows YANG module 'import' statements to optionally
+  require the imported module to have a particular revision date.  In
+  practice, importing a module with an exact revision date is overly
+  burdensome because it requires the importing module to be updated
+  whenever any change to the imported module occurs.  The alternative
+  choice of using an import statement without a revision date is also
+  not ideal because the importing module may not work with all possible
+  revisions of the imported module.</t>
 
-       <t>The ietf-semver module provides another extension, import-versions that is a child of
-         import and specifies the rules for an acceptable set of versions of the given module.
-         This extension addresses requirement 1.3 of <xref target="I-D.verdt-netmod-yang-versioning-reqs"/>.
-         The structure of this extension is specified as follows:</t>
+  <t>With semantic versioning, it is desirable for a importing module to
+  specify the set of module versions of the imported module that are
+  anticipated to be compatible.</t>
+  
+  <t>This document specifies a YANG extension for selecting which
+  versions of a module may be imported.  It is designed around the
+  assumption that most changes to a YANG module do not break importing
+  modules, even if the changes themselves are not backwards compatible.
+  E.g., fixing an incorrect pattern statement or description for a leaf
+  would not break an import, changing the name of a leaf could break an
+  import but frequently would not, but removing a container would break
+  imports if it is augmented.</t>
 
-      <t>TODO: How to specify this? One thought is below, not fully formalized as this
-        should be discussed further.  Note: while this uses a comma to separate discrete versions,
-        we could instead allow for this to be specified multiple times.</t>
+  <t>The ietf-semver module defines the 'version' extension, a
+  substatement to the YANG 'import' statement.  An 'import' statement
+  may contain 'version' statements or a 'revision-date' statement, but
+  not both.  The 'version' statement may be specified multiple times,
+  requiring that the imported module version conforms to at least one of
+  the 'version' statements.</t>
 
-       <figure>
-         <artwork><![CDATA[
-[\[(]X[.Y[.Z]][-[X[.Y[.X]]][\])]][,...]
+  <t>The argument to the 'version' statement takes one of three valid forms:
+  <list style="numbers">
+  <t>"A.B.C" - import the exact module version that matches "A.B.C".</t>
+  <t>"A.B.C+" - import any module version that matches, or is
+  greater than, "A.B.C".</t>
+  <t>"A.B.C-X.Y.Z" - import any module version that matches, or is
+  greater than, "A.B.C"; and also matches, or is less than, "X.Y.Z".
+  The word "MAX" can be used for 'Y' or 'Z' to represent the numerical
+  value 32,767.</t>
+  </list>
+  </t>
+  <t>The rules for comparing module version numbers are as follows:
+  <list style="numbers">
+    <t>Version "R.S.T" matches version "A.B.C", only if
+    <list style="none">
+      <t>R = A, S = B, and T = C</t>
+    </list>
+    </t>
 
-Where the first character MAY be a '[' or '(' to indicate at least inclusive and at least
- exclusive (respectively).  If this is omitted, a full semantic version must be specified
- and the import will only support this one version.
+    <t>Version "R.S.T" is greater than version "A.B.C", only if
+    <list style="none">
+      <t>R = A, S = B, and T > C; or</t>
+      <t>R = A and S > B; or</t>
+      <t>R > A</t>
+    </list>
+    </t>
 
-The following version, if specified with a '[' or '(' indicates the lower bound.  This can
- be a full semantic version or a MAJOR only or MAJOR.MINOR only.
+    <t>Version "R.S.T" is less than version "X.Y.Z", only if
+    <list style="none">
+      <t>R = X, S = Y, and T &lt; Z; or</t>
+      <t>R = X and S &lt; Y; or</t>
+      <t>R &lt; X</t>
+    </list>
+    </t>
+  </list>
+  </t>
+  <section title="Module import examples">
+      <t>Consider an example module "example-module" that is
+      hypothetically available in the following versions: 0.1.0, 1.0.0,
+      1.1.0, 1.1.1m, 1.1.2M, 1.1.3M, 1.2.0, 2.0.0, 3.0.0.</t>
 
-The '-', if specified, is a literal hyphen indicating a range will be specified.  If the second portion
- of the import-versions clause is omitted, then there is no upper bound on what will be considered
- an acceptable imported version.
-
-After the '-' the upper bound semantic version (or part thereof) follows.
-
-After the upper bound version, one of ']' or ')' MUST follow to indicate whether this limit is inclusive
- or exclusive of the upper bound respectively.
-
-Finally, a literal comma (',') MAY be specified with additional ranges.  Each range is taken as a logical
- OR.
-          ]]>
-        </artwork>
-      </figure>
-
-      <t>For example:</t>
-
+      <t>The first example selects the specific version 1.1.2M.  A
+      specific version import might be used if 1.1.2M contained changes
+      that are incompatible with other versions.</t>
       <figure>
         <artwork>
 import example-module {
-  semver:import-versions "[1.0.0-3.0.0)";
-  // All versions between 1.0.0 (inclusive) and 3.0.0 (exclusive) are acceptable.
+  semver:version 1.1.2;
 }
-
-import example-module {
-  semver:import-versions "[2-5]";
-  // All versions between 2.0.0 (inclusive) and 5.y.z (inclusive) where y and z are
-  // any value for MINOR and PATCH versions.
-}
-
-import example-module {
-  semver:import-versions "[1.5-2.0.0),[2.5";
-  // All versions between 1.5.0 (inclusive) and 2.0.0 (exclusive) as well as all versions
-  // greater than 2.5 (inclusive).  In this manner, if 2.0 was branched from 1.4, and a
-  // new feature was added into 1.5, all versions of 1.x.x starting at 1.5 are allowed,
-  // but the feature was not merged into 2.y.z until 2.5.0.
-}
-
-import example-module {
-  semver:import-versions "[1";
-  // All versions greater than MAJOR version 1 are acceptable.  This includes any
-  // MINOR or PATCH versions.
-}
-
-import example-module {
-  semver:import-versions "1.0.0";
-  // Only version 1.0.0 is acceptable (this mimics what exists with import by revision).
-}
-
-import example-module {
-  semver:import-versions "[1.1-2)"";
-  // All versions greater than 1.1 (inclusive, and including all PATCH versions off of 1.1)
-  // up to MAJOR version 2 (exclusive) are acceptable.
-}
-
-import example-module {
-  semver:import-versions "[1.1-2),[3";
-  // All versions greater than 1.1 (inclusive, and including all PATCH versions off of 1.1)
-  // up to MAJOR version 2 (exclusive), as well as all versions greater than MAJOR version 3
-  // (inclusive) are acceptable.
-}
-
-import example-module {
-  semver:import-versions "[1.1-2),[3.0.0";
-  // This is equivalent to the example above, simply indicating that a partial semantic version
-  // assumes all missing components are 0.
-}
-        </artwork>
+	</artwork>
       </figure>
 
+      <t>The next example selects module versions that match, or are
+      greater than, version 1.1.0.  This form may be used if there is a
+      dependency on a data node introduced in version 1.1.0.  This is
+      expected to be the most commonly used form of 'import by version'.</t>
+      <t>Includes versions: 1.1.0, 1.1.1m, 1.1.2M, 1.1.3M,
+      1.2.0, 2.0.0 and 3.0.0.</t>
+      <figure>
+        <artwork>
+import example-module {
+  semver:version 1.1.0+;
+}
+	</artwork>
+      </figure>
+
+      <t>The next example selects module versions that match, or are
+      greater than 1.1.0, but excluding the 1.1.2M and 1.1.3M versions.
+      This form may be needed if structural non backwards compatible
+      changes are introduced in a patch 'M' version.  Generally, it is
+      advisable to avoid making such changes.</t>
+      <t>Includes versions: 1.0.0, 1.1.0, 1.1.1m, 1.2.0, 2.0.0 and
+      3.0.0.</t>
+      <figure>
+        <artwork>
+import example-module {
+  semver:version 1.0.0-1.1.1;
+  semver:version 1.2.0+;
+}
+	</artwork>
+      </figure>
+
+      <t>The last example selects all module versions with a major
+      version number of 1.  This form may be useful if significant non
+      backwards compatible changes have been introduced in version 2.0.0
+      that break import backwards compatibility.</t>
+      <t>Includes versions: 1.0.0, 1.1.0, 1.1.1m, 1.1.2M, 1.1.3M,
+      1.2.0.</t>
+      <figure>
+        <artwork>
+import example-module {
+  semver:version 1.0.0-1.MAX.MAX;
+}
+	</artwork>
+      </figure>
+  </section>
+  <section title="TODO">
        <t>
-       The import statement SHOULD include a semver:import-versions statement and MUST NOT
-       include a revision statement.  An import statement MUST NOT contain both a
-       semver:import-versions and a revision substatement.  The use of the revision
-       substatement for import should be discouraged.
+       TODO - Add text like this to the guidelines.  The import
+       statement SHOULD include a semver:import-versions statement and
+       MUST NOT include a revision statement.  An import statement MUST
+       NOT contain both a semver:import-versions and a revision
+       substatement.  The use of the revision substatement for import
+       should be discouraged.
       </t>
+    <t>TODO - Perhaps guidance text should also warn about making nbc
+    changes that could break imports.  E.g. this could be an example of
+    where making something obsolete might be better than removing
+    it.</t>
+  </section>
 </section>
 
   <section title="Updates to YANG 1.1 Module Update Rules" anchor="update_rules">
