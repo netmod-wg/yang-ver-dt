@@ -187,7 +187,7 @@ At this time, the solution herein addresses requirements 1.1, 1.2, 1.3, 2.1, 4.1
     from the comparision? RW: I've assumed yes.</t>
 
     <t>Q. Does statement ordering need to be considered as part of the
-    comparision? RW: I think the answer should be no.</t>
+    comparision? RW: I think the answer should be no. RR: ordering matters for RPC/action input as per https://tools.ietf.org/html/rfc7950#section-7.5.7</t>
   </section>
 
        
@@ -604,6 +604,7 @@ leaf imperial-temperature {
 <section anchor="guidelines" title="Guidelines">
    <section anchor="guidelines_authors" title="Guidelines to YANG model authors">
       <section anchor="authors_semver" title="Use of semantic versioning">
+      <t>Reuse of an already used module-version MUST be avoided. For example, when updating 3.4.0 in a NBC manner the module author must verify whether version 4.0.0 is available for use and if that version was already used, the updated module must use the version 3.4.1M.</t>
       <t>From a published revision N of a module, the next published revision N+1 of the module SHOULD
          have one of:
          <list style="numbers">
@@ -635,22 +636,22 @@ leaf imperial-temperature {
        <section title="Making non-backwards-compatible changes to a YANG module">
        <t>There are various valid situations where a YANG module has to be modified in a non-backwards-compatible way. Here are some guidelines on how non-backwards compatible changes SHOULD be made:
           <list style ="numbers">
-             <t>The changes should be made incrementally, e.g. a data node's status SHOULD NOT be changed directly from "current" to "obsolete" (see Section 4.7 of <xref target="RFC8407"/>), instead the status SHOULD first be marked "deprecated" and then when support is removed its status MUST be changed to "obsolete".</t>
-             <t>A node with status "deprecated" MUST be supported. Q: if we keep this, do we still need the deprecated-nodes-supported leaf?</t>
+             <t>The changes should be made incrementally, e.g. a data node's status SHOULD NOT be changed directly from "current" to "obsolete" (see Section 4.7 of <xref target="RFC8407"/>), instead the status SHOULD first be marked "deprecated" and then when support is removed its status MUST be changed to "obsolete". Instead of using the "obsolete" status, the data node MAY be removed from the model but this has the risk of breaking modules which import the modified module.</t>
+             <t>A node with status "deprecated" MUST be supported. Q: if we keep this, do we still need the deprecated-nodes-present leaf, see <xref target="ietf_yang_library_updates"/>.</t>
              <t>A node with status "deprecated" SHOULD be available for at least one year before its status is changed to "obsolete", see Section 4.7 of <xref target="RFC8407"/>.</t>
              <t>Support for a node which is "obsolete" is indicated by the node "obsolete-nodes-present, see <xref target="ietf_yang_library_updates"/>.</t>
-             <t>The new extension "status-description" MUST be used for nodes which are "obsolete" or "deprecated".</t>
-             <t>For status "deprecated", the "status-description" SHOULD also indicate until when support for the node is guaranteed.</t>
-             <t>When a container's status is changed to "deprecated" or "obsolete", the same status statement SHOULD be added to all the leaf nodes in the container. This is to avoid ambiguity.</t>            
+             <t>The new extension "status-description" SHOULD be used for nodes which are "obsolete" or "deprecated".</t>
+             <t>For status "deprecated", the "status-description" SHOULD also indicate until when support for the node is guaranteed. If there is a replacement data node, rpc, action or notification for the deprecated node, this MUST be stated in the "status-description".</t>
+             <t>When obsoleting or deprecating data nodes, the "deprecated" or "obsolete" status SHOULD be applied at the highest possible level in the data tree. For example, when deprecating all data nodes in a container, the "deprecated" status SHOULD be applied to the container.</t>            
           </list>
           </t>
          <t>The following sections have examples on how non-backwards-compatible changes can be made.</t>
 
-         <section anchor="remove_bode" title="Removing a node">
-            <t>Removing a node, leaf or container, from the data tree, e.g. because support for the corresponding feature is being removed:
+         <section anchor="remove_bode" title="Removing a data node">
+            <t>Removing a leaf or container from the data tree, e.g. because support for the corresponding feature is being removed:
             <list style="numbers">
                <t>The node's status SHOULD be changed to "deprecated" and it MUST be supported for at least one year. This is a backwards-compatible change.</t>
-               <t>When the node is not available anymore, its status MUST be changed to "obsolete" and the "status-description" updated, this is a non-backwards-compatible change. The "status-description" MUST be used to explain why the node is not available anymore.</t>
+               <t>When the node is not available anymore, its status MUST be changed to "obsolete" and the "status-description" updated, this is a non-backwards-compatible change. The "status-description" SHOULD be used to explain why the node is not available anymore.</t>
             </list>
             </t>
          </section>
@@ -691,7 +692,7 @@ leaf imperial-temperature {
             <t>Clients SHOULD be liberal when processing data received from a server. For example, the server may have increased the range of an operational node causing the client to receive a value whch is outside the range of the YANG model revision it was coded against</t>
             <t>Clients SHOULD look for status changes in new revisions of YANG models they support.</t>
             <t>Clients SHOULD plan to make changes to match published status changes. When a node's status changes from "current" to "deprecated", clients SHOULD plan to stop using that node in a timely fashion. When a node's status changes to "obsolete", clients MUST stop using that node.</t>
-            <t>Q: what should a client do if the version advertised by the server is non-backwards-compatible with the version the client supports?</t>
+            <t>A client SHOULD not use unknown NBC versions automatically</t>
          </list> 
       </t>
    </section>
