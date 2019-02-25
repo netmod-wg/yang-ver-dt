@@ -143,9 +143,9 @@
   I think that we should also (or perhaps alternatively) track these on
   Github.]</t>
 
-  <section anchor="changes_7950" title="Changes to RFC7950">
-      <t>This document proposes updates to <xref target="RFC7950"/> and
-      [TODO - YANGlib-bis] to address some of the requirements.  It
+  <section anchor="changes" title="Changes to existing RFCs">
+    <section anchor="changes_7950" title="Changes to RFC7950">
+      <t>This document proposes updates to <xref target="RFC7950"/> to address some of the requirements.  It
       should be noted that there is also active WG discussion on the
       next steps towards an updated version of YANG, and potentially
       some of the functionality described here could be folded into an
@@ -153,23 +153,40 @@
       likely adversely impact when a standards based YANG module
       versioning solution is available for use.</t>
 
-    <t>
-      The sections listed below provide updates to <xref
-      target="RFC7950"/>.  However, the design team does not believe any
-      of the will require a new version of the YANG language.  It is
-      believed that the extensions as they are defined can coexist with
-      existing YANG 1.1 clients.
-    <list style="symbols">
-      <t><xref target="update_rules"/> which describes modification to
-      the <xref target="RFC7950"/> Section 11 module update text to
-      advise the use of semantic versioning as described in this
-      document</t>
-      <t><xref target="import_semver"/> which describes an extension to
-      do import by semantic version</t>
-      <t><xref target="deprecated_and_obsolete_reasons"/> defines an
-      extension that adds a child element to "status"</t>
-    </list>
-  </t>
+      <t>
+	The sections listed below provide updates to <xref
+	target="RFC7950"/>.  However, the design team does not believe any
+	of the will require a new version of the YANG language.  It is
+	believed that the extensions as they are defined can coexist with
+	existing YANG 1.1 clients.
+	<list style="symbols">
+	  <t><xref target="update_rules"/> which describes modification to
+	  the <xref target="RFC7950"/> Section 11 module update text to
+	  advise the use of semantic versioning as described in this
+	  document</t>
+	  <t><xref target="import_semver"/> which describes an extension to
+	  do import by semantic version</t>
+	  <t><xref target="deprecated_and_obsolete_reasons"/> defines an
+	  extension that adds a child element to "status"</t>
+	</list>
+      </t>
+    </section>
+    <section anchor="changes_rfc7895bis" title="Changes to RFC7895bis">
+      <t>This document updates <xref
+      target="I-D.ietf-netconf-rfc7895bis"/>.  <xref
+      target="ietf_yang_library_updates"/> defines how a datastore
+      schema of YANG library decides which version of an import-only
+      module is used for import when the definition is otherwise
+      ambiguous.</t>
+      <t><xref target="ietf_yang_library_updates"/> also augments YANG library with:
+      <list style="hanging">
+	<t>a leaf to specify each module's YANG sema
+	allow each module's YANG semantic version number to
+	be provided.</t>
+	<t>two leaves to indicate how status 'deprecated' and status
+	'obsolete' nodes are implemented by the server.</t>
+      </list></t>
+    </section>
   </section>
 
   <section anchor="other_solns" title="Complementary solutions for the other requirements">
@@ -540,7 +557,7 @@
 import example-module {
   semver:version 1.1.2;
 }
-	</artwork>
+       </artwork>
       </figure>
 
       <t>The next example selects module versions that match, or are
@@ -554,7 +571,7 @@ import example-module {
 import example-module {
   semver:version 1.1.0+;
 }
-	</artwork>
+        </artwork>
       </figure>
 
       <t>The next example selects module versions that match, or are
@@ -570,7 +587,7 @@ import example-module {
   semver:version 1.0.0-1.1.1;
   semver:version 1.2.0+;
 }
-	</artwork>
+        </artwork>
       </figure>
 
       <t>The last example selects all module versions with a major
@@ -584,7 +601,7 @@ import example-module {
 import example-module {
   semver:version 1.0.0-1.MAX.MAX;
 }
-	</artwork>
+        </artwork>
       </figure>
   </section>
   <section title="TODO">
@@ -615,45 +632,79 @@ import example-module {
       Changes to published modules are allowed, even if they have some potential to cause interoperability
       problems, if the module-version YANG extension is used in the revision statement to clearly indicate the nature of the change."
       </t>
+      <t>TODO - Specify that changing status to "deprecated" is an BC change, and changing status to "obsolete" is an NBC change".</t>
   </section>
 
   <section title="Updates to ietf-yang-library" anchor="ietf_yang_library_updates">
-      <t>The ietf-semver YANG module also specifies additional ietf-yang-library <xref target="RFC7895"/>
-	    <xref target="I-D.ietf-netconf-rfc7895bis"/> leafs to be
-        added at the module and submodule levels.  The first is module-version, which augments
-        /yanglib:yang-library/yanglib:module-set/yanglib:module.  This specifies the current semantic version
-        of the associated module and revision in a given module-set.  The related submodule-version leaf is added at
-        /yanglib:yang-library/yanglib:module-set/yanglib:module/yanglib:submodule to indicate the semantic version of
-        a submodule.</t>
-      <t>In order to satisfy the requirements 4.1 and 4.3 of <xref target="I-D.verdt-netmod-yang-versioning-reqs"/> that deprecated and obsolete node presence and operation are easily and clearly
-        known to clients, ietf-semver also augments the ietf-yang-library with two additional boolean leafs at
-        /yanglib:yang-library/yanglib:module-set/yanglib:module.  A client can make one request of the ietf-yang-library and
-        know whether or a not a module that has deprecated or obsolete has those nodes implemented by the server, as opposed to
-        making multiple requests for each node in question.
+    <t>YANG library <xref target="RFC7895"/> <xref
+    target="I-D.ietf-netconf-rfc7895bis"/> is modified to support
+    semantic versioning in three ways.</t>
+
+    <t>The ietf-semver YANG module augments the 'module' list in
+    ietf-yang-library with a 'version' leaf to optionally declare the
+    YANG semantic version of each module.</t>
+
+    <section title="Resolving ambiguous module imports">
+      <t>A YANG datastore schema, defined in
+      <xref target="I-D.ietf-netconf-rfc7895bis"/>, can specify multiple
+      revisions of a YANG module in the schema using the 'import-only'
+      list, with the requirement from <xref target="RFC7950"/> that only
+      a single revision of a YANG module may be implemented.</t>
+      <t>If a YANG module import statement does not specify a specific
+      version or revision withim the datastore schema then it could be
+      ambigous as to which module revision the import statement should
+      resolve to.  Hence, a datastore schema constructed by a client
+      using the information contained in YANG library may not exactly
+      match the datastore schema actually used by the server.</t>
+      <t>The following rules remove the ambiguity:</t>
+      <t>If a module import statement could resolve to more than one
+      module revision defined in the datastore schema, and one of those
+      revisions is implemented (i.e., not an 'import-only' module), then
+      the import statement MUST resolve to the revision of the module
+      that is defined as being implemented by the datastore schema.</t>
+      <t>If a module import statement could resolve to more than one
+      module revision defined in the datastore schema, and none of those
+      revisions are implemented, but one of more modules revisions
+      specify a YANG semantic version, then the import MUST resolve to
+      the module with the greatest version number, according to the
+      rules in <xref target="import_semver"/>.</t>
+      <t>If a module import statement could resolve to more than one
+      module revision defined in the datastore schema, none of those
+      revisions are implemented, and none of the modules revisions have
+      a YANG semantic version number, then the import MUST resolve to
+      the module that has the most recent revision-date.</t>
+    </section>
+    <section title="Reporting how deprecated and obsolete nodes are handled">
+      <t>The ietf-semver YANG module augments YANG library with two
+      leaves to allow a server to report how it handles status
+      'deprecated' and status 'obsolete' nodes.  The leaves are:
         <list style="hanging">
-          <t hangText="deprecated-nodes-present :">A boolean that indicates whether or not this server implements deprecated nodes.
-           The value of this leaf SHOULD be true; and if so, the server MUST implement nodes
-           within this module as they are documented.  If specific deprecated nodes are not
-           implemented as documented, then they MUST be listed as deviations.  This leaf defaults to true.</t>
-          <t hangText="obsolete-nodes-present :">A boolean that indicates whether or not this server implements obsolete nodes.
-           The value of this leaf SHOULD be false; and if so, the server MUST NOT implement
-           nodes within this module. If this leaf is true, then all nodes in this module MUST
-           be implemented as documented in the module.  Any variation of this MUST be listed as
-           deviations.  This leaf defaults to false.</t>
+          <t hangText="deprecated-nodes-implemented:">If present, this
+          leaf indicates that the server implements all status
+          'deprecated' nodes, or otherwise uses deviations to explicitly
+          remove 'deprecated' nodes from the schema.  If this leaf is
+          absent then the behavior is unspecified.</t>
+          <t hangText="obsolete-nodes-absent:">If present, this leaf
+          indicates that the server does not implement any status
+          'obsolete' nodes, or otherwise uses devations to explicitly
+          add implemented 'obsolete' nodes back into the schema.  If
+          this leaf is absent then the behaviour is unspecified.</t>
          </list>
-       </t>
-       <t>
-         If a module does not have any deprecated or obsolete nodes, the server SHOULD set the corresponding leaf above
-         to true.  This is helpful to clients, such that if the MAJOR version number has not changed, and these booleans are
-         true, then a client does not have to check the status of any node for the module.
-       </t>
-       <t>Module compatibility can be affected if values other than the default are used for the leafs described here.
-         For example, if a server does
-         not implemennt deprecated nodes, then a given module revision may be incompatible with a previous revision where
-         the nodes were not deprecated.  When calculating backward compatibility, the default values of these
-         leafs MUST be considered.  From a client's point of view, if two module revisions have the same MAJOR version
-         but the run-time value of deprecated-nodes-present (as read from the ietf-yang-library) is false, then
-         compatibility MUST NOT be assumed based on the module-version alone.</t>
+     </t>
+     <t>Implementations that implement the YANG semantic versioning
+     scheme defined in this document MUST set both the
+     'deprecated-nodes-implemented' and 'obsolete-nodes-absent' leaves
+     because the refined module update rules in <xref
+     target="update_rules"/> assume that this is how servers handle
+     'deprecated' and 'obsolete' nodes to comply with YANG module
+     semantic versioning.</t>
+     <t>If a server does not set the 'deprecated-nodes-implemented'
+     leaf, then clients MUST NOT rely solely on the YANG module semantic
+     version number to determine whether two modules versions are
+     backwards compatible, and MUST also consider whether the status of
+     any nodes has changed to 'deprecated' and whether those nodes are
+     implemented by the server.</t>
+    </section>
   </section>
 
   <section title="Deprecated and Obsolete Reasons" anchor="deprecated_and_obsolete_reasons">
