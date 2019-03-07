@@ -246,23 +246,23 @@
 </section>
 
 <section anchor="semantic_versioning" title="YANG Semantic Versioning">
-  <t>The first part of the solution introduces and defines YANG Semantic
-  Versioning, explains how it is used with YANG modules, and the rules
-  associated with changing a module's semantic version number when the
-  module definitions are updated.</t>
+  <t>The chapter defines YANG Semantic Versioning, explains how it is
+  used with YANG modules, and the rules associated with changing a
+  module's semantic version number when the module definitions are
+  updated.</t>
 
   <t>The YANG semantic versioning scheme applies only to YANG modules.
   YANG submodules are not independently versioned by the YANG semantic
   versioning scheme.  Instead, if a versioned module includes one or
   more submodules then those submodules are implicitly versioned as part
-  of the module's 'semver:version' statement, and all 'include'
+  of the module's 'semver:version' statements, and all 'include'
   statements MUST specify the revision-date for each of the included
   submodules.</t>
 
 
   <section anchor="version_classification" title="Classification of changes between module revisions">
-    <t>The principle aim of YANG semantic versioning is to allow a
-    reader of a module to understand the overall significance of any
+    <t>The principle aim of YANG semantic versioning is to allow a user
+    of a YANG module to understand the overall significance of any
     changes between two module revisions solely based on the semantic
     version number.</t>
     
@@ -286,23 +286,15 @@
 
       <t>A 'backwards-compatible' module semantic version change is
       where some syntax or semantic changes exists between the two
-      module revisions, but all changes follow the rules of "Updating a
-      Module" of [RFC7950], except that no elements have been changed to
-      status 'obsolete', and re-ordering of statements is allowed.</t>
+      module revisions, but all changes follow the rules specified in
+      <xref target="update_rules"/>.</t>
 
       <t>A 'non-backwards-compatible' module semantic version change is
       where some syntax or semantic changes exists between the two
-      module revisions, and those changes do not follow the rules of
-      "Updating a Module", or one or more schema nodes have been changed
-      to status 'obsolete'.</t>
+      module revisions, and those changes do not follow the rules
+      specified in <xref target="update_rules"/>.</t>
     </list>
     </t>
-
-    <t>Q: Should revision-date history and semantic version be excluded
-    from the comparision? RW: I've assumed yes.</t>
-
-    <t>Q. Does statement ordering need to be considered as part of the
-    comparision? RW: I think the answer should be no. RR: ordering matters for RPC/action input as per https://tools.ietf.org/html/rfc7950#section-7.5.7</t>
   </section>
 
        
@@ -331,14 +323,23 @@
       by the semver.org 2.0.0 versioning scheme.</t>
     </list>
     </t>
-    <t>Every YANG module SHOULD include a top-level 'semver:version'
-    statement that specifies the YANG semantic version number for each
-    revision of the module.</t>
-
-    <t>All 'revision' statements in YANG modules SHOULD include a
-    'semver:version' substatement that specifies the YANG semantic
-    version number associated with that particular revision of the
-    module.</t>
+    <t>Every YANG module versioned using a YANG semantic versioning
+    scheme specifies the module's semantic version number by including
+    the 'semver:module-version' statement according to the following
+    rules:
+    <list>
+    <t>The module MUST include at least one revision statement.</t>
+    <t>The most recent module revision statement MUST include a
+    'semver:module-version' sub-statement, that defines the module's
+    YANG semantic version.</t>
+    <t>The preceding module revision statement SHOULD also include a
+    'semver:module-version' sub-statement, to allow the module's
+    semantic version history to be derived.</t>
+    <t>All other revision statements MAY include a
+    'semver:module-version' sub-statement if they have an associated
+    YANG semantic version.</t>
+    </list>
+    </t>
 
     <t>
      "The YANG semver version number is expressed as a string of the
@@ -353,8 +354,9 @@
 
        <t>'Y' is the MINOR version.  Changes in the minor version number
        indicate changes that are backwards-compatible to versions with
-       the same major version number, but a lower minor version
-       number.</t>
+       the same major version number, but a lower minor version number,
+       unless either version has a patch version with an 'm' or 'M'
+       modifier.</t>
 
        <t>'Zv' is the PATCH version and modifier.  Changes in the patch
        version number can indicate editorial, backwards-compatible, or
@@ -362,14 +364,21 @@
        same major and minor version numbers, but lower patch version
        number, depending on what form modifier 'v' takes:
        <list style="symbols">
-	 <t>'M' - the change represents a non-backwards-compatible change</t>
-	 <t>'m' - the change represents a backwards-compatible change</t>
 	 <t>If the modifier letter is absent, the change represents an
 	 editorial change</t>
+	 <t>'m' - the change represents a backwards-compatible change</t>
+	 <t>'M' - the change represents a non-backwards-compatible change</t>
        </list>
        </t>
      </list>
     </t>
+    <t>A module MUST NOT have two revisions with the same MAJOR, MINOR
+    and PATCH numerical values but with different patch modifier
+    letters.  E.g., it is not allowed for a module to have both version
+    '1.0.0' and also '1.0.0m'.</t>
+    <t>A modules semantic version number uniquely identifies a YANG
+    module.  Two revisions of a module that have the same semantic
+    version numbers MUST have the same non-whitespace content.</t>
   </section>
   
   <section anchor="semver_update_rules" title="YANG Semantic Version Update Rules">
@@ -393,13 +402,13 @@
     argument in the new module revision is calculated:
     <list>
       <t>If the module is being updated in a non-backwards-compatible
-      way, then the module version "X.Y.Z[m|M]" SHOULD be updated to
+      way, then the module version "X.Y.Z[m|M]" MUST be updated to
       "X+1.0.0" unless that module version has already been defined with
       different content, in which case the module version "X.Y.Z+1M MUST
       be used instead.</t>
 
       <t>If the module is being updated in a backwards-compatible way,
-      then the module version "X.Y.Z[m|M]" SHOULD be updated to
+      then the module version "X.Y.Z[m|M]" MUST be updated to
       "X.Y+1.0" unless that module version has already been defined with
       different content, in which case if the current module version is
       "X.Y.ZM" then it MUST be updated to "X.Y.Z+1M", or otherwise
@@ -450,8 +459,6 @@
       
       description
         "to be completed";
-
-      semver:module-version "2.0.0";
 
       revision 2017-10-30 {
         description
@@ -638,7 +645,8 @@ import example-module {
   </section>
 </section>
 
-  <section title="Updates to YANG 1.1 Module Update Rules" anchor="update_rules">
+<section title="Updates to YANG 1.1 Module Update Rules" anchor="update_rules">
+<t>TODO - This section should just specify what the rules are</t>
       <t>
           RFC 7950 section 11, must be updated to allow for non-backward changes provided they follow the
           semantic versioning guidelines and increase the MAJOR version number when a backward incompatible
@@ -651,6 +659,16 @@ import example-module {
       problems, if the module-version YANG extension is used in the revision statement to clearly indicate the nature of the change."
       </t>
       <t>TODO - Specify that changing status to "deprecated" is an BC change, and changing status to "obsolete" is an NBC change".</t>
+      <t>A 'backwards-compatible' module semantic version change is
+      where some syntax or semantic changes exists between the two
+      module revisions, but all changes follow the rules specified in <xref target="update_rules"/>
+      of "Updating a
+      Module" of [RFC7950], except that no elements have been changed to
+      status 'obsolete', and re-ordering of statements is allowed.</t>
+
+      <t>Q: Should revision-date history and semantic version be excluded
+      from the comparision? RW: I've assumed yes.</t>
+
   </section>
 
   <section title="Updates to ietf-yang-library" anchor="ietf_yang_library_updates">
@@ -939,8 +957,6 @@ module ietf-semver {
     "This module contains a definition for a YANG 1.1 extension to
      express the semantic version of YANG modules.";
 
-  semver:module-version "0.3.0";
-
   revision 2019-02-27 {
     description
       "* Move YANG library augmentations into a separate module.
@@ -1034,10 +1050,13 @@ module ietf-semver {
        module the updated status and update rules as this described
        in RFC XXXX are used.
 
-       The statement MUST only be a substatement of the 'module' and
-       'revision' statementa.  Zero or one module-version statement
-       is allowed per parent statement. No substatements are allowed.
-      ";
+       The statement MUST only be a substatement of the 'revision'
+       statements.  Zero or one module-version statement is allowed
+       per parent statement. No substatements are allowed.
+
+       'revision' statements in submodule MAY contain a
+       'module-version' statement for documentation purposes, but it
+       has no effect on the including module's semantic version.";
     reference
       "draft-verdt-netmod-yang-semver: 
        YANG Semantic Versioning for Modules";
