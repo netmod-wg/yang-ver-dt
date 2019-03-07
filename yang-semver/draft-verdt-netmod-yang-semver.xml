@@ -844,15 +844,21 @@ of this specification.</t>
          Therefore, a model author SHOULD use both means to determine a model's semantic version.</t>
        </section>
        <section title="Making non-backwards-compatible changes to a YANG module">
-       <t>There are various valid situations where a YANG module has to be modified in a non-backwards-compatible way. Here are some guidelines on how non-backwards compatible changes SHOULD be made:
+       <t>There are various valid situations where a YANG module has to be modified in a non-backwards-compatible way. Here are the different ways in which this can be done:
+          <list style="symbols">
+             <t>If the server can support NBC versions of the YANG module simultaneously AND the clients support version selection, then the NBC changes MAY be done immediately. The clients would select the version which they support and the NBC change would have no impact on them.</t>
+             <t>When possible, NBC changes are done incrementally to provide clients time to adapt to NBC changes.</t>
+          </list>
+       </t>
+       <t>Here are some guidelines on how non-backwards compatible changes can be made incrementally:
           <list style ="numbers">
              <t>The changes should be made incrementally, e.g. a data node's status SHOULD NOT be changed directly from "current" to "obsolete" (see Section 4.7 of <xref target="RFC8407"/>), instead the status SHOULD first be marked "deprecated" and then when support is removed its status MUST be changed to "obsolete". Instead of using the "obsolete" status, the data node MAY be removed from the model but this has the risk of breaking modules which import the modified module.</t>
-             <t>A node with status "deprecated" MUST be supported. Q: if we keep this, do we still need the deprecated-nodes-present leaf, see <xref target="ietf_yang_library_updates"/>.</t>
+             <t>For A node with status "deprecated" MUST be supported for the solution described here to function properly.</t>
              <t>A node with status "deprecated" SHOULD be available for at least one year before its status is changed to "obsolete", see Section 4.7 of <xref target="RFC8407"/>.</t>
              <t>Support for a node which is "obsolete" is indicated by the node "obsolete-nodes-present, see <xref target="ietf_yang_library_updates"/>.</t>
              <t>The new extension "status-description" SHOULD be used for nodes which are "obsolete" or "deprecated".</t>
-             <t>For status "deprecated", the "status-description" SHOULD also indicate until when support for the node is guaranteed. If there is a replacement data node, rpc, action or notification for the deprecated node, this MUST be stated in the "status-description".</t>
-             <t>When obsoleting or deprecating data nodes, the "deprecated" or "obsolete" status SHOULD be applied at the highest possible level in the data tree. For example, when deprecating all data nodes in a container, the "deprecated" status SHOULD be applied to the container.</t>            
+             <t>For status "deprecated", the "status-description" SHOULD also indicate until when support for the node is guaranteed. If there is a replacement data node, rpc, action or notification for the deprecated node, this SHOULD be stated in the "status-description".</t>
+             <t>When obsoleting or deprecating data nodes, the "deprecated" or "obsolete" status SHOULD be applied at the highest possible level in the data tree. For example, when deprecating all data nodes in a container, the "deprecated" status SHOULD be applied to the container. For clarity, the status MAY be added in all the affected nodes but the status-description SHOULD be added only at the highest level in the tree.</t>            
           </list>
           </t>
          <t>The following sections have examples on how non-backwards-compatible changes can be made.</t>
@@ -871,7 +877,7 @@ of this specification.</t>
             <list style="numbers">
                <t>The status of node "vpn-id" SHOULD be changed to "deprecated" and the node SHOULD be available for at least one year. This is a backwards-compatible change.</t>
                <t>A new node, e.g. "vpn-name", of type string is added to the same location as the existing node "vpn-id". This new node has status "current" and its description SHOULD explain that it is replacing node "vpn-id".</t>
-               <t>During the period of time where both nodes are available, how the server behaves when either node is set is outside the scope of this document. Here are some options:
+               <t>During the period of time where both nodes are available, how the server behaves when either node is set is outside the scope of this document and will vary on a case by case basis. Here are some options:
                <list style="numbers">
                   <t>A server MAY prevent the new node from being set if the old node is already set (and vice-versa). The new node MAY have a when statement to achieve this. The old node MUST NOT have a when statement since this would be a non-backwards-compatible change, but the server MAY reject the old node from being set if the new node is already set.</t>
                   <t>If the new node is set and a client does a get or get-config operation on the old node, the server MAY map the value. For example, if the new node "vpn-name" has value "123" then the server MAY return integer value 123 for the old node "vpn-id". However, if the value can not be mapped, we need a way of returning "unsupported" TBD.</t>
