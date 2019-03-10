@@ -132,7 +132,7 @@
   version numbers to help manage the lifecycle of YANG modules.</t>
   
   <t>
-  The solution is comprised of the following six parts:
+  The solution is comprised of the following seven parts:
        <list style="bullets">
        <t>A definition for the YANG semantic versioning scheme for
        modules, and an explanation of how the semver extension can be
@@ -143,8 +143,7 @@
        inter-module version dependencies to be captured within YANG
        module definitions.</t>
        <t>Updates to the YANG 1.1 module update rules to accommodate the
-       semantic versioning scheme and to provide more consistent
-       handling of changes to the YANG "status" statement.</t>
+       semantic versioning scheme.</t>
        <t>Updates and augmentations to ietf-yang-library to include the
        YANG semantic version number in the module descriptions, to
        report how 'deprecated' and 'obsolete' nodes are handled by a
@@ -154,24 +153,26 @@
        'status' statement to allow additional documentation as to why a
        node is being deprecated, and what alternatives may be
        available.</t>
+       <t>A description of how YANG semantic versioning applies to YANG
+       instance data.</t>
        <t>Guidelines to YANG module authors on how the YANG semantic
-       versioning rules should be used, along with examples. </t>
+       versioning rules should be used, along with examples.</t>
      </list>
   </t>
 
-  <t>Open issues are listed at <xref target="open_issues"/>, and also
-  tracked at https://github.com/netmod-wg/yang-ver-dt/issues</t>
+  <t>Open issues are listed at <xref target="open_issues"/>, and
+  tracked at <eref target="https://github.com/netmod-wg/yang-ver-dt/issues"/>.</t>
 
-  <section anchor="changes" title="Changes to YANG RFCs">
-    <section anchor="changes_7950" title="Changes to RFC7950">
+  <section anchor="changes" title="Updates to YANG RFCs">
+    <section anchor="changes_7950" title="Updates to RFC7950">
       <t>This document proposes updates to <xref target="RFC7950"/> to
       address some of the requirements.  It should be noted that there
       is also active WG discussion on the next steps towards an updated
       version of YANG, and potentially some of the functionality
       described here could be folded into an updated revision of <xref
-      target="RFC7950"/>, although that it might adversely impact when
+      target="RFC7950"/>, although that might adversely impact when
       (parts of) a standards based YANG module versioning solution is
-      available for use.</t>
+      available.</t>
 
       <t>The sections listed below provide updates to <xref
       target="RFC7950"/>.  The design team does not believe any of the
@@ -191,14 +192,14 @@
 	</list>
       </t>
     </section>
-    <section anchor="changes_rfc8525" title="Changes to RFC8525">
+    <section anchor="changes_rfc8525" title="Updates to RFC8525">
       <t>This document updates <xref target="RFC8525"/>.  <xref
       target="ietf_yang_library_updates"/> defines how a reader of a
       YANG library datastore schema chooses which version of an
       import-only module is used to resolve a module import when the
       definition is otherwise ambiguous.</t>
     </section>
-    <section anchor="changes_rfc8407" title="Changes to RFC8407">
+    <section anchor="changes_rfc8407" title="Updates to RFC8407">
       <t><xref target="guidelines"/> updates <xref target="RFC8407"/> to
       provide guidelines on how the YANG module semantic versioning can
       be used to manage the lifecycle of YANG modules when using strict RFC
@@ -255,9 +256,9 @@
   YANG submodules are not independently versioned by the YANG semantic
   versioning scheme.  Instead, if a versioned module includes one or
   more submodules then those submodules are implicitly versioned as part
-  of the module's 'semver:version' statements, and all 'include'
-  statements MUST specify the revision-date for each of the included
-  submodules.</t>
+  of the module's 'semver:version' statements, and all the module's
+  'include' statements MUST specify the revision-date for each of the
+  included submodules.</t>
 
 
   <section anchor="version_classification" title="Classification of changes between module revisions">
@@ -269,8 +270,9 @@
     <t>The semantic version change between any two arbitrary revisions
     of a YANG module can be classified into one of four categories:
     'unchanged', 'editorial, 'backwards-compatible' or
-    'non-backwards-compatible'.  The classification is performed by
-    use of the following rules:
+    'non-backwards-compatible'.  A summary of the classification is
+    given below, with the specific rules as they apply to YANG
+    statements provided in <xref target="update_rules"/>.
     <list style="bullets">
       <t>The semantic version change between two module revisions is
       defined as 'unchanged' if, after excluding 'revision' and
@@ -278,21 +280,21 @@
       remaining changes are insignificant white space changes.</t>
       
       <t>An 'editorial' module semantic version change is where there
-      are changes in the module's statements, or statement ordering,
-      between the two module revisions, but those changes do not affect
-      the syntax or semantic meaning of the module in any way.  An
-      example of an editorial change would be a fix to a spelling
-      mistake in a description statement.</t>
+      are changes in the module's statements, between the two module
+      revisions, but those changes do not affect the syntax or semantic
+      meaning of the module in any way.  An example of an editorial
+      change would be a fix to a spelling mistake in a description
+      statement. </t>
 
       <t>A 'backwards-compatible' module semantic version change is
       where some syntax or semantic changes exists between the two
       module revisions, but all changes follow the rules specified in
-      <xref target="update_rules"/>.</t>
+      <xref target="bc_update_rules"/>.</t>
 
       <t>A 'non-backwards-compatible' module semantic version change is
       where some syntax or semantic changes exists between the two
-      module revisions, and those changes do not follow the rules
-      specified in <xref target="update_rules"/>.</t>
+      module revisions, and those changes do not follow the rules for a
+      'backwards-compatible' version change.</t>
     </list>
     </t>
   </section>
@@ -312,7 +314,7 @@
       semantic versioning scheme supports limited updates to older
       versions of YANG modules, to allow for bug fixes and enhancements
       to module versions that are not the latest.</t>
-      
+
       <t>Module definitions that follow the semver.org 2.0.0 versioning
       scheme are fully compatible with implementations that understand
       the YANG semantic versioning scheme.</t>
@@ -323,7 +325,7 @@
       by the semver.org 2.0.0 versioning scheme.</t>
     </list>
     </t>
-    <t>Every YANG module versioned using a YANG semantic versioning
+    <t>Every YANG module versioned using the YANG semantic versioning
     scheme specifies the module's semantic version number by including
     the 'semver:module-version' statement according to the following
     rules:
@@ -354,9 +356,8 @@
 
        <t>'Y' is the MINOR version.  Changes in the minor version number
        indicate changes that are backwards-compatible to versions with
-       the same major version number, but a lower minor version number,
-       unless either version has a patch version with an 'm' or 'M'
-       modifier.</t>
+       the same major version number, but a lower minor version number
+       and no patch 'm' or 'M' modifier.</t>
 
        <t>'Zv' is the PATCH version and modifier.  Changes in the patch
        version number can indicate editorial, backwards-compatible, or
@@ -372,17 +373,74 @@
        </t>
      </list>
     </t>
-    <t>YANG requires that if two modules have the same revision date
-    then they MUST have the same semantic content.  A similar constraint
-    applies for YANG semantic version numbers, i.e. two revisions of a
-    module that have the same semantic version numbers MUST have the
-    same semantic content.</t>
-    <t>A module MUST NOT have multiple revision where the version string
-    has the same MAJOR, MINOR and PATCH version numbers, but different
-    PATCH modifier letter.  E.g., module version "1.2.3M" is not allowed
-    if module version "1.2.3" has already been defined.  Neither can
-    there be two different revisions of a YANG module with different
-    content but the same </t>
+    <t>The YANG module name and YANG semantic version number uniquely
+    identifies a revision of a module, with an associated revision date.
+    There MUST NOT be multiple instances of a YANG module definition
+    with the same module name and YANG semantic version number but
+    different content or revision date.</t>
+    <t>There MUST NOT be multiple versions of a YANG module that have
+    the same MAJOR, MINOR and PATCH version numbers, but different patch
+    modifier letter.  E.g., module version "1.2.3M" MUST NOT be defined
+    if module version "1.2.3" has already been defined.</t>
+    <section anchor="example_versions" title="Examples for YANG semantic version numbers">
+      <t>The following diagram and explanation illustrates how YANG semantic version numbers work.</t>
+      <figure>
+        <preamble>Example YANG semantic version numbers for an example module:</preamble>
+      <artwork>
+        0.1.0
+          |
+        0.2.0
+          |  
+        1.0.0
+          |  \
+          |   1.1.0 -> 1.1.1m -> 1.1.2M
+          |    |
+          |   1.2.0 -> 1.2.1M -> 1.2.2M
+          |    |
+          |   1.3.0 -> 1.3.1
+          |
+        2.0.0
+          |
+        3.0.0
+             \
+              3.1.0
+      </artwork>
+    </figure>
+    <t>The tree diagram above illustrates how an example modules version
+    history might evolve.  For example, the tree might represent the
+    following changes, listed in chronological order from oldest
+    revision to newest:
+    <list>
+      <t>0.1.0  - first beta module version</t>
+      <t>0.2.0  - second beta module version (with NBC changes)</t>
+      <t>1.0.0  - first release (may have NBC changes from 0.2.0)</t>
+      <t>1.1.0  - added new functionality, leaf "foo" (BC)</t>
+      <t>1.2.0  - added new functionality, leaf "baz" (BC)</t>
+      <t>1.3.0  - improve existing functionality, added leaf "foo-64" (BC)</t>
+      <t>1.3.1  - improve description wording for "foo-64" (Editorial)</t>
+      <t>1.1.1m - backport "foo-64" leaf to 1.1.x to avoid implementing "baz" from 1.2.0 (BC)</t>
+      <t>2.0.0  - change existing model for performance reasons, e.g. re-key list (NBC)</t>
+      <t>1.1.2M - NBC point bug fix, not required in 2.0.0 due to model changes (NBC)</t>
+      <t>3.0.0  - NBC bugfix, rename "baz" to "bar"; also add new BC leaf "wibble"; (NBC)</t>
+      <t>1.2.1M - backport NBC fix, changing "baz" to "bar"</t>
+      <t>1.2.2M - backport "wibble".  This is a BC change but "M" modifier is sticky.</t>
+      <t>3.1.0  - introduce new leaf "wobble" (BC)</t>
+    </list>
+    </t>
+    <t>The partial ordering relationships based on the semantic versioning numbers can be defined as follows:
+    <list>
+      <t>1.0.0 &lt; 1.1.0 &lt; 1.2.0 &lt; 1.3.0 &lt; 2.0.0 &lt; 3.0.0 &lt; 3.1.0</t>
+      <t>1.0.0 &lt; 1.1.0 &lt; 1.1.1m &lt; 1.1.2M</t>
+      <t>1.0.0 &lt; 1.1.0 &lt; 1.2.0 &lt; 1.2.1M &lt; 1.2.2M</t>
+    </list>
+    </t>
+    <t>There is no ordering relationship between 1.1.1M and either 1.2.0 or
+    1.2.1M, except that they share the common ancestor of 1.1.0.</t>
+    <t>Looking at the version number alone, the module definition in
+    2.0.0 does not necessarily contain the contents of 1.3.0.  However,
+    the module revision history in 2.0.0 would likely indicate that it
+    was edited from module version 1.3.0.</t>
+    </section>
   </section>
   
   <section anchor="semver_update_rules" title="YANG Semantic Version Update Rules">
@@ -395,7 +453,8 @@
 
     <t>The first step is to classify the module change as 'editorial',
     'backwards-compatible', or 'non-backwards-compatible version' using
-    the rules defined in <xref target="version_classification"/>.</t>
+    the rules defined in <xref target="version_classification"/> and
+    <xref target="update_rules"/>.</t>
 
     <t>The second step is to calculate the value of the 'semver:version'
     field for the new module revision, based on the value of the
@@ -404,7 +463,7 @@
 
     <t>The following rules define how the value for the 'semver:version'
     argument in the new module revision is calculated:
-    <list>
+    <list style="numbers">
       <t>If a module is being updated in a non-backwards-compatible
       way, then the module version "X.Y.Z[m|M]" MUST be updated to
       "X+1.0.0" unless that module version has already been defined with
@@ -414,7 +473,7 @@
       <t>If a module is being updated in a backwards-compatible way,
       then the next version number depends on the format of the current
       version number:
-      <list>
+      <list style="format %i">
 	<t>"X.Y.Z" - the module version MUST be updated to "X.Y+1.0",
 	unless that module version has already been defined with
 	different content, when the module version MUST be updated to
@@ -429,7 +488,7 @@
       <t>If a module is being updated in an editorial way, then the next
       version number depends on the format of the current version
       number:
-      <list>
+      <list style="format %i">
 	<t>"X.Y.Z" - the module version MUST be updated to "X.Y.Z+1"</t>
 	<t>"X.Y.Zm" - the module version MUST be updated to
 	"X.Y.Z+1m".</t>
@@ -449,21 +508,20 @@
   <section anchor="semver_extension" title="YANG Module Semver Extension">
     <t>This document defines a YANG extension to add the YANG module
     semantic version to a Module.  The complete definition of this YANG
-    module is in section XXX.
+    module is in <xref target="yang_modules"/>.
     </t>
 
     <figure>
       <artwork>
         extension module-version {
-            argument semver;
+          argument semver;
         }
       </artwork>
     </figure>
-    <t>
-    The extension would typically be used this way:
+    <t>The extension would typically be used this way:
     </t>
     <figure>
-       <artwork>
+      <artwork>
     module yang-module-name {
 
       namespace "name-space";
@@ -474,43 +532,63 @@
       description
         "to be completed";
 
+      revision 2018-02-28 {
+        description "Added leaf 'wobble'";
+        semver:module-version "3.1.0";
+      }
+
+      revision 2017-12-31 {
+        description "Rename 'baz' to 'bar', added leaf 'wibble'";
+        semver:module-version "3.0.0";
+      }
+	
       revision 2017-10-30 {
-        description
-          "Change the module structure";
+        description "Change the module structure";
         semver:module-version "2.0.0";
       }
 
+      revision 2017-08-30 {
+        description "Clarified description of 'foo-64' leaf";
+        semver:module-version "1.3.1";
+      }
+
       revision 2017-07-30 {
-        description
-          "Added new feature XXX";
+        description "Added leaf foo-64";
+        semver:module-version "1.3.0";
+      }
+
+      revision 2017-04-20 {
+        description "Add new functionality, leaf 'baz'";
         semver:module-version "1.2.0";
       }
 
       revision 2017-04-03 {
-        description
-          "Update copyright notice.";
-        semver:module-version "1.0.1";
+        description "Add new functionality, leaf 'foo'";
+        semver:module-version "1.1.0";
       }
 
       revision 2017-04-03 {
-        description
-          "First release version.";
+        description "First release version.";
         semver:module-version "1.0.0";
       }
 
+      revision 2017-01-30 {
+        description "NBC changes to initial revision";
+        semver:module-version "0.2.0";
+      }
+
       revision 2017-01-26 {
-        description
-          "Initial module for inet types";
+        description "Initial module version";
         semver:module-version "0.1.0";
       }
 
       //YANG module definition starts here
-       </artwork>
+      </artwork>
     </figure>
-
-	<t>
-    See also "Semantic Versioning and Structure for IETF Specifications" <xref target="I-D.claise-semver"/> for a mechanism
-    to combine the semantic versioning, the GitHub tools, and a potential change to the IETF process.
+   <t>See also "Semantic Versioning and Structure for IETF
+   Specifications" <xref target="I-D.claise-semver"/> for a mechanism to
+   combine the semantic versioning, the GitHub tools, and a potential
+   change to the IETF process.
     </t>
   </section>
 </section>
@@ -539,11 +617,15 @@
   imports if it is augmented by another module.</t>
 
   <t>The ietf-semver module defines the 'version' extension, a
-  substatement to the YANG 'import' statement.  An 'import' statement
-  may contain 'version' statements or a 'revision-date' statement, but
-  not both.  The 'version' statement may be specified multiple times,
-  requiring that the imported module version conforms to at least one of
-  the 'version' statements.</t>
+  substatement to the YANG 'import' statement.
+  <list>
+    <t>An 'import' statement MAY contain 'version' statements or a
+    'revision-date' statement, but not both.</t>
+    <t>The 'version' statement MAY be specified multiple times,
+    requiring that the imported module version conforms to at least one
+    of the 'version' statements.</t>
+  </list>
+  </t>
 
   <t>The argument to the 'version' statement takes one of three valid forms:
   <list style="numbers">
@@ -579,14 +661,16 @@
     </list>
     </t>
   </list>
-  The patch modifier letter is not included as part of module 'version'
-  argument, and is entirely ignored for import statement module version
-  number comparisons.
+  The patch modifier letter is not included as part of the
+  'semver:version' argument, and is entirely ignored for import
+  statement module version number comparisons.
   </t>
   <section title="Module import examples">
       <t>Consider an example module "example-module" that is
-      hypothetically available in the following versions: 0.1.0, 1.0.0,
-      1.1.0, 1.1.1m, 1.1.2M, 1.1.3M, 1.2.0, 2.0.0, 3.0.0.</t>
+      hypothetically available in the following versions: 0.1.0, 0.2.0,
+      1.0.0, 1.1.0, 1.1.1m, 1.1.2M, 1.2.0, 1.2.1M, 1.2.2M, 1.3.0, 1.3.1,
+      2.0.0, 3.0.0, and 3.1.0.  E.g. matching the versions illustrated
+      in <xref target="example_versions"/>.</t>
 
       <t>The first example selects the specific version 1.1.2M.  A
       specific version import might be used if 1.1.2M contained changes
@@ -600,31 +684,32 @@ import example-module {
       </figure>
 
       <t>The next example selects module versions that match, or are
-      greater than, version 1.1.0.  This form may be used if there is a
-      dependency on a data node introduced in version 1.1.0.  This is
+      greater than, version 1.2.0.  This form may be used if there is a
+      dependency on a data node introduced in version 1.2.0.  This is
       expected to be the most commonly used form of 'import by version'.</t>
-      <t>Includes versions: 1.1.0, 1.1.1m, 1.1.2M, 1.1.3M,
-      1.2.0, 2.0.0 and 3.0.0.</t>
+      <t>Includes versions: 1.2.0, 1.2.1M, 1.2.2M, 1.3.0, 1.3.1, 2.0.0,
+      3.0.0 and 3.1.0.</t>
       <figure>
         <artwork>
 import example-module {
-  semver:version 1.1.0+;
+  semver:version 1.2.0+;
 }
         </artwork>
       </figure>
 
       <t>The next example selects module versions that match, or are
-      greater than 1.1.0, but excluding the 1.1.2M and 1.1.3M versions.
-      This form may be needed if structural non backwards compatible
-      changes are introduced in a patch 'M' version.  Generally, it is
-      advisable to avoid making such changes.</t>
-      <t>Includes versions: 1.0.0, 1.1.0, 1.1.1m, 1.2.0, 2.0.0 and
-      3.0.0.</t>
+      greater than 1.1.0, but excluding all 1.1.x and 1.2.x 'M'
+      versions.  This form may be needed if structural non backwards
+      compatible changes are introduced in a patch 'M' version.
+      Generally, it is advisable to avoid making such changes.</t>
+      <t>Includes versions: 1.1.0, 1.1.1m, 1.2.0, 1.3.0, 1.3.1, 2.0.0,
+      3.0.0, and 3.1.0.</t>
       <figure>
         <artwork>
 import example-module {
-  semver:version 1.0.0-1.1.1;
-  semver:version 1.2.0+;
+  semver:version 1.1.0-1.1.1;
+  semver:version 1.2.0;
+  semver:version 1.3.0+;
 }
         </artwork>
       </figure>
@@ -633,8 +718,8 @@ import example-module {
       version number of 1.  This form may be useful if significant non
       backwards compatible changes have been introduced in version 2.0.0
       that break import backwards compatibility.</t>
-      <t>Includes versions: 1.0.0, 1.1.0, 1.1.1m, 1.1.2M, 1.1.3M,
-      1.2.0.</t>
+      <t>Includes versions: 1.0.0, 1.1.0, 1.1.1m, 1.1.2M, 1.2.0, 1.2.1M,
+      1.2.2M, 1.3.0 and 1.3.1.</t>
       <figure>
         <artwork>
 import example-module {
@@ -643,56 +728,76 @@ import example-module {
         </artwork>
       </figure>
   </section>
-  <section title="TODO">
-       <t>
-       TODO - Add text like this to the guidelines.  The import
-       statement SHOULD include a semver:import-versions statement and
-       MUST NOT include a revision statement.  An import statement MUST
-       NOT contain both a semver:import-versions and a revision
-       substatement.  The use of the revision substatement for import
-       should be discouraged.
-      </t>
-    <t>TODO - Perhaps guidance text should also warn about making nbc
-    changes that could break imports.  E.g. this could be an example of
-    where making something obsolete might be better than removing
-    it.</t>
+</section>
+
+<section title="Classifying changes in YANG modules" anchor="update_rules">
+  <t><xref target="RFC7950"/> chapter 11 defines the rules for what
+  constitutes a backwards compatible change in YANG 1.1.  However, the
+  YANG semantic versioning scheme defined in this document uses a
+  slightly modified version of this scheme, and also provides rules to
+  classify changes as editorial, backwards-compatible, or
+  non-backwards-compatible.</t>
+  <section anchor="editorial_update_rules" title="Editorial changes">
+    <t>Any changes that do not change the ordering or meaning of the
+    YANG module in any way are classified as 'editorial'.  The following
+    rules define 'editorial':
+   <list style="symbols">
+     <t>Changing any 'description' statement if it does not change the
+     semantic meaning of the statement is relates to.  E.g., fixing
+     spelling or grammar, or changing layout, are all allowed.</t>
+     <t>Adding or updating 'reference' statements.</t>
+     <t>Adding or updating the 'organization' statement.</t>
+     <t>Adding a new 'revision' or 'semver:module-version'
+     statement, or correcting a previous 'revision' or
+     'semver:module-version' statement.</t>
+     <t>A module may be split into a set of submodules or a submodule
+     may be removed, provided the definitions in the module do not
+     change except in the ways described above.</t>
+    </list></t>
+  </section>
+  <section anchor="bc_update_rules" title="Backwards-compatible changes">
+    <t><xref target="RFC7950"/> chapter 11 defines the rules for what
+    constitutes a backwards-compatible change in YANG 1.1.  The document
+    update these rules in the following ways:
+    <list style="symbols">
+      <t>Adding or changing a 'status' node to 'obsolete' is not a
+      backwards-compatible change.  Other changes/additions of status
+      elements are backwards-compatible, as per <xref
+      target="RFC7950"/>.</t>
+      <t>Changing the ordering of statements is allowed if it does not
+      chanage the ordering of an rpc's 'input' substatements.</t>
+    </list></t>
+  </section>
+  <section anchor="nbc_update_rules" title="Non-backwards-compatible changes">
+    <t>All other changes to YANG modules that are not classified as
+    'editorial' or 'backwards-compatible' are defined as being
+    non-backwards-compatible.</t>
+    <t>Examples of non-backwards-compatible changes include:
+    <list style="symbols">
+      <t>Deleting a data node, or changing it to status obsolete.</t>
+      <t>Changing the name, type, or units of a data node.</t>
+      <t>Modifying the description in a way that changes the semantic
+      meaning of the data node.</t>
+      <t>Any changes that change or reduce the allowed value set of the
+      data node, either through changes in the type definition, or the
+      addition or changes to 'must' statements, or changes in the
+      description.</t>
+      <t>Adding or modifying 'when' statements that reduce when the data
+      node is available in the schema.</t>
+      <t>Making the statement conditional on if-feature.</t>
+    </list></t>
   </section>
 </section>
 
-<section title="Updates to YANG 1.1 Module Update Rules" anchor="update_rules">
-<t>TODO - This section should just specify what the rules are</t>
-      <t>
-          RFC 7950 section 11, must be updated to allow for non-backward changes provided they follow the
-          semantic versioning guidelines and increase the MAJOR version number when a backward incompatible
-          change is made.  This change is in the spirit of requirement 5.1 from <xref target="I-D.verdt-netmod-yang-versioning-reqs"/>.
-          The following is proposed text for this change.</t>
-
-      <t>
-      "As experience is gained with a module, it may be desirable to revise that module.
-      Changes to published modules are allowed, even if they have some potential to cause interoperability
-      problems, if the module-version YANG extension is used in the revision statement to clearly indicate the nature of the change."
-      </t>
-      <t>TODO - Specify that changing status to "deprecated" is an BC change, and changing status to "obsolete" is an NBC change".</t>
-      <t>A 'backwards-compatible' module semantic version change is
-      where some syntax or semantic changes exists between the two
-      module revisions, but all changes follow the rules specified in <xref target="update_rules"/>
-      of "Updating a
-      Module" of [RFC7950], except that no elements have been changed to
-      status 'obsolete', and re-ordering of statements is allowed.</t>
-
-      <t>Q: Should revision-date history and semantic version be excluded
-      from the comparison? RW: I've assumed yes.</t>
-
-  </section>
-
-  <section title="Updates to ietf-yang-library" anchor="ietf_yang_library_updates">
+<section title="Updates to ietf-yang-library" anchor="ietf_yang_library_updates">
     <t>YANG library <xref target="RFC7895"/> <xref target="RFC8525"/> is
     modified to support semantic versioning in three ways.</t>
 
+    <section title="Advertising module version number">
     <t>The ietf-semver YANG module augments the 'module' list in
     ietf-yang-library with a 'version' leaf to optionally declare the
     YANG semantic version of each module.</t>
-
+    </section>
     <section title="Resolving ambiguous module imports">
       <t>A YANG datastore schema, defined in
       <xref target="RFC8525"/>, can specify multiple
@@ -716,12 +821,12 @@ import example-module {
       revisions are implemented, but one of more modules revisions
       specify a YANG semantic version, then the import MUST resolve to
       the module with the greatest version number, according to the
-      rules in <xref target="import_semver"/>.</t>
+      version comparison rules in <xref target="import_semver"/>.</t>
       <t>If a module import statement could resolve to more than one
       module revision defined in the datastore schema, none of those
       revisions are implemented, and none of the modules revisions have
       a YANG semantic version number, then the import MUST resolve to
-      the module that has the most recent revision-date.</t>
+      the module that has the most recent revision date.</t>
     </section>
     <section title="Reporting how deprecated and obsolete nodes are handled">
       <t>The ietf-semver YANG module augments YANG library with two
@@ -743,7 +848,7 @@ import example-module {
      <t>Implementations that implement the YANG semantic versioning
      scheme defined in this document MUST set the
      'deprecated-nodes-implemented' leaf because the refined module
-     update rules in <xref target="update_rules"/> assume that this is
+     update rules in <xref target="update_rules"/> require that this is
      how servers handle 'deprecated' and 'obsolete' nodes to comply with
      YANG module semantic versioning.</t>
      <t>If a server does not set the 'deprecated-nodes-implemented'
@@ -789,10 +894,10 @@ target="I-D.ietf-netmod-yang-instance-file-format"/> do not have an
 associated YANG semantic version, as compatibility for instance data is
 undefined.</t>
 
-<t>However, Instance data may reference an associated YANG schema, and
+<t>However, instance data may reference an associated YANG schema, and
 that schema could make use of semantic version numbers, both for the
 individual YANG modules that comprise the schema, and potentially for
-the entire schema itself (e.g. <xref
+the entire schema itself (e.g., <xref
 target="I-D.rwilton-netmod-yang-packages"/>).</t>
 
 <t>In this way, the versioning of a schema associated with an instance
@@ -810,48 +915,35 @@ of this specification.</t>
 
 <section anchor="guidelines" title="Guidelines">
    <section anchor="guidelines_authors" title="Guidelines to YANG model authors">
-      <t>NBC changes to YANG models cause problems to the clients, who are the consumers of the YANG models, and SHOULD be 
-         avoided. However, there are cases where NBC changes are required, e.g. to fix an incorrect YANG model.</t>
+      <t>NBC changes to YANG models may cause problems to clients, who are consumers of YANG models, and SHOULD be 
+         avoided.  However, there are cases where NBC changes are required, e.g. to fix an incorrect YANG model.</t>
       <t>YANG model authors are recommended to minimize NBC changes and keep changes BC whenever possible.</t>
       <t>The use of status "deprecated" with the status-description statement allows clients to plan a migration to alternative 
          data nodes.</t>
       <t>When NBC changes are introduced, consideration should be given to the impact on clients and YANG model authors SHOULD 
          try to mitigate that impact.</t>
-      <t>Updates SHOULD be applied to the latest revision of YANG modules.</t>
-      <section anchor="authors_semver" title="Use of semantic versioning">
-      <t>The scheme from semver.org 2.0.0 SHOULD be used if modifications are always made to the latest revision of the YANG 
-         modules.</t>
-      <t>The YANG semantic versioning scheme SHOULD be used only if it is needed to do updates to older revisions of the YANG 
-         modules. Once a modifier is added, it is sticky for that "stream". For example if version 3.4.1M is modified in a BC way, the next
+      <section anchor="authors_semver" title="Use of YANG semantic versioning">
+	<t>Module authors should use the following guidance when applying the module version update rules specified in <xref target="semver_update_rules"/>.</t>
+	<t>Updates to modules SHOULD be applied to the latest version of
+	YANG modules, avoiding the use the 'm|M' patch modifier.  When
+	used in this way, the YANG semantic version numbers are
+	compatible with the versioning scheme defined by the semver.org
+	2.0.0 rules.</t>
+	<t>Changes to older versions of published YANG modules SHOULD be
+	minimized, since there may be a greater impact on clients, and
+	comparing between version numbers becomes more limited if the
+	'm|M' modifiers are used.  However, if it necessary to make such
+	changes then the following guidelines apply:
+	<list>
+	  <t>Any changes SHOULD also be made to a latest version of the YANG module, if appropriate.</t>
+	  <t>Where possible, changes SHOULD be restricted to backwards-compatible changes only.</t>
+	  <t>NBC changes MAY be made, subject to the constraints defined in <xref target="semver_update_rules"/>. The impact to clients SHOULD be carefully considered and minimized if possible.</t>
+	</list>    
+	</t>
+	<t>The version numbers associated with a module MUST never be reused.  E.g., when updating module version 3.4.0 in a NBC manner the module author must verify whether version 4.0.0 is available for use and if that version was already used, the updated module must use version 3.4.1M instead.</t> 
+	<t>Patch modifier letters (i.e. 'm' or 'M') are sticky.  For example if version 3.4.1M is modified in a BC way, the next
          version is 3.4.2M. This is to indicate that 3.4.2M is not BC with 3.4.0, however it comes at the cost of not being to indicate the 
          type of  change between 3.4.1M and 3.4.2M.</t>
-      <t>Reuse of an already used module-version MUST be avoided. For example for the YANG versioning scheme, when updating 3.4.0 in a NBC manner the module author must verify whether version 4.0.0 is available for use and if that version was already used, the updated module must use the version 3.4.1M.</t>
-      <t>From a published revision N of a module, the next published revision N+1 of the module SHOULD
-         have one of:
-         <list style="numbers">
-            <t>MAJOR version incremented by 1, MINOR and PATCH versions set to 0. This indicates that in revision N+1:
-               <list style="symbols">
-               <t>There have been one or more non-backwards-compatible changes</t>
-               <t>There may also be new functionality which have been added in a backwards-compatible manner</t>
-               <t>There may also be bug fixes which have been made in a backwards-compatible manner</t>
-               </list></t>
-            <t>MAJOR version unchanged, MINOR version incremented by 1 and PATCH version set to 0. This indicates that
-               in revision N+1:
-               <list style="symbols">
-               <t>There are no non-backwards-compatible changes</t>
-               <t>There have been one or more new functionality which have been added in a backwards compatible-manner</t>
-               <t>There may also be bug fixes which have been made in a backwards-compatible manner</t>
-               </list></t>
-            <t>MAJOR and MINOR versions unchanged, PATCH version incremented by 1. This indicates that in revision N+1:
-               <list style="symbols">
-                  <t>There are no non-backwards-compatible changes</t>
-                  <t>There is no new functionality which has been added in a backwards compatible-manner</t>
-                  <t>There are no more bug fixes which have been made in a backwards-compatible manner</t>
-                  <t>There may be editorial changes such a change to a desctiption statement which does not change the semantics
-                     of the data node in any way.</t>
-               </list></t>
-         </list>
-      </t>
       <t>As explained in <xref target="implementation_experience"/>, while programatically determining a semantic version is possible
          using tools (e.g. the pyang utility), human overisght is highly recommended because of some special cases which can not be detected by tools.
          Therefore, a model author SHOULD use both means to determine a model's semantic version.</t>
@@ -859,7 +951,7 @@ of this specification.</t>
        <section title="Making non-backwards-compatible changes to a YANG module">
        <t>There are various valid situations where a YANG module has to be modified in a non-backwards-compatible way. Here are the different ways in which this can be done:
           <list style="symbols">
-             <t>If the server can support NBC versions of the YANG module simultaneously AND the clients support version selection, then the NBC changes MAY be done immediately. The clients would select the version which they support and the NBC change would have no impact on them.</t>
+             <t>If the server can support NBC versions of the YANG module simultaneously using version selection, then the NBC changes MAY be done immediately.  Clients would be required to select the version which they support and the NBC change would have no impact on them.</t>
              <t>When possible, NBC changes are done incrementally to provide clients time to adapt to NBC changes.</t>
           </list>
        </t>
@@ -916,29 +1008,21 @@ of this specification.</t>
        </section>
    </section>
    <section anchor="guidelines_clients" title="Guidelines to YANG model clients">
-      <t>Here are some guidelines for YANG model clients:
+     <t>Guidelines for clients of modules using YANG semantic versioning:
          <list style="symbols">
             <t>Clients SHOULD be liberal when processing data received from a server. For example, the server may have increased the range of an operational node causing the client to receive a value whch is outside the range of the YANG model revision it was coded against</t>
-            <t>Clients SHOULD look for status changes in new revisions of YANG models they support.</t>
+            <t>Clients SHOULD monitor changes to published YANG modules through their version numbers, and use appropriate tooling to understand the specific changes between module versions.  In particular, clients SHOULD NOT migrate to NBC versions of a module without first understanding the specifics of the NBC changes.</t>
             <t>Clients SHOULD plan to make changes to match published status changes. When a node's status changes from "current" to "deprecated", clients SHOULD plan to stop using that node in a timely fashion. When a node's status changes to "obsolete", clients MUST stop using that node.</t>
-            <t>A client SHOULD not use unknown NBC versions automatically</t>
          </list> 
       </t>
    </section>
 </section>
 
-<section anchor="yang_module" title="Semantic Version Extension YANG Module">
-  <t>
-    The extension and related ietf-yang-library changes described in this module are
-    defined in the YANG module below.
-  </t>
-  <t>TODO - Define a separate type (in a ietf-semver-types.yang) file
-  for the YANG semver field definition.  It would be useful for the YANG
-  library augmentation, and possibly in the packages definition if that
-  work progresses.</t>
-  <t>TODO - Update the semantic version text to update the main definition in this document</t>
+<section anchor="yang_modules" title="Semantic Version Extension YANG Modules">
   <t>
     <figure>
+      <preamble> YANG module with extensions for defining a module's
+      YANG semantic version number, and importing by version.</preamble>
       <artwork><![CDATA[
 <CODE BEGINS> file "ietf-semver@2019-02-07.yang"
 module ietf-semver {
@@ -1073,9 +1157,10 @@ module ietf-semver {
        statements.  Zero or one module-version statement is allowed
        per parent statement. No substatements are allowed.
 
-       'revision' statements in submodule MAY contain a
-       'module-version' statement for documentation purposes, but it
-       has no effect on the including module's semantic version.";
+       'revision' statements in submodules MAY contain a
+       'module-version' statement for documentation purposes, but
+       its meaning is undefined, and has no effect on the including
+       module's semantic version.";
     reference
       "draft-verdt-netmod-yang-semver: 
        YANG Semantic Versioning for Modules";
@@ -1135,7 +1220,9 @@ module ietf-semver {
 <CODE ENDS>
 ]]></artwork>
 </figure>
-    <figure>
+<figure>
+  <preamble>YANG module with augmentations to YANG Library to support
+  semantic version numbers.</preamble>
       <artwork><![CDATA[
 <CODE BEGINS> file "ietf-yl-semver@2019-02-07.yang"
 module ietf-yl-semver {
@@ -1342,19 +1429,22 @@ module ietf-yl-semver {
 
 <section anchor="appendix" title="Appendix">
   <section anchor="open_issues" title="Open Issues">
-    <t>
+    <t>Open issues are being tracked at <eref target="https://github.com/netmod-wg/yang-ver-dt/issues"/>.  Currently open issues are:
+      
       <list style="symbols">
-        <t>Do we need a new version of YANG?
-          <vspace/>
-          While eventually this will fold into a new version, the belief is this solution can
-          work with extensions alone with an update to the <xref target="RFC7950"/> text concerning
-          module updates.</t>
-        <t>We could consider a new naming convention for module files. Today, module files
-          are named using a  module@revision.yang notation.  We could consider module%semver.yang
-          or module#version.yang variants.
-          Re-using the '@' for version is not ideal, so another separator character should be used.
-          In this manner, both version and revision could be used.
-          </t>
+        <t>Do we need a new version of YANG? <eref target="https://github.com/netmod-wg/yang-ver-dt/issues/14">#14</eref></t>
+	<t>Add guidance text about warning NBC changes might break imports <eref target="https://github.com/netmod-wg/yang-ver-dt/issues/11">#11</eref></t>
+	<t>Add a naming convention for versioned YANG file<eref target="https://github.com/netmod-wg/yang-ver-dt/issues/13">#13</eref></t>
+	<t>Define editorial, bc, nbc impact of adding, changing, removing extension stmts<eref target="https://github.com/netmod-wg/yang-ver-dt/issues/12">#12</eref></t>
+	<t>How to version modules in IETF drafts (after they have been published at 1.0.0 or later<eref target="https://github.com/netmod-wg/yang-ver-dt/issues/10">#10</eref></t>
+	<t>The solution does not strictly support semver 2.0.0<eref target="https://github.com/netmod-wg/yang-ver-dt/issues/9">#9</eref></t>
+	<t>Are whitespace changes allow between two module instances with the same version (or revision)?<eref target="https://github.com/netmod-wg/yang-ver-dt/issues/8">#8</eref></t>
+	<t>Do we assume that a module has an implicit semver if none as been specified?<eref target="https://github.com/netmod-wg/yang-ver-dt/issues/7">#7</eref></t>
+	<t>Is changing the ordering of nodes an NBC change?<eref target="https://github.com/netmod-wg/yang-ver-dt/issues/6">#6</eref></t>
+	<t>Should version statement be at top level or under revision statement?<eref target="https://github.com/netmod-wg/yang-ver-dt/issues/5">#5</eref></t>
+	<t>Figure out whether changing the imports constitute a BC or NBC change<eref target="https://github.com/netmod-wg/yang-ver-dt/issues/4">#4</eref></t>
+	<t>Does BC or NBC depend on whether the node is config true/false?<eref target="https://github.com/netmod-wg/yang-ver-dt/issues/15">#15</eref></t>
+	<t>Status obsolete nodes<eref target="https://github.com/netmod-wg/yang-ver-dt/issues/2">#2</eref></t>
       </list>
     </t>
   </section>
