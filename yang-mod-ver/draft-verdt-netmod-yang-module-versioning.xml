@@ -598,6 +598,13 @@ import example-module {
                be used to explain why the node is not available anymore.</t>
             </list>
             </t>
+            <t>If the server can support NBC versions of the YANG module simultaneously using version selection, then the changes can be done immediately:
+               <list style="numbers">
+                  <t>The new revision of the YANG module has the node's status changed to "obsolete" and the
+               "status-description" updated, this is a non-backwards-compatible change.</t>
+                  <t>Clients which require the data node select the older module revision</t>
+               </list>
+            </t>
          </section>
 
          <section anchor="type_change" title="Changing the type of a leaf node">            
@@ -626,15 +633,83 @@ import example-module {
                "status-description" is updated. This is a non-backwards-compatible change.</t>
             </list>
             </t>
+            <t>If the server can support NBC versions of the YANG module simultaneously using version selection, then the changes can be done immediately:
+               <list style="numbers">
+                  <t>In the new revision of the YANG module, the status of node "vpn-id" is changed to "obsolete".  This is a non-backwards-compatible change.</t>
+                  <t>New node "vpn-name" is added to the same location as described above.</t>
+                  <t>Clients which require the data node select the older module revision</t>
+                  <t>A server SHOULD NOT map between the nodes "vpn-id" and "vpn-name", i.e. if a client creates a data instance with "vpn-name" then that data instance SHOULD NOT be visible to a client using a module revision which has "vpn-id" (and vice-versa).</t>
+               </list>
+            </t>
          </section>
          
          <section anchor="range_reduction" title="Reducing the range of a leaf node">
+            <t>Reducing the range of values of a leaf-node. e.g. consider a "vpn-id" node of type integer being changed from type uint32 to type uint16:
+            <list style="numbers">
+               <t>If all values which are being removed were never supported, e.g. if a vpn-id of 65536 or higher was never accepted, this is a backwards-compatible change for the functionality (no functionality change).  Even if it is a non-backwards-compatible change for the YANG model, there should be no impact for clients using that YANG model. </t>
+               <t>If one or more values being removed was previously supported, e.g. if a vpn-id of 65536 was accepted previously, this is a non-backwards-compatible change for the YANG model. Clients using the old YANG model will be impacted, so a change of this nature should be done carefully, e.g. by using the steps described in <xref
+  target="type_change"/></t>
+            </list>
+            </t>
          </section>
 
          <section anchor="key_change" title="Changing the key of a list">
+            <t>Changing the key of  a list has a big impact to the client. For example, consider a "sessions" list which has a key "interface" and there is a need to change the key to "dest-address", such a change can be done in steps:
+            <list style="numbers">
+               <t>The status of list "sessions" SHOULD be changed to "deprecated" and the list SHOULD be available for at
+               least one year. This is a backwards-compatible change.</t>
+               <t>A new list is created in the same location with the same data but with "dest-address" as key. Finding an appropriate name for the new list can be tricky especially if the name of the existing list was perfect. In this case the new list is called "sessions-address", has status "current" and its description SHOULD explain that it is replacing list "session".</t>
+               <t>During the period of time where both lists are available, how the server behaves when either list is
+               set is outside the scope of this document and will vary on a case by case basis. Here are some options:
+               <list style="numbers">
+                  <t>A server MAY prevent the new list from being set if the old list already has entries (and
+                  vice-versa).</t>
+                  <t>If the new list is set and a client does a get or get-config operation on the old list, the server
+                  MAY map the entries. However if the new list has entries which would lead to duplicate keys in the old list, the mapping can not be done.</t>
+               </list>
+               </t>
+               <t>When list "sessions" is not available anymore, its status MUST be changed to "obsolete" and the
+               "status-description" is updated. This is a non-backwards-compatible change.</t>
+            </list>
+            </t>
+            <t>If the server can support NBC versions of the YANG module simultaneously using version selection, then the changes can be done immediately:
+               <list style="numbers">
+                  <t>The new revision of the YANG module has the list "sessions" modified to have "dest-address" as key, this is a non-backwards-compatible change.</t>
+                  <t>Clients which require the previous functionality select the older module revision</t>
+               </list>
+            </t>
          </section>
 
          <section anchor="rename_node" title="Renaming a node">
+            <t>A leaf-node or a container may be renamed, either due to a spelling error in the previous name or because of a better name. For example a node "ip-adress" could be renamed to "ip-address":
+            <list style="numbers">
+               <t>The status of the existing node "ip-adress" SHOULD be changed to "deprecated" and the node SHOULD be available for at
+               least one year. This is a backwards-compatible change.</t>
+               <t>The new node "ip-address" is added to the same location as the existing node
+               "ip-adress". This new node has status "current" and its description SHOULD explain that it is replacing node
+               "ip-adress".</t>
+               <t>During the period of time where both nodes are available, how the server behaves when either node is
+               set is outside the scope of this document and will vary on a case by case basis. Here are some options:
+               <list style="numbers">
+                  <t>A server MAY prevent the new node from being set if the old node is already set (and
+                  vice-versa). The new node MAY have a when statement to achieve this. The old node MUST NOT have a when
+                  statement since this would be a non-backwards-compatible change, but the server MAY reject the old
+                  node from being set if the new node is already set.</t>
+                  <t>If the new node is set and a client does a get or get-config operation on the old node, the server
+                  MAY use the value of the new node. For example, if the new node "ip-address" has value X then the server MAY return
+                   value X for the old node "ip-adress".</t>
+               </list>
+               </t>
+               <t>When node "ip-adress" is not available anymore, its status MUST be changed to "obsolete" and the
+               "status-description" is updated. This is a non-backwards-compatible change.</t>
+            </list>
+           </t>
+            <t>If the server can support NBC versions of the YANG module simultaneously using version selection, then the changes can be done immediately:
+               <list style="numbers">
+                  <t>The new revision of the YANG module has the node with the new name replacing the node with the old name, this is a non-backwards-compatible change.</t>
+                  <t>Clients which require the previous node name select the older module revision</t>
+               </list>
+            </t>
          </section>
 
          <section anchor="default_change" title="Changing a default value">
