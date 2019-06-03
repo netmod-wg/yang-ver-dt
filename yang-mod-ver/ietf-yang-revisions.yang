@@ -1,6 +1,6 @@
 module ietf-yang-revisions {
   yang-version 1.1;
-  namespace "urn:ietf:params:xml:ns:yang:ietf-revisions";
+  namespace "urn:ietf:params:xml:ns:yang:ietf-yang-revisions";
   prefix rev;
 
   organization
@@ -53,14 +53,15 @@ module ietf-yang-revisions {
   typedef label-string {
     type string {
       length "1..255";
+      pattern '[^\s@]+';
+      pattern '\d{4}-\d{2}-\d{2}' {
+        modifier invert-match;
+      }
     }
     description
       "A label associated with a YANG revision.
 
-       TODO - We should probably constrain this:
-       - Exclude revision date format?
-       - Exclude spaces.";
-
+       Excludes spaces and '@'.  Cannot match revision-date.";
     reference
       "draft-verdt-netmod-yang-module-versioning: Revision label";
   }
@@ -79,8 +80,8 @@ module ietf-yang-revisions {
       "This statement is used to indicate YANG module revisions that
        contain non-backwards-compatible changes.
 
-       At most one nbc-changes statement is allowed per parent
-       'revision' statement.
+       Each 'revision' statement MAY have a single 'nbc-changes'
+       substatement.
 
        If a revision of a YANG module contains changes, relative to
        the preceding revision in the revision history, that do not
@@ -99,15 +100,16 @@ module ietf-yang-revisions {
   }
 
   extension label {
-    argument: label-string
+    argument label-string;
     description
-      "Each revision entry in a module may have a 'revision label'
-       associated with it.
-
-       The label can be used to provide an additional versioning
+      "The label can be used to provide an additional versioning
        identifier associated with the revision.  E.g., one option for
        a versioning scheme that could be used is [TODO - Reference
-       semver draft].</t>";
+       semver draft].
+
+       Each 'revision' statement MAY have a single 'label'
+       substatement.";
+
     reference
       "draft-verdt-netmod-module-versioning: Revision label";
   }
@@ -122,11 +124,11 @@ module ietf-yang-revisions {
        The argument value MUST conform to the
        'revision-date-or-label' defined type.
 
-       Zero or more revision-or-derived statements are allowed per
-       import statement.  If specified multiple times, then any
-       module revision that satifies at least one of the
-       'revision-or-derived' statements is an acceptable revision for
-       import.
+       Each 'import' statement MAY have one or more
+       'revision-or-derived' substatements.  If specified multiple
+       times, then any module revision that satifies at least one of
+       the 'revision-or-derived' statements is an acceptable revision
+       for import.
  
        An 'import' statement MUST NOT contain both a
        'revision-or-derived' extension statement and a
@@ -153,14 +155,13 @@ module ietf-yang-revisions {
 
     description
       "Freeform text that describes why a given node has been
-       deprecated or made obsolete.  This may point to other schema
-       elements that can be used in lieu of the given node.
+       deprecated or made obsolete.  E.g., the description could be
+       used to give the reason for removal, or it could point to an
+       alternative schema elements that can be used in lieu of the
+       given node.
 
-       This statement MUST only be used as a substatement of the
-       status statement
-
-       Zero or more status-description statements are allowed per
-       parent status statement.  No substatements are allowed.";
+       Each 'status' statement MAY have a single 'status-description'
+       substatement.";
 
     reference
       "draft-verdt-netmod-yang-module-versioning: YANG status
