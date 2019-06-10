@@ -187,6 +187,11 @@
   target="RFC7950"/>, YANG module revisions continue to be uniquely identified by the module's revision-date, and hence
   all revisions of a module MUST have unique revision dates.</t>
 
+  <t>A module's name and revision-date identifies a specific immutable definition of that module within its revision
+  history.  Hence, if a module includes submodule then it MUST specify the exact revision-date, or revision-label, of
+  the included submodules to ensure that the module's revision-date always identifies a unique definition of the
+  module.</t>
+
   <t><xref target="RFC7950"/> chapter 11 requires that all updates to a YANG module are BC to the
   previous revision of the module.  This document allows for more flexible evolution of YANG modules:
   NBC changes between module revisions are allowed and are documented using a new "nbc-changes"
@@ -236,9 +241,13 @@
   </section>
   
   <section anchor="revision_label" title="Revision-label">
-    <t>Each revision entry in a module MAY have a revision-label associated with it.  The revision-label can be used to provide an
-    additional versioning identifier associated with the revision.  E.g., one option for a versioning scheme that could
-    be used is [TODO - Reference semver draft].</t>
+    <t>Each revision entry in a module or submodule MAY have a revision-label associated with it, providing an alternative alias to
+    identify a particular revision of a module or submodule.  The revision-label can be used to provide an additional versioning
+    identifier associated with the revision.  E.g., one option for a versioning scheme that could be used is [TODO -
+    Reference semver draft].</t>
+    <t>If a revision-label is used within a submodule's revision history, then both the revision-label and revision-date
+    MUST match the revision-date and revision-label used by the module including the submodule.  I.e. both the module
+    and all its submodules are versioned together with the same revision-date and revision-label.</t>
     <t>If a revision has an associated revision-label, then it may be used instead of the revision date in the following places:
     <list>
       <t>In an "rev:revision-or-derived" extension statement argument.</t>
@@ -397,8 +406,6 @@ leaf imperial-temperature {
     revision-label.</t>
     <t>An "import" statement MUST NOT contain both a "revision-or-derived" extension statement and a "revision-date"
     statement.</t>
-    <t>Using the "revision-date" statement causes overly strict import dependencies between modules and SHOULD NOT be
-    used.</t>
     <t>The "revision-or-derived" extension statement MAY be specified multiple times, allowing the import to use any
     module revision that satifies at least one of the "revision-or-derived" extension statements.</t>
     <t>The "revision-or-derived" extension statement does not gaurantee that all module revisions that satisfy an import
@@ -552,7 +559,10 @@ import example-module {
       <t>NBC changes to YANG modules may cause problems to clients, who are consumers of YANG models, and SHOULD be 
          avoided. YANG module authors are recommended to minimize NBC changes and keep changes BC whenever possible.</t>
       <t>When NBC changes are introduced, consideration should be given to the impact on clients and YANG module authors SHOULD 
-         try to mitigate that impact.</t>
+      try to mitigate that impact.</t>
+      <t>[Moved from section 4.] Using the "revision-date" statement causes overly strict import dependencies between
+      modules and SHOULD NOT be used.</t>
+
        <section title="Making non-backwards-compatible changes to a YANG module">
        <t>There are various valid situations where a YANG module has to be modified in an NBC
        way. Here are the different ways in which this can be done:
@@ -725,7 +735,10 @@ module ietf-yang-revisions {
        Reference semver draft].
 
        Each 'revision' statement MAY have a single 'revision-label'
-       substatement.";
+       substatement.
+
+       Revision labels MUST be unique amongst all revisions of a
+       module.";
 
     reference
       "draft-verdt-netmod-module-versioning: Revision-label";
