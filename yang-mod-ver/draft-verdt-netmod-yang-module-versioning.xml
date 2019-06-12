@@ -556,44 +556,50 @@ import example-module {
 
 <section anchor="guidelines" title="Guidelines for using the YANG module update rules">
    <section anchor="guidelines_authors" title="Guidelines for YANG module authors">
-      <t>NBC changes to YANG modules may cause problems to clients, who are consumers of YANG models, and SHOULD be 
-         avoided. YANG module authors are recommended to minimize NBC changes and keep changes BC whenever possible.</t>
+      <t>NBC changes to YANG modules may cause problems to clients, who are consumers of YANG models, and hence YANG module authors are
+         RECOMMENDED to minimize NBC changes and keep changes BC whenever possible.</t>
       <t>When NBC changes are introduced, consideration should be given to the impact on clients and YANG module authors SHOULD 
       try to mitigate that impact.</t>
       <t>[Moved from section 4.] Using the "revision-date" statement causes overly strict import dependencies between
       modules and SHOULD NOT be used.</t>
-
+      <t>A "rev:nbc-changes" statement SHOULD be added only if there are NBC changes relative to the previous revision.</t>
+      <t>The YANG semantic versioning scheme applies only to YANG modules.
+         YANG submodules are not independently versioned by the YANG semantic
+         versioning scheme.  Instead, if a versioned module includes one or
+         more submodules then those submodules are implicitly versioned as
+         part of the module's 'rev:revision-label' statements, and all the
+         module's 'include' statements MUST specify the revision-date for each
+         of the included submodules if any grouping from the submodules is used by the module.</t>
+      <t>Removing old revision statements from a module's revision history could break import by revision, and hence it is RECOMMENDED to retain them.
+         If all depencencies have been updated to not import specific revisions of a module, then the corresponding revision statements can be removed from that module.
+         An alternative solution, if the revision section is too long, would be remove, or curtail, the older description statements associated with the previous revisions.</t>
+               
        <section title="Making non-backwards-compatible changes to a YANG module">
        <t>There are various valid situations where a YANG module has to be modified in an NBC
        way. Here are the different ways in which this can be done:
           <list style="symbols">
-             <t>NBC changes can be done incrementally using the "deprecated" status to provide clients time to adapt to NBC changes.</t>
-             <t>NBC changes are done at once, i.e. without using "status" statements. This has a big impact on clients.</t>
+             <t>NBC changes can be sometimes be done incrementally using the "deprecated" status to provide clients time to adapt to NBC changes.</t>
+             <t>NBC changes are done at once, i.e. without using "status" statements. Depending on the change, this may have a big impact on clients.</t>
              <t>If the server can support multiple versions of the YANG module or of YANG packages(as specified in <xref target="I-D.rwilton-netmod-yang-packages"/>), and allows the client to select the version (as per <xref target="I-D.wilton-netmod-yang-ver-selection"/>), then NBC changes MAY be done without using "status" statements. Clients would be required to select the version which they support and the NBC change would have no impact on them</t>
           </list>
        </t>
-       <t>Here are some guidelines on how NBC changes can be made incrementally:
+       <t>Here are some guidelines on how non-backwards-compatible changes can be made incrementally, with the assumption that deprecated nodes are implemented by the server, and obsolete nodes are not:
           <list style ="numbers">
              <t>The changes should be made gradually, e.g. a data node's status SHOULD NOT be changed directly from
              "current" to "obsolete" (see Section 4.7 of <xref target="RFC8407"/>), instead the status SHOULD first be
              marked "deprecated" and then when support is removed its status MUST be changed to "obsolete". Instead of
              using the "obsolete" status, the data node MAY be removed from the model but this has the risk of breaking
              modules which import the modified module.</t>
-             <t>A node with status "deprecated" MUST be supported for the solution described here to function
-             properly.</t>
-             <t>A node with status "deprecated" SHOULD be available for at least one year before its status is changed
-             to "obsolete", see Section 4.7 of <xref target="RFC8407"/>.</t>
-             <t>Support for a node which is "obsolete" is indicated by the node "obsolete-nodes-present, see <xref
-             target="ietf_yang_library_updates"/>.</t>
              <t>The new extension "status-description" SHOULD be used for nodes which are "obsolete" or
              "deprecated".</t>
              <t>For status "deprecated", the "status-description" SHOULD also indicate until when support for the node
-             is guaranteed. If there is a replacement data node, rpc, action or notification for the deprecated node,
-             this SHOULD be stated in the "status-description".</t>
+             is guaranteed (if known). If there is a replacement data node, rpc, action or notification for the deprecated node,
+             this SHOULD be stated in the "status-description". The reason for deprecating the node can also be included in the
+             "status-description" if it is deemed to be of potential interest to the user.</t>
+             <t>For status "obsolete", it is RECOMMENDED to keep the "status-description" information, from when the node had status "deprecated, which is still relevant.</t>
              <t>When obsoleting or deprecating data nodes, the "deprecated" or "obsolete" status SHOULD be applied at
-             the highest possible level in the data tree. For example, when deprecating all data nodes in a container,
-             the "deprecated" status SHOULD be applied to the container. For clarity, the status MAY be added in all the
-             affected nodes but the status-description SHOULD be added only at the highest level in the tree.</t>
+             the highest possible level in the data tree with an appropriate "status-description" statement. For clarity, the "status" statement SHOULD also be applied to all
+             descendent data nodes, but the "status-description" statement does not need to be repeated if it does not introduce any additional information.</t>
           </list>
           </t>
          <t>See <xref target="example_guidelines"/> for examples on how NBC changes can be made.</t>
@@ -609,7 +615,7 @@ import example-module {
             of the YANG model revision it was coded against.</t>
             <t>Clients SHOULD monitor changes to published YANG modules through their revision history, and use
             appropriate tooling to understand the specific changes between module revision.  In particular, clients
-            SHOULD NOT migrate to NBC revisions of a module without considering the specific NBC changes.</t>
+            SHOULD NOT migrate to NBC revisions of a module without understanding any potential impact of the specific NBC changes.</t>
             <t>Clients SHOULD plan to make changes to match published status changes. When a node's status changes from
             "current" to "deprecated", clients SHOULD plan to stop using that node in a timely fashion.  When a node's
             status changes to "obsolete", clients MUST stop using that node.</t>
