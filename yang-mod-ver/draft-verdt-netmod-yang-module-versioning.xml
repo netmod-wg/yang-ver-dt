@@ -112,13 +112,10 @@
 
 <date/>
 <abstract>
-  <t>This document specifies a new YANG module update procedure that
-  can document when non-backwards-compatible changes have occurred
-  during the evolution of a YANG module.  It provides a variant to
-  the YANG import statement to better represent inter-module
-  dependencies.  It provides help and guidelines for managing the
-  lifecycle of YANG modules and individual schema nodes.  This
-  document updates RFC 7950, RFC 8407 and RFC 8525.</t>
+  <t>This document specifies a new YANG module update procedure that can document when non-backwards-compatible changes
+  have occurred during the evolution of a YANG module.  It extends the YANG import statement with an earliest revision
+  filter to better represent inter-module dependencies.  It provides help and guidelines for managing the lifecycle of
+  YANG modules and individual schema nodes.  This document updates RFC 7950, RFC 8407 and RFC 8525.</t>
 </abstract>
 </front>
 <middle>
@@ -137,8 +134,8 @@
   <t>The solution comprises five parts:
   <list style="bullets">
     <t>Refinements to the YANG 1.1 module revision update procedure, supported by new extension statements to indicate
-    when a revision contains nbc changes, and an optional revision label.</t>
-    <t>A YANG extension allowing YANG module imports to specify an earliest module revision that may satisfy the
+    when a revision contains non-backwards-compatible changes, and an optional revision label.</t>
+    <t>A YANG extension statement allowing YANG module imports to specify an earliest module revision that may satisfy the
     import dependency.</t>
     <t>Updates and augmentations to ietf-yang-library to include the revision label in the module descriptions, to
     report how "deprecated" and "obsolete" nodes are handled by a server, and to clarify how module imports are resolved
@@ -151,24 +148,24 @@
   <t>Open issues are tracked at <eref target="https://github.com/netmod-wg/yang-ver-dt/issues"/>.</t>
 
   <section anchor="changes" title="Updates to YANG RFCs">
-    <t>This document updates <xref target="RFC7950"/>. <xref target="yang_revision_handling"/> describes modification to
-    YANG revision handling and update rules, and <xref target="import"/> describes an extension to do import by derived
+    <t>This document updates <xref target="RFC7950"/> section 11. <xref target="yang_revision_handling"/> describes modifications to
+    YANG revision handling and update rules, and <xref target="import"/> describes a YANG extension statement to do import by derived
     revision.</t>
-    <t>This document updates <xref target="RFC8525"/>. <xref target="ietf_yang_library_updates"/> defines how a client
+    <t>This document updates <xref target="RFC8525"/> section 3. <xref target="ietf_yang_library_updates"/> defines how a client
     of a YANG library datastore schema chooses which revision of an import-only module is used to resolve a module
     import when the definition is otherwise ambiguous.</t>
-    <t>This document updates <xref target="RFC8407"/>. <xref target="guidelines"/> provides guidelines on managing the
-    lifecycle of YANG modules once non-backwards-compatible changes and a branched revision history are allowed.</t>
+    <t>This document updates <xref target="RFC8407"/> section 4.7. <xref target="guidelines"/> provides guidelines on managing the
+    lifecycle of YANG modules that may contain non-backwards-compatible changes and a branched revision history.</t>
   </section>
 </section>
     <section anchor="terminology" title="Terminology and Conventions">
       <t>The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT
       RECOMMENDED", "MAY", and "OPTIONAL" in this document are to be interpreted as described in BCP 14 <xref
       target="RFC2119"/> <xref target="RFC8174"/> when, and only when, they appear in all capitals, as shown here.</t>
-      <t>In addition, this document uses the following terminology:
+      <t>In addition, this document uses the terminology:
       <list style="symbols">	
-        <t>YANG module revision: An instance of a YANG module, uniquely identified with a revision-date, with no implied
-        ordering or backwards compatibility between different revisions of the same module."</t>
+        <t>YANG module revision: An instance of a YANG module, uniquely identified with a revision date, with no implied
+        ordering or backwards compatibility between different revisions of the same module.</t>
 	<t>Backwards-compatible (BC) change: A backwards-compatible change between two YANG module revisions, as defined
 	in <xref target="bc_update_rules"/></t>
         <t>Non-backwards-compatible (NBC) change: A non-backwards-compatible change between two YANG module revisions, as
@@ -184,32 +181,30 @@
   
   <t>This document clarifies <xref target="RFC7950"/> to explicitly allow non linear development of YANG module
   revisions, so modules MAY have multiple revisions that directly derive from the same parent revision.  As per <xref
-  target="RFC7950"/>, YANG module revisions continue to be uniquely identified by the module's revision-date, and hence
+  target="RFC7950"/>, YANG module revisions continue to be uniquely identified by the module's revision date, and hence
   all revisions of a module MUST have unique revision dates.</t>
 
-  <t>A module's name and revision-date identifies a specific immutable definition of that module within its revision
-  history.  Hence, if a module includes submodule then it MUST specify the exact revision-date, or revision-label, of
-  the included submodules to ensure that the module's revision-date always identifies a unique definition of the
-  module.</t>
+  <t>A module's name and revision date identifies a specific immutable definition of that module within its revision
+  history.  Hence, if a module includes submodules then the module's "include" statements MUST use "revision-date"
+  substatements to specify the exact revision date of each included submodule.</t>
 
-  <t><xref target="RFC7950"/> chapter 11 requires that all updates to a YANG module are BC to the
-  previous revision of the module.  This document allows for more flexible evolution of YANG modules:
-  NBC changes between module revisions are allowed and are documented using a new "nbc-changes"
-  extension statement in the module revision history.</t>
+  <t><xref target="RFC7950"/> section 11 requires that all updates to a YANG module are BC to the previous revision of
+  the module.  This document allows for more flexible evolution of YANG modules: NBC changes between module revisions
+  are allowed and are documented using a new "nbc-changes" YANG extension statement in the module revision history.</t>
 
   <section title="Updating a YANG module with a new revision" anchor="update_rules">
-    <t>This section updates <xref target="RFC7950"/> chapter 11 to refine the rules for permissible changes when a new
+    <t>This section updates <xref target="RFC7950"/> section 11 to refine the rules for permissible changes when a new
     YANG module revision is created.</t>
     <t>Where pragmatic, updates to YANG modules SHOULD be backwards-compatible, following the definition in <xref
     target="bc_update_rules"/>.</t>
     <t>A new module revision MAY contain NBC changes, i.e., the semantics of an existing definition
     MAY be changed in an NBC way without requiring a new definition with a new identifier.  A new
-    module revision with NBC changes MUST include a "rev:nbc-changes" extension substatement to
+    module revision with NBC changes MUST include the "rev:nbc-changes" extension substatement to
     signal the potential for incompatibility to existing module users and readers.</t>
 
     <section anchor="bc_update_rules" title="Backwards-compatible changes">
-      <t>The following statements update <xref target="RFC7950"/> chapter 11 to define what constitutes an
-      allowable backwards-compatible change to a YANG module:
+      <t>A change between two module revisions is defined as being "backwards-compatible" if the change conforms to
+      the module update rules specified in <xref target="RFC7950"/> section 11, updated by the following rules:
       <list style="symbols">
         <t>A "status" "deprecated" statement MAY be added, or changed from "current" to "deprecated", but adding or
         changing "status" to "obsolete" is not a backwards-compatible change.</t>
@@ -224,9 +219,6 @@
     <section anchor="nbc_update_rules" title="Non-backwards-compatible changes">
       <t>Any changes to YANG modules that are not defined by <xref target="bc_update_rules"/> as being
       backwards-compatible are classified as "non-backwards-compatible" changes.</t>
-      <t>One particular change to <xref target="RFC7950"/> chapter 11 is that adding or changing a "status" state to
-      "obsolete" is classified as a non-backwards-compatible change, because it could break any clients relying on
-      servers implementing the obsolete data node.</t>
     </section>
   </section>
   
@@ -240,26 +232,26 @@
     to the preceding revision in the revision history, MUST be backwards-compatible.</t>
   </section>
   
-  <section anchor="revision_label" title="Revision-label">
-    <t>Each revision entry in a module or submodule MAY have a revision-label associated with it, providing an alternative alias to
-    identify a particular revision of a module or submodule.  The revision-label can be used to provide an additional versioning
-    identifier associated with the revision.  E.g., one option for a versioning scheme that could be used is [TODO -
-    Reference semver draft].</t>
-    <t>If a revision-label is used within a submodule's revision history, then both the revision-label and revision-date
-    MUST match the revision-date and revision-label used by the module including the submodule.  I.e. both the module
-    and all its submodules are versioned together with the same revision-date and revision-label.</t>
-    <t>If a revision has an associated revision-label, then it may be used instead of the revision date in the following places:
+  <section anchor="revision_label" title="Revision label">
+    <t>Each revision entry in a module or submodule MAY have a revision label associated with it, providing an
+    alternative alias to identify a particular revision of a module or submodule.  The revision label could be used to
+    provide an additional versioning identifier associated with the revision.  E.g., one option for a versioning scheme
+    that could be used is [TODO - Reference semver draft].</t>
+    <t>The revision date and revision label within a submodule's revision history have no effect on the including
+    module's revision.  Submodules MUST NOT use revision label schemes that could be confused with the including
+    module's revision label scheme.</t>
+    <t>If a revision has an associated revision label, then it may be used instead of the revision date in two places:
     <list>
       <t>In an "rev:revision-or-derived" extension statement argument.</t>
-      <t>In the filename of a YANG module, where it takes the following form:
+      <t>In the filename of a YANG module, where it takes the form:
            module-or-submodule-name ['@' revision-label] ( '.yang' / '.yin' )</t>
     </list>
     </t>
   </section>
 
-  <section title="YANG status description extension" anchor="deprecated_and_obsolete_reasons">
-    <t>The ietf-yang-revision module specifies the YANG extension "status-description" that can be used as a substatement of
-    the status statement.  The argument to this extension can contain freeform text to help readers of the module
+  <section title="YANG status description extension statement" anchor="deprecated_and_obsolete_reasons">
+    <t>The ietf-yang-revision module specifies the YANG extension statement "status-description" that can be used as a substatement of
+    the status statement.  The argument to this extension statement can contain freeform text to help readers of the module
     understand why the node was deprecated or made obsolete, when it is anticipated that the node will no longer be
     available for use, and potentially reference other schema elements that can be used instead.  An example is shown
     below.</t>
@@ -283,12 +275,12 @@ leaf imperial-temperature {
     </section>
 
   <section anchor="example_versions" title="Examples for updating the YANG module revision history">
-    <t>The following diagram, explanation, and module history illustrates how the branched revision history, nbc-changes
-    annotations, and revision-label could be used:</t>
+    <t>The following diagram, explanation, and module history illustrates how the branched revision history,
+    "nbc-changes" extension statement, and "revision-label" extension statement could be used:</t>
     <figure>
       <preamble>Example YANG module with branched revision history.</preamble>
       <artwork>
-       Module Revision-date        Revision-label
+       Module revision date        Revision label
          2019-01-01                 &lt;- 1.0.0
              |
          2019-02-01                 &lt;- 2.0.0
@@ -397,13 +389,13 @@ leaf imperial-temperature {
   leaf would not break an import, changing the name of a leaf could break an import but frequently would not, but
   removing a container would break imports if that container is augmented by another module.</t>
 
-  <t>The ietf-revisions module defines the "revision-or-derived" extension, a substatement to the YANG "import"
+  <t>The ietf-revisions module defines the "revision-or-derived" extension statement, a substatement to the YANG "import"
   statement, to allow for a "minium required revision" to be specified during import:
   <list>
-    <t>The argument to the "revision-or-derived" extension statement is a revision-date or a revision-label.</t>
+    <t>The argument to the "revision-or-derived" extension statement is a revision date or a revision label.</t>
     <t>A particular revision of an imported module satisfies an import's "revision-or-derived" extension statement if
-    the imported module's revision history contains a revision statement with a matching revision-date or
-    revision-label.</t>
+    the imported module's revision history contains a revision statement with a matching revision date or
+    revision label.</t>
     <t>An "import" statement MUST NOT contain both a "revision-or-derived" extension statement and a "revision-date"
     statement.</t>
     <t>The "revision-or-derived" extension statement MAY be specified multiple times, allowing the import to use any
@@ -426,7 +418,7 @@ leaf imperial-temperature {
 
     <figure>
       <artwork>
-       Module Revision-date        Revision-label
+       Module revision date        Revision label
          2019-01-01                 &lt;- 1.0.0
              |
          2019-02-01                 &lt;- 2.0.0
@@ -441,12 +433,11 @@ leaf imperial-temperature {
       </artwork>
     </figure>
 
-    <t>The first example selects module revisions that match, or are
-    derived from the revision 2019-02-01.  E.g., this dependency
-    might be used if there was a new container added in revision
-    2019-02-01 that is augmented by the importing module.</t>
-    <t>Includes revisions/labels: 2019-02-01/2.0.0, 2019-03-01/3.0.0,
-    2019-04-01/2.1.0, 2019-05-01/2.2.0 and 2019-06-01/3.1.0. </t>
+    <section toc="exclude" title="Example 1">
+    <t>This example selects module revisions that match, or are derived from the revision 2019-02-01.  E.g., this
+    dependency might be used if there was a new container added in revision 2019-02-01 that is augmented by the
+    importing module.It includes revisions/labels: 2019-02-01/2.0.0, 2019-03-01/3.0.0, 2019-04-01/2.1.0,
+    2019-05-01/2.2.0 and 2019-06-01/3.1.0. </t>
     <figure>
       <artwork>
 import example-module {
@@ -455,9 +446,8 @@ import example-module {
       </artwork>
     </figure>
 
-    <t>Alternatively, the first example could have used the
-    revision label "1.0.0" instead, which selects the same set of
-    revisions/versions.</t>
+    <t>Alternatively, the first example could have used the revision label "1.0.0" instead, which selects the same set
+    of revisions/versions.</t>
     <figure>
       <artwork>
 import example-module {
@@ -465,14 +455,13 @@ import example-module {
 }
       </artwork>
     </figure>
-    
-    <t>The next example selects module revisions that are derived
-    from 2019-04-01 by using the revision label 2.1.0.</t>
-    <t>Includes revisions/labels: 2019-04-01/2.1.0 and
-    2019-05-01/2.2.0. Even though 2019-06-01/3.1.0 has a higher
-    revision label version number than 2019-04-01/2.1.0 it is not a
-    derived revision, and hence it is not a valid revision for
-    import.</t>
+    </section>
+
+    <section toc="exclude" title="Example 2">
+    <t>This example selects module revisions that are derived from 2019-04-01 by using the revision label 2.1.0.  It
+    includes revisions/labels: 2019-04-01/2.1.0 and 2019-05-01/2.2.0.  Even though 2019-06-01/3.1.0 has a higher
+    revision label version number than 2019-04-01/2.1.0 it is not a derived revision, and hence it is not a valid
+    revision for import.</t>
     <figure>
       <artwork>
 import example-module {
@@ -480,9 +469,9 @@ import example-module {
 }
       </artwork>
     </figure>
-
-    <t>The last example selects revisions derived from either
-    2019-04-01 or 2019-06-01.  It includes revisions/labels:
+    </section>
+    <section toc="exclude" title="Example 3">
+    <t>This example selects revisions derived from either 2019-04-01 or 2019-06-01.  It includes revisions/labels:
     2019-04-01/2.1.0, 2019-05-01/2.2.0, and 2019-06-01/3.1.0.</t>
     <figure>
       <artwork>
@@ -492,6 +481,7 @@ import example-module {
 }
       </artwork>
     </figure>
+    </section>
   </section>
 </section>
 
@@ -502,7 +492,7 @@ import example-module {
 
     <section title="Advertising revision-label">
     <t>The ietf-yang-revisions YANG module augments the "module" list in ietf-yang-library with a "revision-label" leaf to
-    optionally declare the revision-label associated wth the particular revision of each module.</t>
+    optionally declare the revision label associated wth the particular revision of each module.</t>
 
     </section>
     <section title="Resolving ambiguous module imports">
@@ -541,39 +531,39 @@ import example-module {
     </section>
   </section>
 
-<section title="Versioning of YANG instance data">
+  <section title="Versioning of YANG instance data">
   <t>Instance data sets <xref target="I-D.ietf-netmod-yang-instance-file-format"/> do not directly make use of the
   updated revision handling rules described in this document, as compatibility for instance data is undefined.</t>
 
   <t>However, instance data specifies the content-schema of the data-set. This schema SHOULD make use of versioning
-  using revision dates and/or revision-labels for the individual YANG modules that comprise the schema or
+  using revision dates and/or revision labels for the individual YANG modules that comprise the schema or
   potentially for the entire schema itself (e.g., <xref target="I-D.rwilton-netmod-yang-packages"/> ).</t>
 
-  <t>In this way, the versioning of a content-schema associated with an instance data set, may help a client to
+  <t>In this way, the versioning of a content-schema associated with an instance data set may help a client to
   determine whether the instance data could also be used in conjunction with other revisions of the YANG schema, or
   other revisions of the modules that define the schema.</t>
 </section>
 
 <section anchor="guidelines" title="Guidelines for using the YANG module update rules">
-   <section anchor="guidelines_authors" title="Guidelines for YANG module authors">
+  <t>The following text updates section 4.7 of <xref target="RFC8407"/> to revise the guidelines for updating YANG modules.</t>
+
+  <section anchor="guidelines_authors" title="Guidelines for YANG module authors">
       <t>NBC changes to YANG modules may cause problems to clients, who are consumers of YANG models, and hence YANG module authors are
          RECOMMENDED to minimize NBC changes and keep changes BC whenever possible.</t>
       <t>When NBC changes are introduced, consideration should be given to the impact on clients and YANG module authors SHOULD 
       try to mitigate that impact.</t>
-      <t>[Moved from section 4.] Using the "revision-date" statement causes overly strict import dependencies between
-      modules and SHOULD NOT be used.</t>
       <t>A "rev:nbc-changes" statement SHOULD be added only if there are NBC changes relative to the previous revision.</t>
-      <t>The YANG semantic versioning scheme applies only to YANG modules.
-         YANG submodules are not independently versioned by the YANG semantic
-         versioning scheme.  Instead, if a versioned module includes one or
-         more submodules then those submodules are implicitly versioned as
-         part of the module's 'rev:revision-label' statements, and all the
-         module's 'include' statements MUST specify the revision-date for each
-         of the included submodules if any grouping from the submodules is used by the module.</t>
       <t>Removing old revision statements from a module's revision history could break import by revision, and hence it is RECOMMENDED to retain them.
          If all depencencies have been updated to not import specific revisions of a module, then the corresponding revision statements can be removed from that module.
          An alternative solution, if the revision section is too long, would be remove, or curtail, the older description statements associated with the previous revisions.</t>
-               
+      <t>The "ver:revision-or-derived" extension should be used in YANG module imports to indicate revision dependencies
+      between modules in preference to the "revision-date" statement, which causes overly strict import dependencies and
+      SHOULD NOT be used.</t>
+      <t>A module that includes submodules MUST use the "revision-date" statement to include specific submodule
+      revisions.  Changing a module's include statements to include different submodule revisions requires a new
+      revision of the module.</t>
+
+      
        <section title="Making non-backwards-compatible changes to a YANG module">
        <t>There are various valid situations where a YANG module has to be modified in an NBC
        way. Here are the different ways in which this can be done:
@@ -590,7 +580,7 @@ import example-module {
              marked "deprecated" and then when support is removed its status MUST be changed to "obsolete". Instead of
              using the "obsolete" status, the data node MAY be removed from the model but this has the risk of breaking
              modules which import the modified module.</t>
-             <t>The new extension "status-description" SHOULD be used for nodes which are "obsolete" or
+             <t>The new "status-description" extension statement SHOULD be used for nodes which are "obsolete" or
              "deprecated".</t>
              <t>For status "deprecated", the "status-description" SHOULD also indicate until when support for the node
              is guaranteed (if known). If there is a replacement data node, rpc, action or notification for the deprecated node,
@@ -627,8 +617,8 @@ import example-module {
 <section anchor="yang_modules" title="Module Versioning Extension YANG Modules">
   <t>
     <figure>
-      <preamble> YANG module with extensions for defining a module's
-      YANG semantic version number, and importing by version.</preamble>
+      <preamble> YANG module with extension statements for annotating NBC changes, revision label, status description,
+      and importing by version.</preamble>
       <artwork><![CDATA[
 <CODE BEGINS> file "ietf-yang-revisions@2019-05-02.yang"
 module ietf-yang-revisions {
@@ -663,8 +653,8 @@ module ietf-yang-revisions {
      Author:   Jason Sterne
                <mailto:jason.sterne@nokia.com>";
   description
-    "This module contains a definition for a YANG 1.1 extension to
-     express the semantic version of YANG modules.";
+    "This YANG 1.1 module contains definitions and extensions to
+     support updated YANG revision handling.";
 
   revision 2019-05-02 {
     description
@@ -705,7 +695,7 @@ module ietf-yang-revisions {
       type label-string;
     }
     description
-      "Represents either a YANG revision-date or a revision label";
+      "Represents either a YANG revision date or a revision label";
   }
   
   extension nbc-changes {
@@ -735,7 +725,7 @@ module ietf-yang-revisions {
   extension revision-label {
     argument label-string;
     description
-      "The revision-label can be used to provide an additional
+      "The revision label can be used to provide an additional
        versioning identifier associated with the revision.  E.g., one
        option for a versioning scheme that could be used is [TODO -
        Reference semver draft].
@@ -747,7 +737,7 @@ module ietf-yang-revisions {
        module.";
 
     reference
-      "draft-verdt-netmod-module-versioning: Revision-label";
+      "draft-verdt-netmod-module-versioning: Revision label";
   }
 
   extension revision-or-derived {
@@ -773,7 +763,7 @@ module ietf-yang-revisions {
        A particular revision of an imported module satisfies an
        import's 'revision-or-derived' extension statement if the
        imported module's revision history contains a revision
-       statement with a matching revision-date or revision-label.
+       statement with a matching revision date or revision label.
 
        The 'revision-or-derived' extension statement does not
        gaurantee that all module revisions that satisfy an import
@@ -1002,7 +992,8 @@ module ietf-yl-revisions {
       <t>Adding or modifying "when" statements that reduce when the data node is available in the schema.</t>
       <t>Making the statement conditional on if-feature.</t>
     </list></t>
-
+    <t>The following sections give guidance for how some of these NBC changes could be made to a YANG module:</t>
+    
     <section anchor="remove_bode" title="Removing a data node">
             <t>Removing a leaf or container from the data tree, e.g. because support for the corresponding feature is
             being removed:
