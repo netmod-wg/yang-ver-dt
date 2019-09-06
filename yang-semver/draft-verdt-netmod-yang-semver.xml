@@ -15,7 +15,7 @@
 <?rfc subcompact="no"?>
 <rfc category="std" ipr="trust200902" docName="draft-verdt-netmod-yang-semver-01">
 <front>
-<title abbrev="YANG Semver">YANG Semantic Versioning for Modules</title>
+<title abbrev="YANG Semver">YANG Semantic Versioning</title>
 
 <author initials="B." surname="Claise" fullname="Benoit Claise">
   <organization abbrev="Cisco Systems, Inc.">
@@ -113,54 +113,83 @@
 <middle>
 <section anchor="intro" title="Introduction">
   <t><xref target="I-D.verdt-netmod-yang-module-versioning"/> puts forth a number of concepts relating
-   to modified rules for updating YANG modules, a means to signal when a new revision of a YANG module
-   has non-backwards-compatible (NBC) changes compared to its previous revision, and a versioning scheme YANG modules that
+   to modified rules for updating YANG artifacts such as modules or packages, a means to signal when a new revision of a YANG artifact
+   has non-backwards-compatible (NBC) changes compared to its previous revision, and a versioning scheme YANG artifacts that
    uses the revision history as a lineage for determining from where a specific revision of a YANG
-   module was derived.  Additionally, section 3.3 of <xref target="I-D.verdt-netmod-yang-module-versioning"/>
+   artifact was derived.  Additionally, section 3.3 of <xref target="I-D.verdt-netmod-yang-module-versioning"/>
    defines a revision label which can be used as an overlay or alias to provide additional context or an additional
    way to refer to a specific revision.</t>
 
-  <t>This document defines a labeling scheme that uses modified <xref target="semver"/> rules for YANG modules as well as the
+  <t>This document defines a labeling scheme that uses modified <xref target="semver"/> rules for YANG artifacts as well as the
     revision label definition for using this scheme.  The label and rules defined herein represent the RECOMMENDED
-    revision label scheme for IETF modules.</t>
+    revision label scheme for IETF artifacts.</t>
   </section>
 
   <section anchor="terminology" title="Terminology and Conventions">
   <t>The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT
   RECOMMENDED", "MAY", and "OPTIONAL" in this document are to be interpreted as described in BCP 14 <xref
   target="RFC2119"/> <xref target="RFC8174"/> when, and only when, they appear in all capitals, as shown here.</t>
+  <t>Additionally, this document uses the following terminology:
+    <list style="symbols">
+      <t>YANG artifact: YANG modules, YANG packages
+        <xref target="I-D.rwilton-netmod-yang-packages"/>, and YANG schema elements are examples of YANG artifacts
+        for the purposes of this document.</t>
+    </list>
+  </t>
 </section>
 
 <section anchor="semantic_versioning" title="YANG Semantic Versioning">
   <t>This section defines YANG Semantic Versioning, explains how it is
-  used with YANG modules, and the rules associated with changing a
-  module's semantic version number when the module definitions are
+  used with YANG artifacts, and the rules associated with changing a
+  artifact's semantic version number when its contents are
   updated.</t>
 
-  <section anchor="versioning_scheme" title="YANG Semantic Versioning Scheme for Modules">
+  <section anchor="version_pattern" title="YANG Semantic Versioning Pattern">
+    <t>YANG artifacts that employ semantic versioning MUST use a version string (e.g., in revision-label
+      or as a package version) that corresponds to the following pattern: X.Y.Zv.  Where:
+      <list style="symbols">
+        <t>X, Y and Z are mandatory non-negative integers that are each less than 32768 and MUST NOT contain leading zeroes</t>
+        <t>The '.' is a literal period (ASCII character 0x2e)</t>
+        <t>v is an optional single character modifier that MUST be either 'm' or 'M' if it is specified</t>
+      </list>
+    </t>
+
+    <t>Additionally, pre-release metadata MAY be appended to a semver string after a trailing '-' character.  Build metadata
+      may be appended after a trailing '+' character.  If both pre-release and build metadata are present, then build metadata MUST
+      follow pre-release metadata.  These optional elements MUST be ignored by YANG semver parsers, but are allowed in order
+      to support all of the <xref target="semver"/> rules.</t>
+
+    <t>Versioning schemes that are not this modified semver
+      MUST NOT use this same version pattern.  Other schemes may, for example, use additional leading characters to distinguish them
+      from this semantic versioning scheme.</t>
+
+    <t>A YANG module is defined in this document which contains single typedef that formally specifies this version pattern.</t>
+  </section>
+
+  <section anchor="versioning_scheme" title="YANG Semantic Versioning Scheme for Artifacts">
     <t>This document defines the YANG semantic versioning scheme that is used for YANG
-    modules that employ the semver revision label. The versioning scheme has the following properties:
+    artifacts that employ the semver label. The versioning scheme has the following properties:
     <list style="bullets">
       <t>The YANG semantic versioning scheme is extended from version
       2.0.0 of the semantic versioning scheme defined at semver.org <xref
       target="semver"/> to cover the additional requirements for the
-      management of YANG module lifecyles that cannot be addressed using
+      management of YANG artifact lifecyles that cannot be addressed using
       the semver.org 2.0.0 versioning scheme alone.</t>
 
       <t>Unlike the semver.org 2.0.0 versioning scheme, the YANG
       semantic versioning scheme supports limited updates to older
-      versions of YANG modules, to allow for bug fixes and enhancements
-      to module versions that are not the latest.  However, it does not
+      versions of YANG artifacts, to allow for bug fixes and enhancements
+      to artifact versions that are not the latest.  However, it does not
       provide for the unlimited branching and updating of older revisions
       which are provided by the general rules in
       <xref target="I-D.verdt-netmod-yang-module-versioning"/>.</t>
 
-      <t>Module definitions that follow the semver.org 2.0.0 versioning
+      <t>YANG artifacts that follow the semver.org 2.0.0 versioning
       scheme are fully compatible with implementations that understand
-      the YANG semantic versioning scheme.</t>
+      the YANG semantic versioning scheme defined in this document.</t>
 
-      <t>If module updates are always restricted to the latest version
-      of the module only, then the version numbers used by the YANG
+      <t>If updates are always restricted to the latest revision
+      of the artifact only, then the version numbers used by the YANG
       semantic versioning scheme are exactly the same as those defined
       by the semver.org 2.0.0 versioning scheme.</t>
     </list>
@@ -171,15 +200,17 @@
     to the 'rev:revision-label' statement.</t>
 
     <t>Because the rules put forth in <xref target="I-D.verdt-netmod-yang-module-versioning"/> are designed to work
-     well with existing versions of YANG and allow for module authors to migrate to this scheme, it is not expected
-     that all revisions of a given YANG module will have a semantic version label.  For example, the first revision of
-     a module may have been produced before this scheme was available.  However, once semver is introduced as a reivison label, all subsequent
-     revisions MUST have revision label with a semver value using the rules described below.</t>
+     well with existing versions of YANG and allow for artifact authors to migrate to this scheme, it is not expected
+     that all revisions of a given YANG artifact will have a semantic version label.  For example, the first revision of
+     a module may have been produced before this scheme was available.</t>
+
+    <t>YANG packages that make use of this semantic versioning scheme will have their sematic version
+      as the value of the "revision_label" property.</t>
 
     <t>
-     "The YANG semver version number is expressed as a string of the
+     As stated above, the YANG semver version number is expressed as a string of the
      form: 'X.Y.Zv'; where X, Y, and Z each represent non-negative
-     integers smaller than 32768, and v represents an optional single
+     integers smaller than 32768 without leading zeroes, and v represents an optional single
      character suffix: 'm' or 'M'.
 
      <list style="symbols">
@@ -201,24 +232,24 @@
 	 <t>If the modifier letter is absent, the change represents an
 	 editorial change</t>
 	 <t>'m' - the change represents a backwards-compatible change</t>
-	 <t>'M' - the change represents a non-backwards-compatible change (i.e., when the rev:nbc-changes statement is applied to a revision)</t>
+	 <t>'M' - the change represents a non-backwards-compatible change</t>
        </list>
        </t>
      </list>
     </t>
-    <t>The YANG module name and YANG semantic version number uniquely
-    identifies a revision of a module, with an associated revision date.
-    There MUST NOT be multiple instances of a YANG module definition
-    with the same module name and YANG semantic version number but
-    different content or revision dates.</t>
-    <t>There MUST NOT be multiple versions of a YANG module that have
+    <t>The YANG articact name and YANG semantic version number uniquely
+    identifies a revision of said artifact.
+    There MUST NOT be multiple instances of a YANG artifact definition
+    with the same name and YANG semantic version number but
+    different content (and in the case of modules, different revision dates).</t>
+    <t>There MUST NOT be multiple versions of a YANG artifact that have
     the same MAJOR, MINOR and PATCH version numbers, but different patch
-    modifier letters.  E.g., module version "1.2.3M" MUST NOT be defined
-    if module version "1.2.3" has already been defined.</t>
+    modifier letters.  E.g., artifact version "1.2.3M" MUST NOT be defined
+    if artifact version "1.2.3" has already been defined.</t>
     <section anchor="example_versions" title="Examples for YANG semantic version numbers">
       <t>The following diagram and explanation illustrates how YANG semantic version numbers work.</t>
       <figure>
-        <preamble>Example YANG semantic version numbers for an example module:</preamble>
+        <preamble>Example YANG semantic version numbers for an example artifact:</preamble>
       <artwork>
         0.1.0
           |
@@ -239,7 +270,7 @@
               3.1.0
       </artwork>
     </figure>
-    <t>The tree diagram above illustrates how an example module's version
+    <t>Assume the tree diagram above illustrates how an example YANG module's version
     history might evolve.  For example, the tree might represent the
     following changes, listed in chronological order from oldest
     revision to newest:
@@ -277,48 +308,48 @@
   </section>
 
   <section anchor="semver_update_rules" title="YANG Semantic Version Update Rules">
-    <t>When a new revision of a module is produced, then the following
-    rules define how the YANG semantic version number for the new module
-    revision is calculated, based on the changes between the two module
-    revisions, and the YANG semantic version number of the base module
-    revision that the changes are derived from:</t>
+    <t>When a new revision of an artifact is produced, then the following
+    rules define how the YANG semantic version number for the new artifact
+    revision is calculated, based on the changes between the two artifact
+    revisions, and the YANG semantic version number of the base artifact
+    revision from which the changes are derived:</t>
 
     <t>
     <list style="numbers">
-      <t>If a module is being updated in a non-backwards-compatible
-      way (i.e., the rev:nbc-changes statement is used on the current revision), then the module version "X.Y.Z[m|M]" MUST be updated to
-      "X+1.0.0" unless that module version has already been defined with
-      different content, in which case the module version "X.Y.Z+1M" MUST
+      <t>If an artifact is being updated in a non-backwards-compatible
+      way, then the artifact version "X.Y.Z[m|M]" MUST be updated to
+      "X+1.0.0" unless that artifact version has already been defined with
+      different content, in which case the artifact version "X.Y.Z+1M" MUST
       be used instead.</t>
 
-      <t>If a module is being updated in a backwards-compatible way,
+      <t>If an artifact is being updated in a backwards-compatible way,
       then the next version number depends on the format of the current
       version number:
       <list style="format %i">
-	<t>"X.Y.Z" - the module version MUST be updated to "X.Y+1.0",
-	unless that module version has already been defined with
-	different content, when the module version MUST be updated to
+	<t>"X.Y.Z" - the artifact version MUST be updated to "X.Y+1.0",
+	unless that artifact version has already been defined with
+	different content, when the artifact version MUST be updated to
 	"X.Y.Z+1m" instead.</t>
-	<t>"X.Y.Zm" - the module version MUST be updated to
+	<t>"X.Y.Zm" - the artifact version MUST be updated to
 	"X.Y.Z+1m".</t>
-	<t>"X.Y.ZM" - the module version MUST be updated to
+	<t>"X.Y.ZM" - the artifact version MUST be updated to
 	"X.Y.Z+1M".</t>
       </list>
       </t>
 
-      <t>If a module is being updated in an editorial way, then the next
+      <t>If an artifact is being updated in an editorial way, then the next
       version number depends on the format of the current version
       number:
       <list style="format %i">
-	<t>"X.Y.Z" - the module version MUST be updated to "X.Y.Z+1"</t>
-	<t>"X.Y.Zm" - the module version MUST be updated to
+	<t>"X.Y.Z" - the artifact version MUST be updated to "X.Y.Z+1"</t>
+	<t>"X.Y.Zm" - the artifact version MUST be updated to
 	"X.Y.Z+1m".</t>
-	<t>"X.Y.ZM" - the module version MUST be updated to
+	<t>"X.Y.ZM" - the artifact version MUST be updated to
 	"X.Y.Z+1M".</t>
       </list>
       </t>
 
-      <t>YANG module semantic version numbers beginning with 0, i.e
+      <t>YANG artifact semantic version numbers beginning with 0, i.e
       "0.X.Y" are regarded as beta definitions and need not follow the
       rules above.  Either the MINOR or PATCH version numbers may be
       updated, regardless of whether the changes are
@@ -326,10 +357,11 @@
     </list>
     </t>
   </section>
-  <section anchor="example_module" title="Examples of the YANG Semver Label">
-    <t>Below is a sample YANG module that uses the YANG semver revision label
-      based on the rules defined in this document.
-    </t>
+  <section anchor="examples" title="Examples of the YANG Semver Label">
+    <section anchor="example_module" title="Example Module Using YANG Semver">
+      <t>Below is a sample YANG module that uses the YANG semver revision label
+        based on the rules defined in this document.
+      </t>
 
     <figure>
       <artwork>
@@ -401,9 +433,32 @@
       </artwork>
     </figure>
   </section>
+  <section anchor="example_package" title="Example of Package Using YANG Semver">
+    <t>Below is an example YANG package that uses the semver revision label based on
+      the rules defined in this document.
+    </t>
+
+    <figure>
+      <artwork>
+   {
+     "ietf-yang-instance-data:instance-data-set": {
+       "name": "example-yang-pkg",
+       "target-ptr": "TBD",
+       "timestamp": "2018-09-06T17:00:00Z",
+       "description": "Example IETF package definition",
+       "content-data": {
+         "ietf-yang-package:yang-package": {
+           "name": "example-yang-pkg",
+           "revision_label": "1.3.1",
+           ...
+  }
+</artwork>
+</figure>
+</section>
+</section>
 </section>
 
-<section title="Import by Semantic Version" anchor="import_semver">
+<section title="Import Module by Semantic Version" anchor="import_semver">
   <t><xref target="I-D.verdt-netmod-yang-module-versioning"/> allows for imports to be
     done based on a module or a derived revision of a module.  The rev:revision-or-derived
     statement can specify either a revision date or a revision label.  When importing by
@@ -425,6 +480,77 @@
     resolving that import will pass through a revision of module A with version 2.1.0M in order to determine if the present instance of
     module A derives from 2.0.0.</t>
 </section>
+
+<section anchor="yang_module" title="YANG Module">
+  <t>This YANG module contains the typedef for the YANG semantic version.</t>
+
+  <figure>
+    <artwork>
+      <![CDATA[
+<CODE BEGINS> file "ietf-yang-semver@2019-09-06.yang"
+  module ietf-yang-semver {
+    yang-version 1.1;
+    namespace "urn:ietf:params:xml:ns:yang:ietf-yang-semver";
+    prefix semver;
+
+    organization
+      "IETF NETMOD (Network Modeling) Working Group";
+    contact
+      "WG Web:   <http://tools.ietf.org/wg/netmod/>
+       WG List:  <mailto:netmod@ietf.org>
+
+       Author:   Joe Clarke
+                 <mailto:jclarke@cisco.com>";
+    description
+      "This module provides type and grouping definitions for YANG
+       packages.
+
+       Copyright (c) 2019 IETF Trust and the persons identified as
+       authors of the code.  All rights reserved.
+
+       Redistribution and use in source and binary forms, with or
+       without modification, is permitted pursuant to, and subject
+       to the license terms contained in, the Simplified BSD License
+       set forth in Section 4.c of the IETF Trust's Legal Provisions
+       Relating to IETF Documents
+       (http://trustee.ietf.org/license-info).
+
+       This version of this YANG module is part of RFC XXXX; see
+       the RFC itself for full legal notices.";
+
+    // RFC Ed.: update the date below with the date of RFC publication
+    // and remove this note.
+    // RFC Ed.: replace XXXX with actual RFC number and remove this
+    // note.
+
+    revision 2019-09-06 {
+      description
+        "Initial revision";
+      reference
+        "RFC XXXX: YANG Semantic Versioning.";
+    }
+
+    /*
+     * Typedefs
+     */
+
+    typedef version {
+      type string {
+        pattern '\d+[.]\d+[.]\d+[mM]?(-[\w\d.]+)?([+][\w\d\.]+)?';
+      }
+      description
+        "Represents a YANG semantic version number.  Note:
+         additional rules apply to the dot-separated numeric identifiers
+         which are spelled out in the reference for this typedef.";
+      reference
+        "RFC XXXX: YANG Semantic Versioning.";
+    }
+  }
+    <CODE ENDS>
+    ]]>
+            </artwork>
+          </figure>
+    </section>
 
 <!--
 
@@ -543,6 +669,7 @@ of this specification.</t>
 <references title="Informative References">
    <?rfc include='reference.I-D.clacla-netmod-yang-model-update'?>
    <?rfc include='reference.I-D.ietf-netmod-yang-instance-file-format'?>
+   <?rfc include='reference.I-D.rwilton-netmod-yang-packages'?>
    <reference anchor="openconfigsemver" target="http://www.openconfig.net/docs/semver/">
      <front>
       <title>Semantic Versioning for Openconfig Models</title>
