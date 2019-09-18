@@ -21,7 +21,7 @@
 <?rfc inline="yes"?>
 <?rfc compact="yes"?>
 <?rfc subcompact="no"?>
-<rfc updates="7950" category="std" ipr="trust200902" docName="draft-verdt-netmod-yang-module-versioning-00">
+<rfc updates="7950" category="std" ipr="trust200902" docName="draft-verdt-netmod-yang-module-versioning-01">
 <front>
 <title abbrev="Updated YANG Module Revision Handling">Updated YANG Module Revision Handling</title>
 
@@ -107,8 +107,6 @@
     <email>kd6913@att.com</email>
   </address>
 </author>
-
-
 
 <date/>
 <abstract>
@@ -235,8 +233,10 @@
   <section anchor="revision_label" title="Revision label">
     <t>Each revision entry in a module or submodule MAY have a revision label associated with it, providing an
     alternative alias to identify a particular revision of a module or submodule.  The revision label could be used to
-    provide an additional versioning identifier associated with the revision.  E.g., one option for a versioning scheme
-    that could be used is [TODO - Reference semver draft].</t>
+    provide an additional versioning identifier associated with the revision.</t>
+    <t>YANG Semver [XXX verdt-netmod-yang-semver] defines a versioning scheme based on Semver 2.0.0 <xref target="semver"/> that can
+    be used as a revision label.  All revision labels that match the pattern for the "version" typedef in the
+    ietf-yang-semver YANG module MUST be interpreted as YANG semantic version numbers.</t>
     <t>The revision date and revision label within a submodule's revision history have no effect on the including
     module's revision.  Submodules MUST NOT use revision label schemes that could be confused with the including
     module's revision label scheme.</t>
@@ -311,25 +311,25 @@ leaf imperial-temperature {
         "to be completed";
 
       revision 2019-06-01 {
-        rev:revision-label "3.1.0";
-        rev:nbc-changes;
+        rev:revision-label 3.1.0;
         description "Add new functionality.";
       }
 
       revision 2019-04-01 {
-        rev:revision-label "3.0.0";
+        rev:revision-label 3.0.0;
+        rev:nbc-changes;
         description
           "Add new functionality. Remove some deprecated nodes.";
       }
 
       revision 2019-02-01 {
-        rev:revision-label "2.0.0";
+        rev:revision-label 2.0.0;
         rev:nbc-changes;
         description "Apply bugfix to pattern statement";
       }
 
       revision 2019-01-01 {
-        rev:revision-label "1.0.0";
+        rev:revision-label 1.0.0;
         description "Initial revision";
       }
 
@@ -344,29 +344,29 @@ leaf imperial-temperature {
       namespace "name-space";
       prefix "prefix-name";
 
-      import ietf-yang-revisions { prefix "semver"; }
+      import ietf-yang-revisions { prefix "rev"; }
       
       description
         "to be completed";
 
       revision 2019-05-01 {
-        rev:revision-label "2.2.0";
+        rev:revision-label 2.2.0;
         description "Backwards-compatible bugfix to enhancement.";
       }
 
       revision 2019-03-01 {
-        rev:revision-label "2.1.0";
+        rev:revision-label 2.1.0;
         description "Apply enhancement to older release train.";
       }
 
       revision 2019-02-01 {
-        rev:revision-label "2.0.0";
+        rev:revision-label 2.0.0;
         rev:nbc-changes;
         description "Apply bugfix to pattern statement";
       }
 
       revision 2019-01-01 {
-        rev:revision-label "1.0.0";
+        rev:revision-label 1.0.0;
         description "Initial revision";
       }
 
@@ -487,14 +487,10 @@ import example-module {
 
 
 <section title="Updates to ietf-yang-library" anchor="ietf_yang_library_updates">
-    <t>YANG library <xref target="RFC7895"/> <xref target="RFC8525"/> is modified to support the new module update rules
-    in three ways.</t>
+    <t>This document updates YANG library <xref target="RFC7895"/> <xref target="RFC8525"/> to clarify how ambiguous
+    module imports are resolved.  It also defines the YANG module, ietf-yl-revisions that augments YANG library with new
+    versioning related meta-data.</t>
 
-    <section title="Advertising revision-label">
-    <t>The ietf-yang-revisions YANG module augments the "module" list in ietf-yang-library with a "revision-label" leaf to
-    optionally declare the revision label associated wth the particular revision of each module.</t>
-
-    </section>
     <section title="Resolving ambiguous module imports">
       <t>A YANG datastore schema, defined in <xref target="RFC8525"/>, can specify multiple revisions of a YANG module
       in the schema using the "import-only" list, with the requirement from <xref target="RFC7950"/> that only a single
@@ -511,23 +507,45 @@ import example-module {
       and none of those revisions are implemented, then the import MUST resolve to the module revision with the latest
       revision date.</t>
     </section>
-    <section title="Reporting how deprecated and obsolete nodes are handled">
-      <t>The ietf-yang-revisions YANG module augments YANG library with two leaves to allow a server to report how it handles
-      status "deprecated" and status "obsolete" nodes.  The leaves are:
-        <list style="hanging">
-          <t hangText="deprecated-nodes-implemented:">If present, this leaf indicates that all schema nodes with a
-          status "deprecated" child statement are implemented equivalently as if they had status "current", or otherwise
-          deviations MUST be used to explicitly remove "deprecated" nodes from the schema.  If this leaf is absent then
-          the behavior is unspecified.</t>
-          <t hangText="obsolete-nodes-absent:">If present, this leaf indicates that the server does not implement any
-          status "obsolete" nodes.  If this leaf is absent then the behaviour is unspecified.</t>
-         </list>
-      </t>
-      <t>Servers SHOULD set both the "deprecated-nodes-implemented" and "obsolete-nodes-absent" leaves.</t>
-      <t>If a server does not set the "deprecated-nodes-implemented" leaf, then clients MUST NOT rely solely on the
-      "rev:nbc-changes" statements to determine whether two module revisions are backwards-compatible, and MUST also
-      consider whether the status of any nodes has changed to "deprecated" and whether those nodes are implemented by
-      the server.</t>
+    <section title="YANG library versioning augmentations">
+      <t></t>
+          <figure>
+            <preamble>The "ietf-yl-revisions" YANG module has the following
+            structure (using the notation defined in <xref target="RFC8340"/>):</preamble>
+              <artwork>
+                    <![CDATA[
+module: ietf-yl-revisions
+  augment /yanglib:yang-library/yanglib:module-set/yanglib:module:
+    +--ro revision-label?   rev:revision-label
+  augment /yanglib:yang-library/yanglib:schema:
+    +--ro deprecated-nodes-implemented?   empty
+    +--ro obsolete-nodes-absent?          empty
+            ]]>
+                </artwork>
+            </figure>
+
+      <section title="Advertising revision-label">
+        <t>The ietf-yl-revisions YANG module augments the "module" list in ietf-yang-library with a "revision-label"
+        leaf to optionally declare the revision label associated wth the particular revision of each module.</t>
+      </section>
+      <section title="Reporting how deprecated and obsolete nodes are handled">
+        <t>The ietf-yl-revisions YANG module augments YANG library with two leaves to allow a server to report how it
+        handles status "deprecated" and status "obsolete" nodes.  The leaves are:
+          <list style="hanging">
+            <t hangText="deprecated-nodes-implemented:">If present, this leaf indicates that all schema nodes with a
+            status "deprecated" child statement are implemented equivalently as if they had status "current", or
+            otherwise deviations MUST be used to explicitly remove "deprecated" nodes from the schema.  If this leaf is
+            absent then the behavior is unspecified.</t>
+            <t hangText="obsolete-nodes-absent:">If present, this leaf indicates that the server does not implement any
+            status "obsolete" nodes.  If this leaf is absent then the behaviour is unspecified.</t>
+          </list>
+	</t>
+	<t>Servers SHOULD set both the "deprecated-nodes-implemented" and "obsolete-nodes-absent" leaves.</t>
+	<t>If a server does not set the "deprecated-nodes-implemented" leaf, then clients MUST NOT rely solely on the
+	"rev:nbc-changes" statements to determine whether two module revisions are backwards-compatible, and MUST also
+	consider whether the status of any nodes has changed to "deprecated" and whether those nodes are implemented by
+	the server.</t>
+      </section>
     </section>
   </section>
 
@@ -548,6 +566,7 @@ import example-module {
   <t>The following text updates section 4.7 of <xref target="RFC8407"/> to revise the guidelines for updating YANG modules.</t>
 
   <section anchor="guidelines_authors" title="Guidelines for YANG module authors">
+      <t>All IETF YANG modules MUST include revision-label statements for all newly published YANG modules, and all newly published revisions of existing YANG modules.  The revision-label MUST take the form of a YANG semantic version number [XXX verdt-netmod-yang-versioning].</t> 
       <t>NBC changes to YANG modules may cause problems to clients, who are consumers of YANG models, and hence YANG module authors are
          RECOMMENDED to minimize NBC changes and keep changes BC whenever possible.</t>
       <t>When NBC changes are introduced, consideration should be given to the impact on clients and YANG module authors SHOULD 
@@ -620,12 +639,18 @@ import example-module {
       <preamble> YANG module with extension statements for annotating NBC changes, revision label, status description,
       and importing by version.</preamble>
       <artwork><![CDATA[
-<CODE BEGINS> file "ietf-yang-revisions@2019-05-02.yang"
+<CODE BEGINS> file "ietf-yang-revisions@2019-09-18.yang"
 module ietf-yang-revisions {
   yang-version 1.1;
   namespace "urn:ietf:params:xml:ns:yang:ietf-yang-revisions";
   prefix rev;
 
+  import ietf-yang-types {
+    prefix yang;
+    reference
+      "XXXX [ietf-netmod-rfc6991-bis]: Common YANG Data Types";
+  }
+  
   organization
     "IETF NETMOD (Network Modeling) Working Group";
   contact
@@ -654,26 +679,40 @@ module ietf-yang-revisions {
                <mailto:jason.sterne@nokia.com>";
   description
     "This YANG 1.1 module contains definitions and extensions to
-     support updated YANG revision handling.";
+     support updated YANG revision handling.
 
-  revision 2019-05-02 {
+     Copyright (c) 2019 IETF Trust and the persons identified as
+     authors of the code.  All rights reserved.
+
+     Redistribution and use in source and binary forms, with or
+     without modification, is permitted pursuant to, and subject
+     to the license terms contained in, the Simplified BSD License
+     set forth in Section 4.c of the IETF Trust's Legal Provisions
+     Relating to IETF Documents
+     (http://trustee.ietf.org/license-info).
+
+     This version of this YANG module is part of RFC XXXX; see
+     the RFC itself for full legal notices.
+
+     The key words 'MUST', 'MUST NOT', 'REQUIRED', 'SHALL', 'SHALL
+     NOT', 'SHOULD', 'SHOULD NOT', 'RECOMMENDED', 'NOT RECOMMENDED',
+     'MAY', and 'OPTIONAL' in this document are to be interpreted as
+     described in BCP 14 (RFC 2119) (RFC 8174) when, and only when,
+     they appear in all capitals, as shown here.";
+
+  // RFC Ed.: update the date below with the date of RFC publication
+  // and remove this note.
+  // RFC Ed.: replace XXXX (inc above) with actual RFC number and
+  // remove this note.
+
+  revision 2019-09-18 {
     description
-      "Initial version.  Derived from ietf-semver.yang@2019-02-17.";
+      "Initial version.";
     reference
-      "draft-verdt-netmod-module-versioning: Updated YANG Module
-       Revision Handling";
-  }
-
-  typedef revision-identifier {
-    type string {
-      pattern '\d{4}-\d{2}-\d{2}';
-    }
-    description
-      "Represents a specific date in YYYY-MM-DD format.
-       TODO - Import and reuse type from 6991-bis";
+      "XXXX: Updated YANG Module Revision Handling";
   }
   
-  typedef label-string {
+  typedef revision-label {
     type string {
       length "1..255";
       pattern '[^\s@]+';
@@ -684,15 +723,21 @@ module ietf-yang-revisions {
     description
       "A label associated with a YANG revision.
 
-       Excludes spaces and '@'.  Cannot match revision-date.";
+       Excludes spaces and '@'.  MUST NOT match revision-date.
+
+       Revision labels that classify as YANG semantic versions,
+       as defined by the ietf-yang-semver:version typedef,
+       MUST conform to the versioning behaviour defined in
+       XXXX [verdt]: YANG Semantic Versioning.";
     reference
-      "draft-verdt-netmod-yang-module-versioning: Revision label";
+      "XXXX: Updated YANG Module Revision Handling;
+       Section 3.3, Revision label";
   }
 
   typedef revision-date-or-label {
     type union {
-      type revision-identifier;
-      type label-string;
+      type yang:revision-identifier;
+      type revision-label;
     }
     description
       "Represents either a YANG revision date or a revision label";
@@ -717,18 +762,22 @@ module ietf-yang-revisions {
        history, that are classified as 'backwards-compatible' then
        the revision statement MUST NOT contain any 'nbc-changes'
        substatement.";
+
     reference
-      "draft-verdt-netmod-module-versioning: nbc-changes revision
-       extension statement";
+      "XXXX: Updated YANG Module Revision Handling;
+       Section 3.2, nbc-changes revision extension statement";
   }
 
   extension revision-label {
-    argument label-string;
+    argument revision-label;
     description
       "The revision label can be used to provide an additional
        versioning identifier associated with the revision.  E.g., one
        option for a versioning scheme that could be used is [TODO -
        Reference semver draft].
+       
+       The format of the revision-label argument MUST conform to the
+       pattern defined for the revision-label typedef.
 
        Each 'revision' statement MAY have a single 'revision-label'
        substatement.
@@ -737,7 +786,8 @@ module ietf-yang-revisions {
        module.";
 
     reference
-      "draft-verdt-netmod-module-versioning: Revision label";
+      "XXXX: Updated YANG Module Revision Handling;
+       Section 3.3, Revision label";
   }
 
   extension revision-or-derived {
@@ -772,8 +822,8 @@ module ietf-yang-revisions {
        compatible.";
 
     reference
-      "draft-verdt-netmod-yang-module-versioning: Import by derived
-       revision";
+      "XXXX: Updated YANG Module Revision Handling;
+       Section 4, Import by derived revision";
   }
 
   extension status-description {
@@ -790,8 +840,8 @@ module ietf-yang-revisions {
        substatement.";
 
     reference
-      "draft-verdt-netmod-yang-module-versioning: YANG status
-       description extension";
+      "XXXX: Updated YANG Module Revision Handling;
+       Section 3.4, YANG status description extension statement";
   }
 }
 <CODE ENDS>
@@ -800,18 +850,21 @@ module ietf-yang-revisions {
 <figure>
   <preamble>YANG module with augmentations to YANG Library to revision labels</preamble>
       <artwork><![CDATA[
-<CODE BEGINS> file "ietf-yl-revisions@2019-05-02.yang"
+<CODE BEGINS> file "ietf-yl-revisions@2019-09-18.yang"
 module ietf-yl-revisions {
   yang-version 1.1;
   namespace "urn:ietf:params:xml:ns:yang:ietf-yl-revisions";
   prefix yl-rev;
 
-  import ietf-revisions {
+  import ietf-yang-revisions {
     prefix rev;
+    reference
+      "XXXX: Updated YANG Module Revision Handling";
   }
   
   import ietf-yang-library {
     prefix yanglib;
+    reference "RFC 8525: YANG Libary";
   }
 
   organization
@@ -843,28 +896,54 @@ module ietf-yl-revisions {
   description
     "This module contains augmentations to YANG Library to add module
      level revision label and to provide an indication of how
-     deprecated and obsolete nodes are handled by the server.";
+     deprecated and obsolete nodes are handled by the server.
 
-  revision 2019-05-02 {
+     Copyright (c) 2019 IETF Trust and the persons identified as
+     authors of the code.  All rights reserved.
+
+     Redistribution and use in source and binary forms, with or
+     without modification, is permitted pursuant to, and subject
+     to the license terms contained in, the Simplified BSD License
+     set forth in Section 4.c of the IETF Trust's Legal Provisions
+     Relating to IETF Documents
+     (http://trustee.ietf.org/license-info).
+
+     This version of this YANG module is part of RFC XXXX; see
+     the RFC itself for full legal notices.
+
+     The key words 'MUST', 'MUST NOT', 'REQUIRED', 'SHALL', 'SHALL
+     NOT', 'SHOULD', 'SHOULD NOT', 'RECOMMENDED', 'NOT RECOMMENDED',
+     'MAY', and 'OPTIONAL' in this document are to be interpreted as
+     described in BCP 14 (RFC 2119) (RFC 8174) when, and only when,
+     they appear in all capitals, as shown here.";
+
+  // RFC Ed.: update the date below with the date of RFC publication
+  // and remove this note.
+  // RFC Ed.: replace XXXX (including in the imports above) with
+  // actual RFC number and remove this note.
+  // RFC Ed.: please replace revision-label version with 1.0.0 and
+  // remove this note.
+  revision 2019-09-18 {
+    rev:revision-label 0.1.0;
     description
-      "Initial revision, derived from ietf-yl-semver~2019-02-17";
+      "Initial revision";
     reference
-      "draft-verdt-netmod-module-versioning: Updated YANG Module
-       Revision Handling";
+      "XXXX: Updated YANG Module Revision Handling";
   }
 
   augment "/yanglib:yang-library/yanglib:module-set/yanglib:module" {
     description
       "Augmentation modules with a revision label";
     leaf revision-label {
-      type rev:label-string;
+      type rev:revision-label;
       description
         "The revision label associated with this module revision.
          The label MUST match the rev:label value in the specific
          revision of the module loaded in this module-set.";
+
       reference
-        "draft-verdt-netmod-module-versioning: Updated YANG Module
-         Revision Handling";
+        "XXXX: Updated YANG Module Revision Handling;
+         Section 5.2.1, Advertising revision-label";
     }
   }
 
@@ -883,23 +962,28 @@ module ietf-yl-revisions {
          deviations MUST be used to explicitly remove 'deprecated'
          nodes from the schema.  If this leaf is absent then the
          behavior is unspecified.";
+
       reference
-        "draft-verdt-netmod-yang-semver: Reporting how deprecated and
-         obsolete nodes are handled";
+        "XXXX: Updated YANG Module Revision Handling;
+         Section 5.2.2, Reporting how deprecated and obsolete nodes
+         are handled";
     }
+    
     leaf obsolete-nodes-absent {
       type empty;
       description
         "If present, this leaf indicates that the server does not
          implement any status 'obsolete' nodes.  If this leaf is
          absent then the behaviour is unspecified.";
+
       reference
-        "draft-verdt-netmod-yang-semver: Reporting how deprecated and
-         obsolete nodes are handled";
+        "XXXX: Updated YANG Module Revision Handling;
+         Section 5.2.2, Reporting how deprecated and obsolete nodes
+         are handled";
     }
   }
 }
-<CODE ENDS>
+CODE ENDS>
 ]]></artwork>
 </figure>
 </t>
@@ -970,13 +1054,22 @@ module ietf-yl-revisions {
    <?rfc include='reference.RFC.8407'?>
    <?rfc include='reference.RFC.8525'?>
    <?ref include='reference.I-D.verdt-netmod-yang-versioning-reqs'?>
+   <?ref include='reference.I-D.ietf-netmod-rfc6991-bis'?>
 </references>
 <references title="Informative References">
+   <?rfc include='reference.RFC.8340'?>
    <?rfc include='reference.I-D.clacla-netmod-yang-model-update'?>
    <?rfc include='reference.I-D.ietf-netmod-yang-instance-file-format'?>
    <?rfc include='reference.I-D.rwilton-netmod-yang-packages'?>
    <?ref include='reference.I-D.wilton-netmod-yang-ver-selection'?>
    <?rfc include="reference.I-D.verdt-netmod-yang-solutions"?>
+   <reference anchor="semver" target="https://www.semver.org">
+      <front>
+       <title>Semantic Versioning 2.0.0</title>
+       <author/>
+       <date/>
+    </front>
+  </reference>
 </references>
 <?rfc needLines="100"?>
 
