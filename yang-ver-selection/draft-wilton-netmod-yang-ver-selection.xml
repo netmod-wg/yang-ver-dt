@@ -1,0 +1,578 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE rfc SYSTEM "rfc2629.dtd" [
+  <!ENTITY RFC2119 SYSTEM "reference.RFC.2119.xml">
+  <!ENTITY RFC5246 SYSTEM "reference.RFC.5246.xml">
+  <!ENTITY RFC6020 SYSTEM "reference.RFC.6020.xml">
+  <!ENTITY RFC6241 SYSTEM "reference.RFC.6241.xml">
+  <!ENTITY RFC6242 SYSTEM "reference.RFC.6242.xml">
+  <!ENTITY RFC6536 SYSTEM "reference.RFC.6536.xml">
+  <!ENTITY RFC7895 SYSTEM "reference.RFC.7895.xml">
+  <!ENTITY RFC7950 SYSTEM "reference.RFC.7950.xml">
+  <!ENTITY RFC8199 SYSTEM "reference.RFC.8199.xml">
+  <!ENTITY RFC8040 SYSTEM "reference.RFC.8040.xml">
+  <!ENTITY RFC8174 SYSTEM "reference.RFC.8174.xml">
+  <!ENTITY RFC8342 SYSTEM "reference.RFC.8342.xml">
+]>
+<?xml-stylesheet type="text/xsl" href="rfc2629.xslt" ?>
+<?rfc toc="yes"?>
+<?rfc tocompact="yes"?>
+<?rfc tocdepth="4"?>
+<?rfc tocindent="yes"?>
+<?rfc symrefs="yes"?>
+<?rfc sortrefs="yes"?>
+<?rfc comments="yes"?>
+<?rfc inline="yes"?>
+<?rfc compact="yes"?>
+<?rfc subcompact="no"?>
+<rfc category="std" ipr="trust200902" docName="draft-wilton-netmod-yang-ver-selection-00">
+  <front>
+    <title abbrev="YANG Schema Version Selection">YANG Schema Version Selection</title>
+
+    <author initials="R." surname="Wilton" fullname="Robert Wilton">
+      <organization>Cisco Systems, Inc.</organization>
+      <address>
+        <email>rwilton@cisco.com</email>
+      </address>
+    </author>
+    <author initials="R." surname="Rahman" fullname="Reshad Rahman">
+      <organization>Cisco Systems, Inc.</organization>
+      <address>
+        <email>rrahman@cisco.com</email>
+      </address>
+    </author>
+    <date/>
+    <abstract>
+      <t>
+	This document defines protocol mechanisms to allow clients to choose which YANG schema to
+	use for interactions with a server, out of the available YANG schema supported by a server.
+	The provided functionality allow servers to support clients in a backwards compatible way,
+	at the same time allowing for non-backwards-compatible updates to YANG modules.</t>
+      <t>This draft provides a solution to YANG versioning requirements 3.1 and 3.2.</t>
+    </abstract>
+
+  </front>
+  <middle>
+    <section anchor="terminology" title="Terminology and Conventions">
+      <t>The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "SHOULD NOT",
+      "RECOMMENDED", "NOT RECOMMENDED", "MAY", and "OPTIONAL" in this document are to be interpreted
+      as described in BCP 14 <xref target="RFC2119"/> <xref target="RFC8174"/> when, and only when,
+      they appear in all capitals, as shown here.</t>
+      
+      <t>This document uses terminology introduced in the YANG versioning requirements draft <xref
+      target="I-D.verdt-netmod-yang-versioning-reqs"/>.</t>
+      <t>This document also makes of the following terminology introduced in the Network Management
+      Datastore Architecture <xref target="RFC8342"/>:
+        <list style="symbols">
+          <t>datastore schema</t>
+        </list>
+      </t>      
+      <t>In addition, this document makes use of the following terminology:
+        <list style="symbols">
+          <t>bc: Used as an abbreviation for a backwards-compatible change.</t>
+	  <t>nbc: Used as an abbreviation for a non-backwards-compatible change.</t>
+	  <t>editorial change: A backwards-compatible change that does not change the YANG module
+	  semantics in any way.</t>
+	  <t>YANG schema: The combined set of schema nodes for a set of YANG module revisions,
+	  taking into consideration any deviations and enabled features.</t>
+	  <t>versioned schema: A YANG schema with an associated YANG semantic version number, e.g.,
+	  as might be described by a YANG package.</t>
+	  <t>schema set: A set of related versioned YANG schema, one for each datastore that is
+	  supported.</t>
+        </list>
+      </t>
+      <t>TODO - the bc/nbc/editorial terminology should probably be defined and referenced from the
+      YANG module versioning solution draft.  'schema' and 'versioned schema' could be defined in the
+      packages draft.</t>
+    </section>
+    <section anchor="intro" title="Introduction">
+      <t>This document describes how NETCONF and RESTCONF clients can choose a particular YANG schema
+      they wish to choose to interact with a server with.</t>
+
+      <t><xref target="I-D.verdt-netmod-yang-versioning-reqs"/> defines requirements that any
+      solution to YANG versioning must have.</t>
+
+      <t><xref target="I-D.verdt-netmod-yang-semver"/> specifies a partial solution to the YANG
+      versioning requirements that focuses on using semantic versioning within individual YANG
+      modules, but does not address all the requirements listed in the requirements draft.  Of
+      particular relevance here, requirements 3.1 and 3.2 are not addressed.</t>
+
+      <t><xref target="I-D.rwilton-netmod-yang-packages"/> describes how sets of related YANG
+      modules can be grouped together into a logical entity that is versioned using the YANG
+      semantic versioning number scheme.  Different packages can be defined for different sets of
+      YANG modules, e.g., packages could be defined for the IETF YANG modules, OpenConfig YANG
+      modules, a vendor's YANG modules.  Different versions of these package definitions can be
+      defined as the contents of these packages evolve over time, and as the versions of the YANG
+      modules included in the package evolve.</t>
+
+      <t>This draft defines how YANG packages can be used to represent versioned datastore schema,
+      and how clients can choose which versioned schemas to use during interactions with a
+      device.</t>
+    </section>
+    <section anchor="background" title="Background">
+      <t>There are three ways that the lifecycle of a data model can be managed:
+      <list style="numbers">
+	<t>Disallow all non-backwards-compatible updates to a YANG module.  Broadly this is the
+	approach adopted by <xref target="RFC7950"/>, but it has been shown to be too inflexible in
+	some cases.  E.g. it makes it hard to fix bugs in a clean fashion - it is not clear that
+	allowing two independent data nodes (one deprecated, one current) to configure the same
+	underlying property is robustly backwards compatible in all scenarios, particularly if the
+	value space and/or default values differ between the module revisions.</t>
+
+	<t>Allow non-backwards-compatible updates to YANG modules, and use a mechanism such as
+	semantic version numbers to communicate the likely impact of any changes to module users,
+	but require that clients handle non-backwards-compatible changes in servers by migrating to
+	new versions of the modules.  Without version selection, this is what the <xref
+	target="I-D.verdt-netmod-yang-semver"/> approach likely achieves.</t>
+
+	<t>Allow non-backwards-compatible updates to YANG modules, but also provide mechanisms to
+	allow servers to support multiple versions of YANG modules, and provide clients with some
+	ability to select which versions of YANG modules they wish to interact with, subject to some
+	reasonable constraints.  This is the approach that this draft aims to address.  It is worth
+	noting that the idea of supporting multiple versions of an API is not new in the wider
+	software industry, and there any many examples of where this approach has been successfully
+	used.</t>
+      </list>
+      </t>
+    </section>
+    
+    <section anchor="objectives" title="Objectives">
+      <t>The goals of the schema version selection draft are:
+      <list style="symbols">
+	<t>To provide a mechanism where non-backwards-compatible changes and bug fixes can be made
+	to YANG modules without forcing clients to immediately migrate to new versions of those
+	modules as they get implemented.</t>
+
+	<t>To allow servers to support multiple versions of a particular YANG schema, and to allow
+	clients to choose which YANG schema version to use when interoperating with the server.  The
+	aim here is to give operators more flexibility as to when they update their software.</t>
+
+	<t>To provide a mechanism to allow different YANG schema families (e.g., SDO models,
+	OpenConfig models, Vendor models) to be supported by a server, and to allow clients to
+	choose which YANG schema family is used to interoperate with the server.</t>
+      </list>
+      </t>
+
+      <t>The following points are non objective of this draft:
+      <list style="symbols">
+	<t>This draft does not provide a mechanism to allow clients to choose arbitrary sets of YANG
+	module versions to interoperate with the server.</t>
+	
+        <t>Servers are not required to concurrently support clients using different YANG schema families
+        or versioned schema.  A server MAY choose to only allow a single schema family or single
+        versioned schema to be used by all clients.</t>
+
+	<t>There is no requirement for a server to support every published version of a YANG
+	package, particularly if some package versions are backwards compatible.  Clients are
+	required to interoperate with backwards compatible updates of YANG modules.  E.g., if a
+	particular package was available in versions 1.0.0, 1.1.0, 1.2.0, 2.0.0, 3.0.0 and 3.1.0,
+	then a server may choose to only support versions 1.2.0, 2.0.0, and 3.1.0, with the
+	knowledge that all clients should be able to interoperate with the server.</t>
+
+	<t>There is no requirement to support all parts of all versioned schemas.  For some nbc
+	changes in modules, it is not possible for a server to support both the old and new module
+	versions, and to convert between the two.  Where appropriate deviations can be used, and
+	otherwise an out of band mechanism is used to indicate where a mapping has failed.</t>
+      </list>
+      </t>
+    </section>
+
+    <section anchor="overview" title="Solution Overview">
+      <t>An overview the solution is as follows:
+      <list style="numbers">
+	<t>YANG packages are defined for the different versioned schema supported by a server:
+	<list style="symbols">
+	  <t>Separate packages can be defined for different families of schema, e.g., SDO,
+	  OpenConfig, or vendor native.</t>
+	  <t>Separate packages can be defined for each versioned schema within a schema family.</t>
+	  <t>Separate packages may be defined for different datastores, if the datastores use
+	  different datastore schema.  For example, a different datastore schema, and hence package,
+	  might be used for &lt;operational&gt; vs the conventional datastores.</t>
+	</list></t>
+	<t>Each server advertises, via an operational data model:
+	<list style="symbols">
+	  <t>All of the YANG packages that may be used during version selection.  The packages can
+	  also be made available for offline consumption via instance data documents, as described
+	  in <xref target="I-D.rwilton-netmod-yang-packages"/>.</t>
+	  <t>Grouped sets of versioned schema, where each set defines the versioned schema used by
+	  each supported datastore, and each versioned schema is represented by a YANG package
+	  instance.</t>
+	</list></t>
+	<t>Each server supports configuration to:
+	<list style="symbols">
+	  <t>Allow a client to configure which schema version set to use for the default
+	  NETCONF/RESTCONF connections.</t>
+	  <t>Allow a client to configure additional separate NETCONF and RESTCONF protocol
+	  instances, which use different schema version sets on those protocol instances.</t>
+	  <t>An RPC mechanism could also be defined to select schema, but is not currently discussed
+	  in this draft.</t>
+	</list></t>
+	<t>The server internally maps requests between the different protocol instances to the
+	internal device implementation.</t>
+      </list>
+      </t>
+    </section>
+    <section title="Version selection from a server perspective">
+    <t>The general premise of this solution is that servers generally implement one native schema,
+    and the version selection scheme is used to support older version of that native schema and also
+    foreign schema specified by external entities.</t>
+    <t>Overall the solution relies on the ability to map instance data between different schema
+    versions.  Depending on the scope of difference between the schema versions then some of these
+    mappings may be very hard, or even impossible, to implement.  Hence, there is still a strong
+    incentive to try and minimize nbc changes between schema versions to minimize the mapping
+    complexity.</t>
+    <t>Server implementations MUST serialize configuration requests across the different schema.
+    The expectation is that this would be achieved by mapping all requests to the devices native
+    schema version.</t>
+    <t>Datastore validation needs to be performed in two places, firstly in whichever schema a
+    clients is interacting in, and secondly in the native schema for the device.  This could have a
+    negative performance impact.</t>
+    <t>Depending on the complexity of the mappings between schema versions, it may be necessary for
+    the mappings to be stateful.</t>
+    <t>TODO - Figure out how hot fixes that slightly modify the schema are handled.</t>
+    </section>
+    <section title="Version selection from a clients perspective">
+      <t>Clients can use configuration to choose which schema sets are available.</t>
+      <t>Clients cannot choose arbitrary individual YANG module versions, and are instead constrained
+      by the versions that the server makes available.</t>
+      <t>Each client protocol connection is to one particular schema set.  From that client session
+      perspective it appears as if the client is interacting with a regular server.  If the client
+      queries YANG library that the version of YANG Library that is returned matches the schema set
+      that is being used for that server instance.</t>
+      <t>The server may not support a schema with the exact version desired by the client, and they
+      have to accept a later version that is backwards compatible with their desired version.
+      Clients may also have to accept later schema versions that contain NBC fixes, although the
+      assumption is that such nbc fixes should be designed to minimize the impact on clients.</t>
+      <t>There is no guarantee that servers will always be able to support all older schema
+      versions.  Deviations should be used where necessary to indicate that the server is unable to
+      faithfully implement the older schema version.</t>
+      <t>If clients interact with a server using multiple versions, they should not exact that all
+      data nodes in later module versions can always be backported to older schema versions.  TODO -
+      Specify how mapping errors can be reported to client.</t>
+      
+    </section>
+    <section title="Limitations of the solution">
+      <t>Not all schema conversions are possible.  E.g. an impossible type conversion, or something
+      has been removed.  The solution is fundamentally limited by how the schemas actually change,
+      this solution does not provide a magic bullet that can solve all versioning issues.</t>
+    </section>
+    <section title="Schema Version Selection YANG module">
+      <t>The YANG schema version selection YANG module is used by a device to report the schema-sets
+      that are available, and to allow clients to choose which schema-set they wish to use.</t>
+      <t>Feature are used to allow servers to decide whether they allow the primary schema-set to be
+      changed, and/or allow secondary schema-sets to be configured.</t>
+      <t>The primary schema-set is the datastore schema reported by YANG Library if a client
+      connects to the device using the standard NETCONF/RESTCONF protocol numbers.</t>
+      <t>If secondary schema-sets are configured, then the client can choose whether NETCONF or
+      RESTCONF is supported, which port numbers the protocols should run on (if available), and what
+      RESTCONF root path prefix to use (e.g. if all of the RESTCONF protocol instances run on port
+      443.</t>
+      <t>Different schema-sets may support different datastores.</t>
+      
+      <figure>
+        <preamble>The "ietf-schema-version-selection" YANG module has the following structure:</preamble>
+        <artwork>
+          <![CDATA[
+module: ietf-schema-version-selection
+    +--rw schema-selection
+       +--rw schema-sets* [name]
+       |  +--rw name          string
+       |  +--rw netconf! {secondary-schema-set}?
+       |  |  +--rw port?   inet:port-number
+       |  +--rw restconf! {secondary-schema-set}?
+       |  |  +--rw port?        inet:port-number
+       |  |  +--rw root-path?   inet:uri
+       |  +--ro datastores* [datastore]
+       |     +--ro datastore    ds:datastore-ref
+       |     +--ro package
+       |        +--ro name?
+       |        |       -> /yanglib:yang-library/pkg:package/name
+       |        +--ro version?   leafref
+       +--rw default-schema-set?
+               -> /schema-selection/schema-sets/name
+               {default-schema-set}?
+          ]]>
+        </artwork>
+      </figure>
+    </section>
+
+    <section title="YANG Module">
+      <t>The YANG module definition for the module described in the previous sections.</t>
+      <figure>
+        <artwork>
+          <![CDATA[
+<CODE BEGINS> file "ietf-schema-version-selection@2019-03-11.yang"
+module ietf-schema-version-selection {
+  yang-version 1.1;
+  namespace
+    "urn:ietf:params:xml:ns:yang:ietf-schema-version-selection";
+  prefix "ver-sel";
+
+  import ietf-inet-types {
+    prefix inet;
+    reference "RFC 6991: Common YANG Data Types.";
+  }
+  import ietf-datastores {
+    prefix ds;
+    reference
+      "RFC 8342: Network Management Datastore Architecture (NMDA)";
+  }
+  import ietf-yang-library {
+    prefix yanglib;
+    reference "RFC 8525: YANG Library";
+  }
+  import ietf-yang-library-packages {
+    prefix pkg;
+    reference "draft-rwilton-netmod-yang-packages-01";
+  }
+
+  organization
+    "IETF NETMOD (Network Modeling) Working Group";
+
+  contact
+    "WG Web:   <http://tools.ietf.org/wg/netmod/>
+     WG List:  <mailto:netmod@ietf.org>
+
+     Author:   Reshad Rahman
+               <mailto:rrahman@cisco.com>
+
+     Author:   Rob Wilton
+               <mailto:rwilton@cisco.com>";
+
+  description
+    "This module provide a data model to advertise and allow the
+     selection of schema versions by clients.
+
+     Copyright (c) 2019 IETF Trust and the persons identified as
+     authors of the code.  All rights reserved.
+
+     Redistribution and use in source and binary forms, with or
+     without modification, is permitted pursuant to, and subject
+     to the license terms contained in, the Simplified BSD License
+     set forth in Section 4.c of the IETF Trust's Legal Provisions
+     Relating to IETF Documents
+     (http://trustee.ietf.org/license-info).
+
+     This version of this YANG module is part of RFC XXXX; see
+     the RFC itself for full legal notices.";
+
+  // RFC Ed.: update the date below with the date of RFC publication
+  // and remove this note.
+  // RFC Ed.: replace XXXX with actual RFC number and remove this
+  // note.
+  revision 2019-03-11 {
+    description
+      "Initial revision";
+    reference
+      "RFC XXXX: YANG Schema Version Selection";
+  }
+  
+  /*
+   * Typedefs
+   */
+
+  typedef yang-sem-ver {
+    type string {
+      pattern '\d+[.]\d+[.]\d+[mM]?';
+    }
+    description
+      "Represents a YANG semantic version number.";
+    reference
+      "TODO - Should be defined by YANG versioning types module";
+  }
+
+  feature "default-schema-set" {
+    description
+      "Feature that allows clients to choose the default schema set
+       to be used for clients that connect using the standard network
+       configuration protocol port number or URL.
+
+       Implementations may choose to only support this feature in
+       <operational> to report the default-schema-set without
+       allowing it to be configured.";
+  }
+
+  feature "secondary-schema-set" {
+    description
+      "Feature to choose if secondary schema sets may be configured
+       by clients.
+
+       Implementations may choose to only support this feature in
+       <operational> to report secondary schema sets without
+       allowing them to be configured.";
+  }
+
+  container schema-selection {
+      description
+        "YANG schema version selection";
+
+    list schema-sets {
+      key "name";
+
+      description
+        "All schema-sets that are available for client selection.";
+      
+      leaf name {
+        type "string" {
+          length "1..255";
+        }
+        description
+          "The server assigned name of the schema-set.
+
+           This should include the schema family, and appropriate
+           versioning or release information";
+      }
+
+      container netconf {
+        if-feature "secondary-schema-set";
+
+        presence "Make this schema-set available via NETCONF";
+        description
+          "NETCONF protocol settings for this schema set, if
+           available";
+
+        leaf port {
+          type inet:port-number;
+          description
+            "The port numnber to use for interacting with this
+             schema-set.  If not configured,then the port number is
+             server allocated.";
+          reference
+            "RFC 6242: Using the NETCONF Protocol over SSH";
+        }
+      }
+
+      container restconf {
+        if-feature "secondary-schema-set";
+
+        presence
+          "Make this schema-set available via RESTCONF";
+        description
+          "RESTCONF protocol settings for this schema set, if
+           available";
+
+        leaf port {
+          type inet:port-number;
+          default "443";
+          description
+            "The port numnber to use for interacting with this
+             schema-set.  If not configured, then the port number
+             defaults to the standard RESTCONF https port number of
+             443";
+          reference
+            "RFC 8040: RESTCONF Protocol, section 2.1";
+        }
+
+        leaf root-path {
+          type inet:uri;
+          default "/restconf";
+          description
+            "The default root path to use to access the RESTCONF
+             protocol instance for this schema-set";
+          
+        }
+      }
+      
+      list datastores {
+        key "datastore";
+        config false;
+
+        description
+          "The list of datastores supported for this schema set";
+        
+        leaf datastore {
+          type ds:datastore-ref;
+          description
+            "The datastore that this datastore schema is associated
+             with";
+          reference
+            "RFC 8342: Network Management Datastore Architecture
+             (NMDA)";
+        }
+
+        container package {
+          description
+            "YANG package associated with this datastore schema";
+          
+          leaf name {
+            type leafref {
+              path "/yanglib:yang-library/pkg:package/pkg:name";
+            }
+            description
+              "The name of the YANG package this schema relates to";
+          }
+          leaf version {
+            type leafref {
+              path '/yanglib:yang-library/'
+               + 'pkg:package[pkg:name = current()/../name]/'
+               + 'pkg:version';
+            }
+            
+            description
+              "The version of the YANG package this schema relates
+               to";
+          }
+        }
+      }
+    }
+
+    leaf default-schema-set {
+      if-feature "default-schema-set";
+      type leafref {
+        path '/schema-selection/schema-sets/name';
+      }
+      description
+        "Specifies the default schema-set used by this device.  This
+         is the set of datastore schema that is used if a client
+         connects using the standard protocol port numbers and URLs";
+    }
+  }
+}
+<CODE ENDS>
+]]>
+        </artwork>
+      </figure>
+    </section>    
+    
+    <section anchor="security" title="Security Considerations">
+      <t>To be defined.</t>
+    </section>
+    <section anchor="iana" title="IANA Considerations">
+      <t>TODO - Add registrations for YANG modules defined in this draft.</t>
+    </section>
+    <section anchor="issues" title="Open Questions/Issues">
+      <t>All issues, along with the draft text, are currently being
+      tracked at:
+      TODO - URL</t>
+    </section>
+    <section anchor="acknowledgements" title="Acknowledgements">
+      <t>The ideas that formed this draft are based on discussions with the YANG versioning design
+      team, and other members of the NETMOD WG.</t>
+    </section>
+  </middle>
+  <?rfc needLines="20"?>
+  <back>
+    <references title="Normative References">
+      <?rfc include="reference.RFC.2119"?>
+      <?rfc include="reference.RFC.5246"?>
+      <?rfc include="reference.RFC.6241"?>
+      <?rfc include="reference.RFC.6242"?>
+      <?rfc include="reference.RFC.6536"?>
+      <?rfc include="reference.RFC.7950"?>
+      <?rfc include="reference.RFC.8040"?>
+      <?rfc include="reference.RFC.8174"?>
+      <?rfc include="reference.RFC.8342"?>
+      <?rfc include="reference.I-D.verdt-netmod-yang-versioning-reqs"?>
+      <?rfc include="reference.I-D.verdt-netmod-yang-semver"?>
+      <?rfc include="reference.I-D.rwilton-netmod-yang-packages"?>
+      <?rfc include="reference.I-D.ietf-netconf-rfc7895bis"?>
+      <?rfc include="reference.I-D.ietf-netmod-yang-instance-file-format"?>     
+      <?rfc include="reference.I-D.ietf-netmod-module-tags"?>
+    </references>
+    <references title="Informative References">
+      <?rfc include="reference.RFC.8199"?>
+      <?rfc include="reference.I-D.bierman-netmod-yang-package"?>
+      <?rfc include="reference.I-D.ietf-netmod-artwork-folding"?>
+    </references>
+    <?rfc needLines="100"?>
+  </back>
+</rfc>
