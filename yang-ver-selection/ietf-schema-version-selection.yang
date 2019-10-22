@@ -56,13 +56,13 @@ module ietf-schema-version-selection {
   // and remove this note.
   // RFC Ed.: replace XXXX with actual RFC number and remove this
   // note.
-  revision 2019-03-11 {
+  revision 2019-10-22 {
     description
       "Initial revision";
     reference
       "RFC XXXX: YANG Schema Version Selection";
   }
-  
+
   /*
    * Typedefs
    */
@@ -104,10 +104,11 @@ module ietf-schema-version-selection {
 
     list schema-sets {
       key "name";
+      unique "restconf/root-path";
 
       description
-        "All schema-sets that are available for client selection.";
-      
+        "All schema-sets that are available for selection by clients.";
+
       leaf name {
         type "string" {
           length "1..255";
@@ -119,25 +120,6 @@ module ietf-schema-version-selection {
            versioning or release information";
       }
 
-      container netconf {
-        if-feature "secondary-schema-set";
-
-        presence "Make this schema-set available via NETCONF";
-        description
-          "NETCONF protocol settings for this schema set, if
-           available";
-
-        leaf port {
-          type inet:port-number;
-          description
-            "The port numnber to use for interacting with this
-             schema-set.  If not configured, then the port number is
-             server allocated.";
-          reference
-            "RFC 6242: Using the NETCONF Protocol over SSH";
-        }
-      }
-
       container restconf {
         if-feature "secondary-schema-set";
 
@@ -147,35 +129,23 @@ module ietf-schema-version-selection {
           "RESTCONF protocol settings for this schema set, if
            available";
 
-        leaf port {
-          type inet:port-number;
-          default "443";
-          description
-            "The port numnber to use for interacting with this
-             schema-set.  If not configured, then the port number
-             defaults to the standard RESTCONF https port number of
-             443";
-          reference
-            "RFC 8040: RESTCONF Protocol, section 2.1";
-        }
-
         leaf root-path {
           type inet:uri;
           default "/restconf";
           description
             "The default root path to use to access the RESTCONF
              protocol instance for this schema-set";
-          
+
         }
       }
-      
+
       list datastores {
         key "datastore";
         config false;
 
         description
           "The list of datastores supported for this schema set";
-        
+
         leaf datastore {
           type ds:datastore-ref;
           description
@@ -186,11 +156,12 @@ module ietf-schema-version-selection {
              (NMDA)";
         }
 
-        container package {
+        list packages {
+          key "package";
           description
             "YANG package associated with this datastore schema";
-          
-          leaf name {
+
+          leaf package {
             type leafref {
               path "/yanglib:yang-library/pkg:package/pkg:name";
             }
@@ -200,10 +171,10 @@ module ietf-schema-version-selection {
           leaf version {
             type leafref {
               path '/yanglib:yang-library/'
-               + 'pkg:package[pkg:name = current()/../name]/'
+               + 'pkg:package[pkg:name = current()/../package]/'
                + 'pkg:version';
             }
-            
+
             description
               "The version of the YANG package this schema relates to";
           }
@@ -219,7 +190,7 @@ module ietf-schema-version-selection {
       description
         "Specifies the default schema-set used by this device.  This
          is the set of datastore schema that is used if a client
-         connects using the standard protocol port numbers and URLs";
+         connects using the standard URLs";
     }
   }
 }
