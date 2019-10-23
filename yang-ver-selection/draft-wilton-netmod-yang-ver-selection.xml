@@ -24,7 +24,7 @@
 <?rfc inline="yes"?>
 <?rfc compact="yes"?>
 <?rfc subcompact="no"?>
-<rfc category="std" ipr="trust200902" docName="draft-wilton-netmod-yang-ver-selection-00">
+<rfc category="std" ipr="trust200902" docName="draft-wilton-netmod-yang-ver-selection-01" updates="6241,8040">
   <front>
     <title abbrev="YANG Schema Version Selection">YANG Schema Version Selection</title>
 
@@ -43,8 +43,8 @@
     <date/>
     <abstract>
       <t>
-	This document defines protocol mechanisms to allow clients to choose which YANG schema to
-	use for interactions with a server, out of the available YANG schema supported by a server.
+	This document defines protocol mechanisms to allow clients, using NETCONF or RESTCONF, to choose which YANG schema to
+	use for interactions with a server, out of the available YANG schemas supported by a server.
 	The provided functionality allow servers to support clients in a backwards compatible way,
 	at the same time allowing for non-backwards-compatible updates to YANG modules.</t>
       <t>This draft provides a solution to YANG versioning requirements 3.1 and 3.2.</t>
@@ -58,7 +58,7 @@
       as described in BCP 14 <xref target="RFC2119"/> <xref target="RFC8174"/> when, and only when,
       they appear in all capitals, as shown here.</t>
       
-      <t>This document uses terminology introduced in the YANG versioning requirements draft <xref
+      <t>This document uses terminology introduced in the YANG versioning requirements document <xref
       target="I-D.verdt-netmod-yang-versioning-reqs"/>.</t>
       <t>This document also makes of the following terminology introduced in the Network Management
       Datastore Architecture <xref target="RFC8342"/>:
@@ -86,15 +86,15 @@
     </section>
     <section anchor="intro" title="Introduction">
       <t>This document describes how NETCONF and RESTCONF clients can choose a particular YANG schema
-      they wish to choose to interact with a server with.</t>
+      they wish to choose to interact with a server.</t>
 
       <t><xref target="I-D.verdt-netmod-yang-versioning-reqs"/> defines requirements that any
       solution to YANG versioning must have.</t>
 
-      <t><xref target="I-D.verdt-netmod-yang-semver"/> specifies a partial solution to the YANG
-      versioning requirements that focuses on using semantic versioning within individual YANG
-      modules, but does not address all the requirements listed in the requirements draft.  Of
-      particular relevance here, requirements 3.1 and 3.2 are not addressed.</t>
+      <t><xref target="I-D.verdt-netmod-yang-semver"/>, which is based on <xref target="I-D.verdt-netmod-yang-module-versioning"/>, 
+      specifies a partial solution to the YANG versioning requirements that focuses on using semantic 
+      versioning within individual YANG modules, but does not address all the requirements listed in the requirements document.  
+      Of particular relevance here, requirements 3.1 and 3.2 are not addressed.</t>
 
       <t><xref target="I-D.rwilton-netmod-yang-packages"/> describes how sets of related YANG
       modules can be grouped together into a logical entity that is versioned using the YANG
@@ -104,7 +104,7 @@
       defined as the contents of these packages evolve over time, and as the versions of the YANG
       modules included in the package evolve.</t>
 
-      <t>This draft defines how YANG packages can be used to represent versioned datastore schema,
+      <t>This document defines how YANG packages can be used to represent versioned datastore schema,
       and how clients can choose which versioned schemas to use during interactions with a
       device.</t>
     </section>
@@ -127,7 +127,7 @@
 	<t>Allow non-backwards-compatible updates to YANG modules, but also provide mechanisms to
 	allow servers to support multiple versions of YANG modules, and provide clients with some
 	ability to select which versions of YANG modules they wish to interact with, subject to some
-	reasonable constraints.  This is the approach that this draft aims to address.  It is worth
+	reasonable constraints.  This is the approach that this document aims to address.  It is worth
 	noting that the idea of supporting multiple versions of an API is not new in the wider
 	software industry, and there any many examples of where this approach has been successfully
 	used.</t>
@@ -136,7 +136,7 @@
     </section>
     
     <section anchor="objectives" title="Objectives">
-      <t>The goals of the schema version selection draft are:
+      <t>The goals of the schema version selection document are:
       <list style="symbols">
 	<t>To provide a mechanism where non-backwards-compatible changes and bug fixes can be made
 	to YANG modules without forcing clients to immediately migrate to new versions of those
@@ -152,9 +152,9 @@
       </list>
       </t>
 
-      <t>The following points are non objective of this draft:
+      <t>The following points are non objective of this document:
       <list style="symbols">
-	<t>This draft does not provide a mechanism to allow clients to choose arbitrary sets of YANG
+	<t>This document does not provide a mechanism to allow clients to choose arbitrary sets of YANG
 	module versions to interoperate with the server.</t>
 	
         <t>Servers are not required to concurrently support clients using different YANG schema families
@@ -177,9 +177,10 @@
     </section>
 
     <section anchor="overview" title="Solution Overview">
-      <t>An overview the solution is as follows:
+      <t>An overview of the solution is as follows:
       <list style="numbers">
-	<t>YANG packages are defined for the different versioned schema supported by a server:
+	<t>YANG packages, specified in <xref target="I-D.rwilton-netmod-yang-packages"/>, are defined 
+	for the different versioned schema supported by a server:
 	<list style="symbols">
 	  <t>Separate packages can be defined for different families of schema, e.g., SDO,
 	  OpenConfig, or vendor native.</t>
@@ -201,8 +202,9 @@
 	<list style="symbols">
 	  <t>Allow a client to configure which schema version set to use for the default
 	  NETCONF/RESTCONF connections.</t>
-	  <t>Allow a client to configure additional separate NETCONF and RESTCONF protocol
-	  instances, which use different schema version sets on those protocol instances.</t>
+	  <t>Allow a client to configure additional separate RESTCONF protocol
+	  instances, which use different schema version sets on those protocol instances. 
+	  See <xref target="restconf"/>.</t>
 	  <t>An RPC mechanism could also be defined to select schema, but is not currently discussed
 	  in this draft.</t>
 	</list></t>
@@ -210,6 +212,88 @@
 	internal device implementation.</t>
       </list>
       </t>
+      <section anchor="netconf" title="NETCONF">
+         <section anchor="newcap" title="New capability to advertise YANG packages supported">
+            <t>A new NETCONF :yang-packages capability, using base:1.1 defined in  <xref target="RFC6241"/>,
+            is used indicate what YANG package versions the server is willing to support. The server sends 
+            an unordered comma separated list (with no white spaces) of YANG package versions it supports. A 
+            server MAY concurrently support clients using different YANG package versions.</t>
+            <t>The :yang-packages capability is identified by the following capability string:
+            <list hangIndent="4" style="hanging">
+               <t hangText="    urn:ietf:params:netconf:capability:yang-packages:1.0"></t>
+            </list>
+            </t>
+            <t>In this example, the server advertises its (abbreviated) &lt;hello&gt; as
+               follows. This indicates that the server supports the following YANG packages:
+               <list style="hanging">
+                  <t hangText="example-ietf-routing:">Versions 2.1.0 and 1.3.1</t>
+                  <t hangText="example-vendor-xxx:">Versions 9.2.3 and 8.4.2</t>
+               </list>
+                  
+               Some extra white spaces have been added for display purposes only.
+ 
+ <figure><artwork><![CDATA[
+ <hello xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
+ <capabilities>
+ <capability>urn:ietf:params:netconf:base:1.0</capability>
+ <capability>urn:ietf:params:netconf:base:1.1</capability>
+ <capability>
+ urn:ietf:params:netconf:capability:yang-packages:1.0?list=
+ example-ietf-routing@2.1.0,example-ietf-routing@1.3.1,
+ example-vendor-xxx@9.2.3,example-vendor-xxx@8.4.2
+ </capability>
+ </capabilities>
+ </hello>
+ 
+]]></artwork></figure>
+            </t>
+         </section>
+         <section title="&lt;select-package&gt; operation">
+            <t>Description: Used by a client to select a YANG package version which 
+               has been advertised by the server via the mechanism described above in <xref target="newcap"/>.
+               The YANG package version is selected for the lifetime of the NETCONF session, unless
+               a different version of the YANG package is subsequently selected via this operation.</t>
+            <t>Parameters:
+            <list hangIndent="4" style="hanging">
+               <t hangText="    yang-package-version:">YANG package version that the client wants to use.</t>
+            </list>
+            </t>
+            <t>Positive response: if the server was able to satisfy the request, an
+      &lt;rpc-reply&gt; is sent that includes an &lt;ok&gt; element.</t>
+            <t>Negative response: An &lt;rpc-error&gt; element is included in the
+      &lt;rpc-reply&gt; if the request cannot be completed for any reason. A &lt;select-package&gt; operation 
+      can fail for a number of reasons, such as the YANG package version is not supported by the server, or a
+      different version of the YANG package has already been selected by another client.</t>
+            <t>Example: a client selects YANG package example-ietf-routing version 1.3.1:
+<figure><artwork><![CDATA[
+     <rpc message-id="101"
+          xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
+       <select-package>
+         <yang-package-version>
+           <example-ietf-routing@1.3.1/>
+         </yang-package-version>
+       </select-package>
+     </rpc>
+
+     <rpc-reply message-id="101"
+          xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
+       <ok/> <!-- YANG package selection succeeded -->
+     </rpc-reply>
+
+]]></artwork></figure>                  
+               </t>
+         </section>
+      </section>
+      <section anchor="restconf" title="RESTCONF">
+         <t>To enable servers which can support different versions of YANG packages:
+            <list style="symbols">
+               <t>On servers, a unique RESTCONF root resource can be configured to map to each schema-set</t>
+               <t>A default schema-set can be configured.</t>
+            </list>
+         </t>
+         <t>Clients select the desired schema-set by choosing the corresponding RESTCONF root resource</t>
+         <t>This updates Section 3.1 of <xref target="RFC8040"/>.</t>
+      </section>
     </section>
     <section title="Version selection from a server perspective">
     <t>The general premise of this solution is that servers generally implement one native schema,
@@ -221,16 +305,16 @@
     incentive to try and minimize nbc changes between schema versions to minimize the mapping
     complexity.</t>
     <t>Server implementations MUST serialize configuration requests across the different schema.
-    The expectation is that this would be achieved by mapping all requests to the devices native
+    The expectation is that this would be achieved by mapping all requests to the device's native
     schema version.</t>
     <t>Datastore validation needs to be performed in two places, firstly in whichever schema a
-    clients is interacting in, and secondly in the native schema for the device.  This could have a
+    client is interacting in, and secondly in the native schema for the device.  This could have a
     negative performance impact.</t>
     <t>Depending on the complexity of the mappings between schema versions, it may be necessary for
     the mappings to be stateful.</t>
     <t>TODO - Figure out how hot fixes that slightly modify the schema are handled.</t>
     </section>
-    <section title="Version selection from a clients perspective">
+    <section title="Version selection from a client's perspective">
       <t>Clients can use configuration to choose which schema sets are available.</t>
       <t>Clients cannot choose arbitrary individual YANG module versions, and are instead constrained
       by the versions that the server makes available.</t>
@@ -276,20 +360,20 @@ module: ietf-schema-version-selection
     +--rw schema-selection
        +--rw schema-sets* [name]
        |  +--rw name          string
-       |  +--rw netconf! {secondary-schema-set}?
-       |  |  +--rw port?   inet:port-number
        |  +--rw restconf! {secondary-schema-set}?
-       |  |  +--rw port?        inet:port-number
        |  |  +--rw root-path?   inet:uri
        |  +--ro datastores* [datastore]
        |     +--ro datastore    ds:datastore-ref
-       |     +--ro package
-       |        +--ro name?
-       |        |       -> /yanglib:yang-library/pkg:package/name
-       |        +--ro version?   leafref
+       |     +--ro packages [package]
+       |        +--ro package?
+       |        |     -> /yanglib:yang-library/pkg:package/name
+       |        +--ro version?   
+       |              -> /yanglib:yang-library/pkg:package[pkg:name = current()
+       |                 /../package]/version 
        +--rw default-schema-set?
                -> /schema-selection/schema-sets/name
                {default-schema-set}?
+               
           ]]>
         </artwork>
       </figure>
@@ -300,7 +384,7 @@ module: ietf-schema-version-selection
       <figure>
         <artwork>
           <![CDATA[
-<CODE BEGINS> file "ietf-schema-version-selection@2019-03-11.yang"
+<CODE BEGINS> file "ietf-schema-version-selection@2019-10-22.yang"
 module ietf-schema-version-selection {
   yang-version 1.1;
   namespace
@@ -359,13 +443,13 @@ module ietf-schema-version-selection {
   // and remove this note.
   // RFC Ed.: replace XXXX with actual RFC number and remove this
   // note.
-  revision 2019-03-11 {
+  revision 2019-10-22 {
     description
       "Initial revision";
     reference
       "RFC XXXX: YANG Schema Version Selection";
   }
-  
+
   /*
    * Typedefs
    */
@@ -393,8 +477,8 @@ module ietf-schema-version-selection {
 
   feature "secondary-schema-set" {
     description
-      "Feature to choose if secondary schema sets may be configured
-       by clients.
+      "Feature to choose if secondary schema sets may be configured by
+       clients.
 
        Implementations may choose to only support this feature in
        <operational> to report secondary schema sets without
@@ -407,10 +491,11 @@ module ietf-schema-version-selection {
 
     list schema-sets {
       key "name";
+      unique "restconf/root-path";
 
       description
-        "All schema-sets that are available for client selection.";
-      
+        "All schema-sets that are available for selection by clients.";
+
       leaf name {
         type "string" {
           length "1..255";
@@ -422,25 +507,6 @@ module ietf-schema-version-selection {
            versioning or release information";
       }
 
-      container netconf {
-        if-feature "secondary-schema-set";
-
-        presence "Make this schema-set available via NETCONF";
-        description
-          "NETCONF protocol settings for this schema set, if
-           available";
-
-        leaf port {
-          type inet:port-number;
-          description
-            "The port numnber to use for interacting with this
-             schema-set.  If not configured,then the port number is
-             server allocated.";
-          reference
-            "RFC 6242: Using the NETCONF Protocol over SSH";
-        }
-      }
-
       container restconf {
         if-feature "secondary-schema-set";
 
@@ -450,35 +516,23 @@ module ietf-schema-version-selection {
           "RESTCONF protocol settings for this schema set, if
            available";
 
-        leaf port {
-          type inet:port-number;
-          default "443";
-          description
-            "The port numnber to use for interacting with this
-             schema-set.  If not configured, then the port number
-             defaults to the standard RESTCONF https port number of
-             443";
-          reference
-            "RFC 8040: RESTCONF Protocol, section 2.1";
-        }
-
         leaf root-path {
           type inet:uri;
           default "/restconf";
           description
             "The default root path to use to access the RESTCONF
              protocol instance for this schema-set";
-          
+
         }
       }
-      
+
       list datastores {
         key "datastore";
         config false;
 
         description
           "The list of datastores supported for this schema set";
-        
+
         leaf datastore {
           type ds:datastore-ref;
           description
@@ -489,11 +543,12 @@ module ietf-schema-version-selection {
              (NMDA)";
         }
 
-        container package {
+        list packages {
+          key "package";
           description
             "YANG package associated with this datastore schema";
-          
-          leaf name {
+
+          leaf package {
             type leafref {
               path "/yanglib:yang-library/pkg:package/pkg:name";
             }
@@ -503,13 +558,12 @@ module ietf-schema-version-selection {
           leaf version {
             type leafref {
               path '/yanglib:yang-library/'
-               + 'pkg:package[pkg:name = current()/../name]/'
+               + 'pkg:package[pkg:name = current()/../package]/'
                + 'pkg:version';
             }
-            
+
             description
-              "The version of the YANG package this schema relates
-               to";
+              "The version of the YANG package this schema relates to";
           }
         }
       }
@@ -523,7 +577,7 @@ module ietf-schema-version-selection {
       description
         "Specifies the default schema-set used by this device.  This
          is the set of datastore schema that is used if a client
-         connects using the standard protocol port numbers and URLs";
+         connects using the standard URLs";
     }
   }
 }
@@ -537,12 +591,27 @@ module ietf-schema-version-selection {
       <t>To be defined.</t>
     </section>
     <section anchor="iana" title="IANA Considerations">
-      <t>TODO - Add registrations for YANG modules defined in this draft.</t>
+      <t>TODO - Add registrations for YANG modules defined in this document.</t>
+      <t>This document registers a URI.</t>
+      <section title="NETCONF Capability URNs">
+         <t>This document registers a URI in the IETF XML
+            registry <xref target="RFC3688"/>.  The IANA registry "Network Configuration
+            Protocol (NETCONF) Capability URNs" needs to be updated to include
+            the following capability.
+ <figure><artwork><![CDATA[
+   Index
+       Capability Identifier
+   -------------------------
+   :yang-packages
+       urn:ietf:params:netconf:capability:yang-packages:1.0 
+]]></artwork></figure>
+
+         </t>
+      </section>
     </section>
     <section anchor="issues" title="Open Questions/Issues">
       <t>All issues, along with the draft text, are currently being
-      tracked at:
-      TODO - URL</t>
+      tracked at: https://github.com/netmod-wg/yang-ver-dt/labels/version-selection-solution</t>
     </section>
     <section anchor="acknowledgements" title="Acknowledgements">
       <t>The ideas that formed this draft are based on discussions with the YANG versioning design
@@ -553,6 +622,7 @@ module ietf-schema-version-selection {
   <back>
     <references title="Normative References">
       <?rfc include="reference.RFC.2119"?>
+      <?rfc include="reference.RFC.3688"?>
       <?rfc include="reference.RFC.5246"?>
       <?rfc include="reference.RFC.6241"?>
       <?rfc include="reference.RFC.6242"?>
@@ -562,6 +632,7 @@ module ietf-schema-version-selection {
       <?rfc include="reference.RFC.8174"?>
       <?rfc include="reference.RFC.8342"?>
       <?rfc include="reference.I-D.verdt-netmod-yang-versioning-reqs"?>
+      <?rfc include="reference.I-D.verdt-netmod-yang-module-versioning"?>
       <?rfc include="reference.I-D.verdt-netmod-yang-semver"?>
       <?rfc include="reference.I-D.rwilton-netmod-yang-packages"?>
       <?rfc include="reference.I-D.ietf-netconf-rfc7895bis"?>
