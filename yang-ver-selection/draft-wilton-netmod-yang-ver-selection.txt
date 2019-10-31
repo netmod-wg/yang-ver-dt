@@ -5,8 +5,8 @@
 Network Working Group                                          R. Wilton
 Internet-Draft                                                 R. Rahman
 Updates: 6241,8040 (if approved)                     Cisco Systems, Inc.
-Intended status: Standards Track                        October 22, 2019
-Expires: April 24, 2020
+Intended status: Standards Track                        October 31, 2019
+Expires: May 3, 2020
 
 
                      YANG Schema Version Selection
@@ -39,7 +39,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on April 24, 2020.
+   This Internet-Draft will expire on May 3, 2020.
 
 Copyright Notice
 
@@ -53,7 +53,7 @@ Copyright Notice
 
 
 
-Wilton & Rahman          Expires April 24, 2020                 [Page 1]
+Wilton & Rahman            Expires May 3, 2020                  [Page 1]
 
 Internet-Draft        YANG Schema Version Selection         October 2019
 
@@ -72,23 +72,23 @@ Table of Contents
    4.  Objectives  . . . . . . . . . . . . . . . . . . . . . . . . .   4
    5.  Solution Overview . . . . . . . . . . . . . . . . . . . . . .   5
      5.1.  NETCONF . . . . . . . . . . . . . . . . . . . . . . . . .   6
-       5.1.1.  New capability to advertise YANG packages supported .   6
-       5.1.2.  <select-package> operation  . . . . . . . . . . . . .   7
+       5.1.1.  New capability to advertise schema sets supported . .   6
+       5.1.2.  <select-schema-sets> operation  . . . . . . . . . . .   7
      5.2.  RESTCONF  . . . . . . . . . . . . . . . . . . . . . . . .   8
    6.  Version selection from a server perspective . . . . . . . . .   8
    7.  Version selection from a client's perspective . . . . . . . .   9
-   8.  Limitations of the solution . . . . . . . . . . . . . . . . .  10
+   8.  Limitations of the solution . . . . . . . . . . . . . . . . .   9
    9.  Schema Version Selection YANG module  . . . . . . . . . . . .  10
    10. YANG Module . . . . . . . . . . . . . . . . . . . . . . . . .  11
-   11. Security Considerations . . . . . . . . . . . . . . . . . . .  15
-   12. IANA Considerations . . . . . . . . . . . . . . . . . . . . .  15
+   11. Security Considerations . . . . . . . . . . . . . . . . . . .  16
+   12. IANA Considerations . . . . . . . . . . . . . . . . . . . . .  16
      12.1.  NETCONF Capability URNs  . . . . . . . . . . . . . . . .  16
-   13. Open Questions/Issues . . . . . . . . . . . . . . . . . . . .  16
-   14. Acknowledgements  . . . . . . . . . . . . . . . . . . . . . .  16
-   15. References  . . . . . . . . . . . . . . . . . . . . . . . . .  16
-     15.1.  Normative References . . . . . . . . . . . . . . . . . .  16
-     15.2.  Informative References . . . . . . . . . . . . . . . . .  18
-   Authors' Addresses  . . . . . . . . . . . . . . . . . . . . . . .  18
+   13. Open Questions/Issues . . . . . . . . . . . . . . . . . . . .  17
+   14. Acknowledgements  . . . . . . . . . . . . . . . . . . . . . .  17
+   15. References  . . . . . . . . . . . . . . . . . . . . . . . . .  17
+     15.1.  Normative References . . . . . . . . . . . . . . . . . .  17
+     15.2.  Informative References . . . . . . . . . . . . . . . . .  19
+   Authors' Addresses  . . . . . . . . . . . . . . . . . . . . . . .  19
 
 1.  Terminology and Conventions
 
@@ -99,45 +99,38 @@ Table of Contents
    capitals, as shown here.
 
    This document uses terminology introduced in the YANG versioning
-   requirements document [I-D.verdt-netmod-yang-versioning-reqs].
+   requirements document [I-D.verdt-netmod-yang-versioning-reqs], the
+   YANG Module Versioning document
+   [I-D.verdt-netmod-yang-module-versioning] and the YANg Packages
+   document [I-D.rwilton-netmod-yang-packages].
 
    This document also makes of the following terminology introduced in
    the Network Management Datastore Architecture [RFC8342]:
 
-   o  datastore schema
 
 
-
-
-Wilton & Rahman          Expires April 24, 2020                 [Page 2]
+Wilton & Rahman            Expires May 3, 2020                  [Page 2]
 
 Internet-Draft        YANG Schema Version Selection         October 2019
 
 
+   o  datastore schema
+
    In addition, this document makes use of the following terminology:
-
-   o  bc: Used as an abbreviation for a backwards-compatible change.
-
-   o  nbc: Used as an abbreviation for a non-backwards-compatible
-      change.
-
-   o  editorial change: A backwards-compatible change that does not
-      change the YANG module semantics in any way.
 
    o  YANG schema: The combined set of schema nodes for a set of YANG
       module revisions, taking into consideration any deviations and
       enabled features.
 
    o  versioned schema: A YANG schema with an associated YANG semantic
-      version number, e.g., as might be described by a YANG package.
+      version number, e.g., as might be described by a YANG
+      package[I-D.rwilton-netmod-yang-packages].
 
    o  schema set: A set of related versioned YANG schema, one for each
       datastore that is supported.
 
-   TODO - the bc/nbc/editorial terminology should probably be defined
-   and referenced from the YANG module versioning solution draft.
-   'schema' and 'versioned schema' could be defined in the packages
-   draft.
+   TODO - 'schema' and 'versioned schema' could be defined in the
+   packages draft.
 
 2.  Introduction
 
@@ -162,20 +155,20 @@ Internet-Draft        YANG Schema Version Selection         October 2019
    e.g., packages could be defined for the IETF YANG modules, OpenConfig
    YANG modules, a vendor's YANG modules.  Different versions of these
    package definitions can be defined as the contents of these packages
-
-
-
-Wilton & Rahman          Expires April 24, 2020                 [Page 3]
-
-Internet-Draft        YANG Schema Version Selection         October 2019
-
-
    evolve over time, and as the versions of the YANG modules included in
    the package evolve.
 
    This document defines how YANG packages can be used to represent
    versioned datastore schema, and how clients can choose which
    versioned schemas to use during interactions with a device.
+
+
+
+
+Wilton & Rahman            Expires May 3, 2020                  [Page 3]
+
+Internet-Draft        YANG Schema Version Selection         October 2019
+
 
 3.  Background
 
@@ -218,19 +211,20 @@ Internet-Draft        YANG Schema Version Selection         October 2019
       immediately migrate to new versions of those modules as they get
       implemented.
 
-
-
-
-Wilton & Rahman          Expires April 24, 2020                 [Page 4]
-
-Internet-Draft        YANG Schema Version Selection         October 2019
-
-
    o  To allow servers to support multiple versions of a particular YANG
       schema, and to allow clients to choose which YANG schema version
       to use when interoperating with the server.  The aim here is to
       give operators more flexibility as to when they update their
       software.
+
+
+
+
+
+Wilton & Rahman            Expires May 3, 2020                  [Page 4]
+
+Internet-Draft        YANG Schema Version Selection         October 2019
+
 
    o  To provide a mechanism to allow different YANG schema families
       (e.g., SDO models, OpenConfig models, Vendor models) to be
@@ -275,18 +269,19 @@ Internet-Draft        YANG Schema Version Selection         October 2019
        *  Separate packages can be defined for different families of
           schema, e.g., SDO, OpenConfig, or vendor native.
 
-
-
-Wilton & Rahman          Expires April 24, 2020                 [Page 5]
-
-Internet-Draft        YANG Schema Version Selection         October 2019
-
-
        *  Separate packages can be defined for each versioned schema
           within a schema family.
 
        *  Separate packages may be defined for different datastores, if
           the datastores use different datastore schema.  For example, a
+
+
+
+Wilton & Rahman            Expires May 3, 2020                  [Page 5]
+
+Internet-Draft        YANG Schema Version Selection         October 2019
+
+
           different datastore schema, and hence package, might be used
           for <operational> vs the conventional datastores.
 
@@ -301,7 +296,7 @@ Internet-Draft        YANG Schema Version Selection         October 2019
           versioned schema used by each supported datastore, and each
           versioned schema is represented by a YANG package instance.
 
-   3.  Each server supports configuration to:
+   3.  Each server supports the operations to:
 
        *  Allow a client to configure which schema version set to use
           for the default NETCONF/RESTCONF connections.
@@ -310,39 +305,38 @@ Internet-Draft        YANG Schema Version Selection         October 2019
           protocol instances, which use different schema version sets on
           those protocol instances.  See Section 5.2.
 
-       *  An RPC mechanism could also be defined to select schema, but
-          is not currently discussed in this draft.
+       *  Allow a client using NETCONF to use the "select-schema-sets"
+          RPC to choose which schema sets it wants to use for the
+          lifetime of the current NECONF session.  See Section 5.1.
 
    4.  The server internally maps requests between the different
        protocol instances to the internal device implementation.
 
 5.1.  NETCONF
 
-5.1.1.  New capability to advertise YANG packages supported
+5.1.1.  New capability to advertise schema sets supported
 
-   A new NETCONF :yang-packages capability, using base:1.1 defined in
-   [RFC6241], is used indicate what YANG package versions the server is
-   willing to support.  The server sends an unordered comma separated
-   list (with no white spaces) of YANG package versions it supports.  A
-   server MAY concurrently support clients using different YANG package
-   versions.
+   A new NETCONF :schema-sets capability, using base:1.1 defined in
+   [RFC6241], is used to indicate what schema sets the server is willing
+   to support.  The server sends an unordered comma separated list (with
+   no white spaces) of schema sets it supports.  A server MAY
+   concurrently support clients using different YANG package versions.
 
-   The :yang-packages capability is identified by the following
-   capability string:
+   The :schema-sets capability is identified by the following capability
+   string:
+
+       urn:ietf:params:netconf:capability:schema-sets:1.0
+
+   In this example, the server advertises its (abbreviated) <hello> as
+   follows.  This indicates that the server supports the following
+   schema sets:
 
 
 
-
-Wilton & Rahman          Expires April 24, 2020                 [Page 6]
+Wilton & Rahman            Expires May 3, 2020                  [Page 6]
 
 Internet-Draft        YANG Schema Version Selection         October 2019
 
-
-       urn:ietf:params:netconf:capability:yang-packages:1.0
-
-   In this example, the server advertises its (abbreviated) <hello> as
-   follows.  This indicates that the server supports the following YANG
-   packages:
 
    example-ietf-routing:  Versions 2.1.0 and 1.3.1
 
@@ -355,7 +349,7 @@ Internet-Draft        YANG Schema Version Selection         October 2019
     <capability>urn:ietf:params:netconf:base:1.0</capability>
     <capability>urn:ietf:params:netconf:base:1.1</capability>
     <capability>
-    urn:ietf:params:netconf:capability:yang-packages:1.0?list=
+    urn:ietf:params:netconf:capability:schema-sets:1.0?list=
     example-ietf-routing@2.1.0,example-ietf-routing@1.3.1,
     example-vendor-xxx@9.2.3,example-vendor-xxx@8.4.2
     </capability>
@@ -363,47 +357,51 @@ Internet-Draft        YANG Schema Version Selection         October 2019
     </hello>
 
 
-5.1.2.  <select-package> operation
+5.1.2.  <select-schema-sets> operation
 
-   Description: Used by a client to select a YANG package version which
-   has been advertised by the server via the mechanism described above
-   in Section 5.1.1.  The YANG package version is selected for the
-   lifetime of the NETCONF session, unless a different version of the
-   YANG package is subsequently selected via this operation.
+   Description: Used by a client to select schema-sets which have been
+   advertised by the server via the mechanism described above in
+   Section 5.1.1.  The schema-sets are selected for the lifetime of the
+   NETCONF session, unless new schema-sets are subsequently selected via
+   this operation.
 
    Parameters:
 
-       yang-package-version:  YANG package version that the client wants
-       to use.
+       schema-set:  Schema-set(s)that the client wants to use for this
+       session.
 
    Positive response: if the server was able to satisfy the request, an
    <rpc-reply> is sent that includes an <ok> element.
 
    Negative response: An <rpc-error> element is included in the <rpc-
    reply> if the request cannot be completed for any reason.  A <select-
-   package> operation can fail for a number of reasons, such as the YANG
-   package version is not supported by the server, or a different
-   version of the YANG package has already been selected by another
+   schema-sets> operation can fail for a number of reasons, such as a
+   YANG package version is not supported by the server, or a different
+   version of a YANG package has already been selected by another
    client.
 
+   Example: a client selects schema sets example-ietf-routing version
+   1.3.1 and example-vendor-xxx version 9.2.3:
 
 
 
-Wilton & Rahman          Expires April 24, 2020                 [Page 7]
+
+
+
+
+Wilton & Rahman            Expires May 3, 2020                  [Page 7]
 
 Internet-Draft        YANG Schema Version Selection         October 2019
 
 
-   Example: a client selects YANG package example-ietf-routing version
-   1.3.1:
-
         <rpc message-id="101"
              xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
-          <select-package>
-            <yang-package-version>
-              <example-ietf-routing@1.3.1/>
-            </yang-package-version>
-          </select-package>
+          <select-schema-sets>
+            <schema-sets>
+              <schema-set>example-ietf-routing@1.3.1</schema-set>
+              <schema-set>example-vendor-xxx@9.2.3</schema-set>
+            </schema-sets>
+          </select-schema-sets>
         </rpc>
 
         <rpc-reply message-id="101"
@@ -441,18 +439,16 @@ Internet-Draft        YANG Schema Version Selection         October 2019
    still a strong incentive to try and minimize nbc changes between
    schema versions to minimize the mapping complexity.
 
-
-
-
-
-Wilton & Rahman          Expires April 24, 2020                 [Page 8]
-
-Internet-Draft        YANG Schema Version Selection         October 2019
-
-
    Server implementations MUST serialize configuration requests across
    the different schema.  The expectation is that this would be achieved
    by mapping all requests to the device's native schema version.
+
+
+
+Wilton & Rahman            Expires May 3, 2020                  [Page 8]
+
+Internet-Draft        YANG Schema Version Selection         October 2019
+
 
    Datastore validation needs to be performed in two places, firstly in
    whichever schema a client is interacting in, and secondly in the
@@ -497,20 +493,19 @@ Internet-Draft        YANG Schema Version Selection         October 2019
    always be backported to older schema versions.  TODO - Specify how
    mapping errors can be reported to client.
 
-
-
-
-
-Wilton & Rahman          Expires April 24, 2020                 [Page 9]
-
-Internet-Draft        YANG Schema Version Selection         October 2019
-
-
 8.  Limitations of the solution
 
    Not all schema conversions are possible.  E.g. an impossible type
    conversion, or something has been removed.  The solution is
    fundamentally limited by how the schemas actually change, this
+
+
+
+Wilton & Rahman            Expires May 3, 2020                  [Page 9]
+
+Internet-Draft        YANG Schema Version Selection         October 2019
+
+
    solution does not provide a magic bullet that can solve all
    versioning issues.
 
@@ -525,14 +520,16 @@ Internet-Draft        YANG Schema Version Selection         October 2019
    to be configured.
 
    The primary schema-set is the datastore schema reported by YANG
-   Library if a client connects to the device using the standard
-   NETCONF/RESTCONF protocol numbers.
+   Library.
 
-   If secondary schema-sets are configured, then the client can choose
-   whether NETCONF or RESTCONF is supported, which port numbers the
-   protocols should run on (if available), and what RESTCONF root path
-   prefix to use (e.g. if all of the RESTCONF protocol instances run on
-   port 443.
+   If secondary schema-sets are configured:
+
+      With NETCONF, the "select-schema-sets" RPC is used by the client
+      to chosse which schema set(s) it wants to use for the current
+      NETCONF session.
+
+      With RESTCONF, the configured root path prefix is used by the
+      client for a particular schema set.
 
    Different schema-sets may support different datastores.
 
@@ -557,7 +554,10 @@ Internet-Draft        YANG Schema Version Selection         October 2019
 
 
 
-Wilton & Rahman          Expires April 24, 2020                [Page 10]
+
+
+
+Wilton & Rahman            Expires May 3, 2020                 [Page 10]
 
 Internet-Draft        YANG Schema Version Selection         October 2019
 
@@ -567,22 +567,26 @@ Internet-Draft        YANG Schema Version Selection         October 2019
 
 
 module: ietf-schema-version-selection
-    +--rw schema-selection
-       +--rw schema-sets* [name]
-       |  +--rw name          string
-       |  +--rw restconf! {secondary-schema-set}?
-       |  |  +--rw root-path?   inet:uri
-       |  +--ro datastores* [datastore]
-       |     +--ro datastore    ds:datastore-ref
-       |     +--ro packages [package]
-       |        +--ro package?
-       |        |     -> /yanglib:yang-library/pkg:package/name
-       |        +--ro version?
-       |              -> /yanglib:yang-library/pkg:package[pkg:name = current()
-       |                 /../package]/version
-       +--rw default-schema-set?
-               -> /schema-selection/schema-sets/name
-               {default-schema-set}?
+  +--rw schema-selection
+     +--rw schema-sets* [name]
+     |  +--rw name          string
+     |  +--ro datastores* [datastore]
+     |     +--ro datastore    ds:datastore-ref
+     |     +--ro packages* [package]
+     |        +--ro package    -> /yanglib:yang-library/pkg:package/name
+     |        +--ro version?   -> /yanglib:yang-library/pkg:package[pkg:name = current()
+     |                            /../package]/version
+     +--rw restconf {secondary-schema-set}?
+     |  +--rw schema-sets* [schema-set]
+     |     +--rw schema-set    -> /schema-selection/schema-sets/name
+     |     +--rw root-path     inet:uri
+     +--rw default-schema-set?   -> /schema-selection/schema-sets/name {default-schema-set}?
+
+  rpcs:
+    +---x select-schema-sets
+       +---w input
+          +---w schema-sets* [schema-set]
+             +---w schema-set    -> /schema-selection/schema-sets/name
 
 
 
@@ -592,236 +596,273 @@ module: ietf-schema-version-selection
    sections.
 
 
- <CODE BEGINS> file "ietf-schema-version-selection@2019-10-22.yang"
- module ietf-schema-version-selection {
-   yang-version 1.1;
-   namespace
-     "urn:ietf:params:xml:ns:yang:ietf-schema-version-selection";
-   prefix "ver-sel";
+<CODE BEGINS> file "ietf-schema-version-selection@2019-10-31.yang"
+module ietf-schema-version-selection {
+  yang-version 1.1;
+  namespace
+    "urn:ietf:params:xml:ns:yang:ietf-schema-version-selection";
+  prefix "ver-sel";
 
-   import ietf-inet-types {
-     prefix inet;
-     reference "RFC 6991: Common YANG Data Types.";
-   }
-   import ietf-datastores {
-     prefix ds;
-     reference
-       "RFC 8342: Network Management Datastore Architecture (NMDA)";
-   }
-   import ietf-yang-library {
-     prefix yanglib;
+  import ietf-inet-types {
+    prefix inet;
+    reference "RFC 6991: Common YANG Data Types.";
+  }
+  import ietf-datastores {
+    prefix ds;
+    reference
 
 
 
-Wilton & Rahman          Expires April 24, 2020                [Page 11]
+Wilton & Rahman            Expires May 3, 2020                 [Page 11]
 
 Internet-Draft        YANG Schema Version Selection         October 2019
 
 
-     reference "RFC 8525: YANG Library";
-   }
-   import ietf-yang-library-packages {
-     prefix pkg;
-     reference "draft-rwilton-netmod-yang-packages-01";
-   }
+      "RFC 8342: Network Management Datastore Architecture (NMDA)";
+  }
+  import ietf-yang-library {
+    prefix yanglib;
+    reference "RFC 8525: YANG Library";
+  }
+  import ietf-yang-library-packages {
+    prefix pkg;
+    reference "draft-rwilton-netmod-yang-packages-01";
+  }
 
-   organization
-     "IETF NETMOD (Network Modeling) Working Group";
+  organization
+    "IETF NETMOD (Network Modeling) Working Group";
 
-   contact
-     "WG Web:   <http://tools.ietf.org/wg/netmod/>
-      WG List:  <mailto:netmod@ietf.org>
+  contact
+    "WG Web:   <http://tools.ietf.org/wg/netmod/>
+     WG List:  <mailto:netmod@ietf.org>
 
-      Author:   Reshad Rahman
-                <mailto:rrahman@cisco.com>
+     Author:   Reshad Rahman
+               <mailto:rrahman@cisco.com>
 
-      Author:   Rob Wilton
-                <mailto:rwilton@cisco.com>";
+     Author:   Rob Wilton
+               <mailto:rwilton@cisco.com>";
 
-   description
-     "This module provide a data model to advertise and allow the
-      selection of schema versions by clients.
+  description
+    "This module provide a data model to advertise and allow the
+     selection of schema versions by clients.
 
-      Copyright (c) 2019 IETF Trust and the persons identified as
-      authors of the code.  All rights reserved.
+     Copyright (c) 2019 IETF Trust and the persons identified as
+     authors of the code.  All rights reserved.
 
-      Redistribution and use in source and binary forms, with or
-      without modification, is permitted pursuant to, and subject
-      to the license terms contained in, the Simplified BSD License
-      set forth in Section 4.c of the IETF Trust's Legal Provisions
-      Relating to IETF Documents
-      (http://trustee.ietf.org/license-info).
+     Redistribution and use in source and binary forms, with or
+     without modification, is permitted pursuant to, and subject
+     to the license terms contained in, the Simplified BSD License
+     set forth in Section 4.c of the IETF Trust's Legal Provisions
+     Relating to IETF Documents
+     (http://trustee.ietf.org/license-info).
 
-      This version of this YANG module is part of RFC XXXX; see
-      the RFC itself for full legal notices.";
+     This version of this YANG module is part of RFC XXXX; see
+     the RFC itself for full legal notices.";
 
-   // RFC Ed.: update the date below with the date of RFC publication
-   // and remove this note.
-   // RFC Ed.: replace XXXX with actual RFC number and remove this
-   // note.
-   revision 2019-10-22 {
-     description
-       "Initial revision";
-     reference
-       "RFC XXXX: YANG Schema Version Selection";
-   }
+  // RFC Ed.: update the date below with the date of RFC publication
+  // and remove this note.
+  // RFC Ed.: replace XXXX with actual RFC number and remove this
+  // note.
+  revision 2019-10-31 {
+    description
+      "Initial revision";
 
 
 
-
-Wilton & Rahman          Expires April 24, 2020                [Page 12]
+Wilton & Rahman            Expires May 3, 2020                 [Page 12]
 
 Internet-Draft        YANG Schema Version Selection         October 2019
 
 
-   /*
-    * Typedefs
-    */
+    reference
+      "RFC XXXX: YANG Schema Version Selection";
+  }
 
-   typedef yang-sem-ver {
-     type string {
-       pattern '\d+[.]\d+[.]\d+[mM]?';
-     }
-     description
-       "Represents a YANG semantic version number.";
-     reference
-       "TODO - Should be defined by YANG versioning types module";
-   }
+  /*
+   * Typedefs
+   */
 
-   feature "default-schema-set" {
-     description
-       "Feature that allows clients to choose the default schema set
-        to be used for clients that connect using the standard network
-        configuration protocol port number or URL.
+  typedef yang-sem-ver {
+    type string {
+      pattern '\d+[.]\d+[.]\d+[mM]?';
+    }
+    description
+      "Represents a YANG semantic version number.";
+    reference
+      "TODO - Should be defined by YANG versioning types module";
+  }
 
-        Implementations may choose to only support this feature in
-        <operational> to report the default-schema-set without
-        allowing it to be configured.";
-   }
+  feature "default-schema-set" {
+    description
+      "Feature that allows clients to choose the default schema set
+       to be used for clients.
 
-   feature "secondary-schema-set" {
-     description
-       "Feature to choose if secondary schema sets may be configured by
-        clients.
+       Implementations may choose to only support this feature in
+       <operational> to report the default-schema-set without
+       allowing it to be configured.";
+  }
 
-        Implementations may choose to only support this feature in
-        <operational> to report secondary schema sets without
-        allowing them to be configured.";
-   }
+  feature "secondary-schema-set" {
+    description
+      "Feature to choose if secondary schema sets may be configured by
+       clients.
 
-   container schema-selection {
-       description
-         "YANG schema version selection";
+       Implementations may choose to only support this feature in
+       <operational> to report secondary schema sets without
+       allowing them to be configured.";
+  }
 
-     list schema-sets {
-       key "name";
-       unique "restconf/root-path";
+  container schema-selection {
+      description
+        "YANG schema version selection";
 
-       description
-         "All schema-sets that are available for selection by clients.";
+    list schema-sets {
+      key "name";
 
-       leaf name {
-         type "string" {
-
+      description
+        "All schema-sets that are available for selection by clients.";
 
 
-Wilton & Rahman          Expires April 24, 2020                [Page 13]
+
+
+Wilton & Rahman            Expires May 3, 2020                 [Page 13]
 
 Internet-Draft        YANG Schema Version Selection         October 2019
 
 
-           length "1..255";
-         }
-         description
-           "The server assigned name of the schema-set.
+      leaf name {
+        type "string" {
+          length "1..255";
+        }
+        description
+          "The server assigned name of the schema-set.
 
-            This should include the schema family, and appropriate
-            versioning or release information";
-       }
+           This should include the schema family, and appropriate
+           versioning or release information";
+      }
 
-       container restconf {
-         if-feature "secondary-schema-set";
+      list datastores {
+        config false;
+        key "datastore";
 
-         presence
-           "Make this schema-set available via RESTCONF";
-         description
-           "RESTCONF protocol settings for this schema set, if
-            available";
+        description
+          "The list of datastores supported for this schema set";
 
-         leaf root-path {
-           type inet:uri;
-           default "/restconf";
-           description
-             "The default root path to use to access the RESTCONF
-              protocol instance for this schema-set";
+        leaf datastore {
+          type ds:datastore-ref;
+          description
+            "The datastore that this datastore schema is associated
+             with";
+          reference
+            "RFC 8342: Network Management Datastore Architecture
+             (NMDA)";
+        }
 
-         }
-       }
+        list packages {
+          key "package";
+          description
+            "YANG packages associated with this datastore schema";
 
-       list datastores {
-         key "datastore";
-         config false;
+          leaf package {
+            type leafref {
+              path "/yanglib:yang-library/pkg:package/pkg:name";
+            }
+            description
+              "The name of the YANG package this schema relates to";
+          }
+          leaf version {
+            type leafref {
+              path '/yanglib:yang-library/'
+               + 'pkg:package[pkg:name = current()/../package]/'
+               + 'pkg:version';
+            }
 
-         description
-           "The list of datastores supported for this schema set";
-
-         leaf datastore {
-           type ds:datastore-ref;
-           description
-             "The datastore that this datastore schema is associated
-              with";
-           reference
-             "RFC 8342: Network Management Datastore Architecture
-              (NMDA)";
-         }
-
-         list packages {
-           key "package";
-           description
+            description
 
 
 
-Wilton & Rahman          Expires April 24, 2020                [Page 14]
+Wilton & Rahman            Expires May 3, 2020                 [Page 14]
 
 Internet-Draft        YANG Schema Version Selection         October 2019
 
 
-             "YANG package associated with this datastore schema";
+              "The version of the YANG package this schema relates to";
+          }
+        }
+      }
+    }
 
-           leaf package {
-             type leafref {
-               path "/yanglib:yang-library/pkg:package/pkg:name";
-             }
-             description
-               "The name of the YANG package this schema relates to";
+
+    container restconf {
+      if-feature "secondary-schema-set";
+
+      description
+        "RESTCONF protocol settings for schema sets";
+
+      list schema-sets {
+        key "schema-set";
+        unique "root-path";
+        description "The schema-sets accessed via RESTCONF";
+
+        leaf schema-set {
+          type leafref {
+            path '/schema-selection/schema-sets/name';
+          }
+          description "A schema-set being used by RESTCONF";
+        }
+        leaf root-path {
+          type inet:uri;
+          mandatory true;
+          description
+            "The root path to use to access the RESTCONF
+            protocol instance for this schema-set";
+          reference
+            "RFC8040";
+        }
+      }
+    }
+
+    leaf default-schema-set {
+      if-feature "default-schema-set";
+      type leafref {
+        path '/schema-selection/schema-sets/name';
+      }
+      description
+        "Specifies the default schema-set used by this device.  This
+         is the set of datastore schema that is used if a client
+         connects using the standard URLs";
+    }
+  }
+
+
+
+
+Wilton & Rahman            Expires May 3, 2020                 [Page 15]
+
+Internet-Draft        YANG Schema Version Selection         October 2019
+
+
+  /*
+   * RPCs
+   */
+   rpc select-schema-sets {
+     description
+       "This RPC allows a NETCONF client to select which schema-sets, among the
+        ones advertised by the server, the clients wants to use for this session";
+
+     input {
+       list schema-sets {
+         key "schema-set";
+         leaf schema-set {
+           type leafref {
+             path '/schema-selection/schema-sets/name';
            }
-           leaf version {
-             type leafref {
-               path '/yanglib:yang-library/'
-                + 'pkg:package[pkg:name = current()/../package]/'
-                + 'pkg:version';
-             }
-
-             description
-               "The version of the YANG package this schema relates to";
-           }
          }
        }
      }
-
-     leaf default-schema-set {
-       if-feature "default-schema-set";
-       type leafref {
-         path '/schema-selection/schema-sets/name';
-       }
-       description
-         "Specifies the default schema-set used by this device.  This
-          is the set of datastore schema that is used if a client
-          connects using the standard URLs";
-     }
    }
- }
- <CODE ENDS>
+}
+<CODE ENDS>
 
 
 11.  Security Considerations
@@ -834,14 +875,6 @@ Internet-Draft        YANG Schema Version Selection         October 2019
 
    This document registers a URI.
 
-
-
-
-Wilton & Rahman          Expires April 24, 2020                [Page 15]
-
-Internet-Draft        YANG Schema Version Selection         October 2019
-
-
 12.1.  NETCONF Capability URNs
 
    This document registers a URI in the IETF XML registry [RFC3688].
@@ -852,8 +885,18 @@ Internet-Draft        YANG Schema Version Selection         October 2019
       Index
           Capability Identifier
       -------------------------
-      :yang-packages
-          urn:ietf:params:netconf:capability:yang-packages:1.0
+      :schema-sets
+          urn:ietf:params:netconf:capability:schema-sets:1.0
+
+
+
+
+
+
+Wilton & Rahman            Expires May 3, 2020                 [Page 16]
+
+Internet-Draft        YANG Schema Version Selection         October 2019
+
 
 13.  Open Questions/Issues
 
@@ -887,16 +930,7 @@ Internet-Draft        YANG Schema Version Selection         October 2019
 
    [I-D.rwilton-netmod-yang-packages]
               Wilton, R., "YANG Packages", draft-rwilton-netmod-yang-
-              packages-01 (work in progress), March 2019.
-
-
-
-
-
-Wilton & Rahman          Expires April 24, 2020                [Page 16]
-
-Internet-Draft        YANG Schema Version Selection         October 2019
-
+              packages-02 (work in progress), October 2019.
 
    [I-D.verdt-netmod-yang-module-versioning]
               Claise, B., Clarke, J., Rahman, R., Wilton, R., Lengyel,
@@ -909,6 +943,16 @@ Internet-Draft        YANG Schema Version Selection         October 2019
               B., Sterne, J., and K. D'Souza, "YANG Semantic
               Versioning", draft-verdt-netmod-yang-semver-01 (work in
               progress), October 2019.
+
+
+
+
+
+
+Wilton & Rahman            Expires May 3, 2020                 [Page 17]
+
+Internet-Draft        YANG Schema Version Selection         October 2019
+
 
    [I-D.verdt-netmod-yang-versioning-reqs]
               Clarke, J., "YANG Module Versioning Requirements", draft-
@@ -947,13 +991,6 @@ Internet-Draft        YANG Schema Version Selection         October 2019
               RFC 7950, DOI 10.17487/RFC7950, August 2016,
               <https://www.rfc-editor.org/info/rfc7950>.
 
-
-
-Wilton & Rahman          Expires April 24, 2020                [Page 17]
-
-Internet-Draft        YANG Schema Version Selection         October 2019
-
-
    [RFC8040]  Bierman, A., Bjorklund, M., and K. Watsen, "RESTCONF
               Protocol", RFC 8040, DOI 10.17487/RFC8040, January 2017,
               <https://www.rfc-editor.org/info/rfc8040>.
@@ -961,6 +998,17 @@ Internet-Draft        YANG Schema Version Selection         October 2019
    [RFC8174]  Leiba, B., "Ambiguity of Uppercase vs Lowercase in RFC
               2119 Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174,
               May 2017, <https://www.rfc-editor.org/info/rfc8174>.
+
+
+
+
+
+
+
+Wilton & Rahman            Expires May 3, 2020                 [Page 18]
+
+Internet-Draft        YANG Schema Version Selection         October 2019
+
 
    [RFC8342]  Bjorklund, M., Schoenwaelder, J., Shafer, P., Watsen, K.,
               and R. Wilton, "Network Management Datastore Architecture
@@ -1005,4 +1053,12 @@ Authors' Addresses
 
 
 
-Wilton & Rahman          Expires April 24, 2020                [Page 18]
+
+
+
+
+
+
+
+
+Wilton & Rahman            Expires May 3, 2020                 [Page 19]

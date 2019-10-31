@@ -56,7 +56,7 @@ module ietf-schema-version-selection {
   // and remove this note.
   // RFC Ed.: replace XXXX with actual RFC number and remove this
   // note.
-  revision 2019-10-22 {
+  revision 2019-10-31 {
     description
       "Initial revision";
     reference
@@ -80,8 +80,7 @@ module ietf-schema-version-selection {
   feature "default-schema-set" {
     description
       "Feature that allows clients to choose the default schema set
-       to be used for clients that connect using the standard network
-       configuration protocol port number or URL.
+       to be used for clients.
 
        Implementations may choose to only support this feature in
        <operational> to report the default-schema-set without
@@ -104,7 +103,6 @@ module ietf-schema-version-selection {
 
     list schema-sets {
       key "name";
-      unique "restconf/root-path";
 
       description
         "All schema-sets that are available for selection by clients.";
@@ -120,28 +118,9 @@ module ietf-schema-version-selection {
            versioning or release information";
       }
 
-      container restconf {
-        if-feature "secondary-schema-set";
-
-        presence
-          "Make this schema-set available via RESTCONF";
-        description
-          "RESTCONF protocol settings for this schema set, if
-           available";
-
-        leaf root-path {
-          type inet:uri;
-          default "/restconf";
-          description
-            "The default root path to use to access the RESTCONF
-             protocol instance for this schema-set";
-
-        }
-      }
-
       list datastores {
-        key "datastore";
         config false;
+        key "datastore";
 
         description
           "The list of datastores supported for this schema set";
@@ -159,7 +138,7 @@ module ietf-schema-version-selection {
         list packages {
           key "package";
           description
-            "YANG package associated with this datastore schema";
+            "YANG packages associated with this datastore schema";
 
           leaf package {
             type leafref {
@@ -182,6 +161,36 @@ module ietf-schema-version-selection {
       }
     }
 
+
+    container restconf {
+      if-feature "secondary-schema-set";
+
+      description
+        "RESTCONF protocol settings for schema sets";
+
+      list schema-sets {
+        key "schema-set";
+        unique "root-path";
+        description "The schema-sets accessed via RESTCONF";
+
+        leaf schema-set {
+          type leafref {
+            path '/schema-selection/schema-sets/name';
+          }
+          description "A schema-set being used by RESTCONF";
+        }
+        leaf root-path {
+          type inet:uri;
+          mandatory true;
+          description
+            "The root path to use to access the RESTCONF
+            protocol instance for this schema-set";
+          reference
+            "RFC8040";
+        }
+      }
+    }
+
     leaf default-schema-set {
       if-feature "default-schema-set";
       type leafref {
@@ -193,4 +202,24 @@ module ietf-schema-version-selection {
          connects using the standard URLs";
     }
   }
+
+  /*
+   * RPCs
+   */
+   rpc select-schema-sets {
+     description
+       "This RPC allows a NETCONF client to select which schema-sets, among the
+        ones advertised by the server, the clients wants to use for this session";
+
+     input {
+       list schema-sets {
+         key "schema-set";
+         leaf schema-set {
+           type leafref {
+             path '/schema-selection/schema-sets/name';
+           }
+         }
+       }
+     }
+   }
 }
