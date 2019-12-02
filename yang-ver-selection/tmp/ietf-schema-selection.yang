@@ -1,0 +1,261 @@
+module ietf-schema-selection {
+  yang-version 1.1;
+  namespace
+    "urn:ietf:params:xml:ns:yang:ietf-schema-selection";
+  prefix "ver-sel";
+
+  import ietf-inet-types {
+    prefix inet;
+    reference "RFC 6991: Common YANG Data Types.";
+  }
+
+  import ietf-datastores {
+    prefix ds;
+    reference
+      "RFC 8342: Network Management Datastore Architecture (NMDA)";
+  }
+
+  import ietf-yang-library {
+    prefix yanglib;
+    reference "RFC 8525: YANG Library";
+  }
+
+  import ietf-yang-package-types {
+    prefix pkg;
+    reference "RFC XXXX: YANG Packages";
+  }
+
+  import ietf-yl-packages {
+    prefix yl-pkg;
+    reference "RFC XXXX: YANG Packages";
+  }
+
+  organization
+    "IETF NETMOD (Network Modeling) Working Group";
+
+  contact
+    "WG Web:   <http://tools.ietf.org/wg/netmod/>
+     WG List:  <mailto:netmod@ietf.org>
+
+     Author:   Reshad Rahman
+               <mailto:rrahman@cisco.com>
+
+     Author:   Rob Wilton
+               <mailto:rwilton@cisco.com>";
+
+  description
+    "This module provide a data model to advertise and allow the
+     selection of schema versions by clients.
+
+     Copyright (c) 2019 IETF Trust and the persons identified as
+     authors of the code.  All rights reserved.
+
+     Redistribution and use in source and binary forms, with or
+     without modification, is permitted pursuant to, and subject
+     to the license terms contained in, the Simplified BSD License
+     set forth in Section 4.c of the IETF Trust's Legal Provisions
+     Relating to IETF Documents
+     (http://trustee.ietf.org/license-info).
+
+     This version of this YANG module is part of RFC XXXX; see
+     the RFC itself for full legal notices.";
+
+  // RFC Ed.: update the date below with the date of RFC publication
+  // and remove this note.
+  // RFC Ed.: replace XXXX with actual RFC number and remove this
+  // note.
+  revision 2019-11-29 {
+    description
+      "Initial revision";
+    reference
+      "RFC XXXX: YANG Schema Version Selection";
+  }
+
+  /*
+   * Features
+   */
+  feature "default-schema" {
+    description
+      "Feature that allows clients to choose the default schema set
+       to be used for clients.
+
+       Implementations may choose to only support this feature in
+       <operational> to report the default-schema-set without
+       allowing it to be configured.";
+  }
+
+  feature "secondary-schema" {
+    description
+      "Feature to choose if secondary schema may be configured by
+       clients.
+
+       Implementations may choose to only support this feature in
+       <operational> to report secondary schema sets without
+       allowing them to be configured.";
+  }
+
+  feature "custom-package" {
+    if-feature "default-schema or secondary-schema";
+    description
+      "Feature to choose whether clients may configurable custom
+       packages definitions.";
+  }
+
+  container schema-selection {
+    description
+      "YANG schema selection.
+
+       Contains configuration and state related to client selectable
+       YANG schema versions.";
+        
+    leaf default-schema {
+      if-feature "default-schema";
+      type leafref {
+        path "/schema-selection/selectable-package/identifier";
+        require-instance false;
+      }
+      description
+        "Specifies the default schema used by this device.
+
+         This is the schema that is chosen if a NETCONF client doesn't
+         select a schema during capability negotiation, or if the
+         standard RESTCONF (or NMDA datastore URLs) are used.
+
+         If not configured, the operational state must";
+    }
+
+    leaf-list secondary-schema {
+      if-feature "secondary-schema";
+      type leafref {
+        path "/schema-selection/selectable-package/identifier";
+        require-instance false;
+      }
+      description
+        "Specifies the secondary schema used by this device, that can
+         be selected by clients (either through NETCONF capability
+         negotiation or RESTCONF schema specific path.";
+    }
+
+    list custom-package {
+      if-feature "custom-package";
+      key "identifier";
+
+      description
+        "Defines a custom selectable package constructed from
+         compatible selectable-packages.";
+      
+      leaf identifier {
+        type "pkg:pkg-identifier";
+        description
+          "Name of selectable schema, and package instance.
+
+           Format can either be the form of a YANG identifer, or
+           '<name>@<rev-label>'.
+
+           The selectable-schema name is used in NETCONF capabilties
+           negotiation and also the RESTCONF path (XXX, is encoding
+           required, e.g. for '@'?)";
+      }
+
+      leaf description {
+        type string;
+        description
+          "The description associated with this custom package.";
+      }
+
+      leaf-list included-package {
+        type leafref {
+          path "/schema-selection/selectable-package/identifier";
+          require-instance false;
+        }
+      }
+    }
+
+    
+    list selectable-package {
+      config false;
+      key "identifier";
+
+      leaf identifier {
+          type leafref {
+            path "/yanglib:yang-library/yl-pkg:package/yl-pkg:identifier";
+          }
+        description
+          "Identifies a specific revision of a package that MAY be
+           selected as a schema or as part of a schema.
+
+           Format is '<pkg-name>@<rev-label>', using the package name
+           and revision label (revision date, revision label or
+           YANG semver).
+
+           Packages MUST represent the pan-datastore device schema
+           (XXX, define + add reference).";
+      }
+
+      list datastores {
+        key "datastore";
+
+        description
+          "The list of datastores supported for this pan-datastore
+           package, along with the package schema associated with that
+           datastore.";
+
+        leaf datastore {
+          type ds:datastore-ref;
+          description
+            "The datastore that this datastore schema is associated
+             with";
+          reference
+            "RFC 8342: Network Management Datastore Architecture
+             (NMDA)";
+        }
+
+        /*
+         * XXX, Change identifier for package to be "name@rev-label"?
+         *
+         * Note, support for multiple packages per datastore has
+         * been removed (to keep the model simple).
+         */
+        
+        leaf package {
+          type leafref {
+            path "/yanglib:yang-library/yl-pkg:package/yl-pkg:identifier";
+          }
+          description
+            "The name of the YANG package this schema relates to";
+        }
+      }
+
+      leaf-list required-package {
+        type leafref {
+          path "/schema-selection/selectable-package/identifier";
+        }
+        description
+          "Lists the available-pkgs that MUST be combined with this
+           package into a single 'selectable schema'.
+
+           E.g., a package that represents an incomplete schema would
+           have to be combined into other packages to represent a
+           schema.";
+      }
+
+      leaf-list combinable-package {
+        type leafref {
+          path "/schema-selection/selectable-package/identifier";
+        }
+        description
+          "Lists the available-pkgs that MAY be combined with this
+           package into a single 'selectable schema'.";
+      }
+      
+      leaf-list compatible-package {
+        type leafref {
+          path "/schema-selection/selectable-package/identifier";
+        }
+        description
+          "Lists the available-pkgs that MAY be selected for other
+           'selectable schema' entries.";
+      }
+    }
+  }
+}

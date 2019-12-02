@@ -1,0 +1,140 @@
+module ietf-yl-packages {
+  yang-version 1.1;
+  namespace "urn:ietf:params:xml:ns:yang:ietf-yl-packages";
+  prefix yl-pkg;
+
+  import ietf-yang-revisions {
+    prefix rev;
+    reference "XXXX: Updated YANG Module Revision Handling";
+  }
+
+  import ietf-yang-package-types {
+    prefix pkg-types;
+    reference "RFC XXX: YANG Packages.";
+  }
+
+  import ietf-yang-library {
+    prefix yanglib;
+    reference "RFC 7895bis: YANG Library";
+  }
+
+  organization
+    "IETF NETMOD (Network Modeling) Working Group";
+
+  contact
+    "WG Web:   <http://tools.ietf.org/wg/netmod/>
+     WG List:  <mailto:netmod@ietf.org>
+
+     Author:   Rob Wilton
+               <mailto:rwilton@cisco.com>";
+
+  description
+    "This module provides defined augmentations to YANG library to 
+     allow a server to report YANG package information.
+
+     Copyright (c) 2018 IETF Trust and the persons identified as
+     authors of the code.  All rights reserved.
+
+     Redistribution and use in source and binary forms, with or
+     without modification, is permitted pursuant to, and subject
+     to the license terms contained in, the Simplified BSD License
+     set forth in Section 4.c of the IETF Trust's Legal Provisions
+     Relating to IETF Documents
+     (http://trustee.ietf.org/license-info).
+
+     This version of this YANG module is part of RFC XXXX; see
+     the RFC itself for full legal notices.
+
+     The key words 'MUST', 'MUST NOT', 'REQUIRED', 'SHALL', 'SHALL
+     NOT', 'SHOULD', 'SHOULD NOT', 'RECOMMENDED', 'NOT RECOMMENDED',
+     'MAY', and 'OPTIONAL' in this document are to be interpreted as
+     described in BCP 14 (RFC 2119) (RFC 8174) when, and only when,
+     they appear in all capitals, as shown here.";
+
+  
+  // RFC Ed.: update the date below with the date of RFC publication
+  // and remove this note.
+  // RFC Ed.: replace XXXX with actual RFC number and remove this
+  // note.
+  revision 2019-09-11 {
+    rev:revision-label 0.1.0;
+    description
+      "Initial revision";
+    reference
+      "RFC XXXX: YANG Packages";
+  }
+
+  
+  /*
+   * Augmentations
+   */
+  
+  augment "/yanglib:yang-library" {
+    description "Add YANG package definitions into YANG library";
+    
+    list package {
+      key "identifier";
+      config "false";
+
+      description
+        "Defines the packages available on this server.";
+
+      uses pkg-types:yang-pkg-compact-identification-leaf;
+      uses pkg-types:yang-pkg-common-leafs;
+      uses pkg-types:yang-pkg-module-leafs;
+    }
+  }
+
+  augment "/yanglib:yang-library/yanglib:schema" {
+    description
+      "Allow datastore schema to be related to a YANG package";
+    
+    container package {
+       leaf identifier {
+         type leafref {
+           path "/yanglib:yang-library/package/identifier";
+         }
+         description
+           "The name of the package this schema relates to.
+
+            The referenced package MUST represent a referentially
+            complete schema";
+       }       
+       
+       leaf checksum {
+         type pkg-types:sha-256-hash;
+         description 
+           "The checksum of the package this schema relates to,
+            calculated on the 'YANG instance data file' package
+            definition.
+
+            This leaf MAY be omitted if the referenced package is
+            locally scoped without an associated checksum.";
+       }
+       
+       leaf-list supported-optional-feature {
+         type pkg-types:scoped-feature;
+         description
+           "Lists all optional module features that are also
+            supported by the server when implementing the package.
+
+            This list SHOULD exclude any features in the
+            'mandatory-feature' list for the package, or any included
+            package.
+
+            The full set of features supported by the server for this
+            schema is the union of this list and all
+            'mandatory-feature' lists for the package and all
+            included packages.  This is equivalent to the information
+            provided via the 'feature' leaf list in YANG library.
+
+            Features are identified using
+            '<module-name>:<feature-name>'";
+       }
+       
+      description
+        "Describes which package the schema directly relates to, if
+         any.";
+    }
+  }
+}
