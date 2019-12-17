@@ -4,11 +4,6 @@ module ietf-schema-selection {
     "urn:ietf:params:xml:ns:yang:ietf-schema-selection";
   prefix "ver-sel";
 
-  import ietf-inet-types {
-    prefix inet;
-    reference "RFC 6991: Common YANG Data Types.";
-  }
-
   import ietf-datastores {
     prefix ds;
     reference
@@ -18,11 +13,6 @@ module ietf-schema-selection {
   import ietf-yang-library {
     prefix yanglib;
     reference "RFC 8525: YANG Library";
-  }
-
-  import ietf-yang-package-types {
-    prefix pkg;
-    reference "RFC XXXX: YANG Packages";
   }
 
   import ietf-yl-packages {
@@ -94,11 +84,11 @@ module ietf-schema-selection {
        allowing them to be configured.";
   }
 
-  feature "custom-package" {
+  feature "custom-schema" {
     if-feature "default-schema or secondary-schema";
     description
       "Feature to choose whether clients may configurable custom
-       packages definitions.";
+       schema definitions.";
   }
 
   container schema-selection {
@@ -111,7 +101,7 @@ module ietf-schema-selection {
     leaf default-schema {
       if-feature "default-schema";
       type leafref {
-        path "/schema-selection/selectable-package/identifier";
+        path "/schema-selection/schema/name";
         require-instance false;
       }
       description
@@ -121,33 +111,38 @@ module ietf-schema-selection {
          select a schema during capability negotiation, or if the
          standard RESTCONF (or NMDA datastore URLs) are used.
 
-         If not configured, the operational state must";
+         This schema also represents the datastore schema that is used
+         to persist configuration for all conventional configuration
+         datastores.
+
+         If not configured, the operational state indicates the
+         default schema used by this device.";
     }
 
     leaf-list secondary-schema {
       if-feature "secondary-schema";
       type leafref {
-        path "/schema-selection/selectable-package/identifier";
+        path "/schema-selection/schema/name";
         require-instance false;
       }
       description
         "Specifies the secondary schema used by this device, that can
          be selected by clients (either through NETCONF capability
-         negotiation or RESTCONF schema specific path.";
+         negotiation or RESTCONF schema specific path).";
     }
 
-    list custom-package {
-      if-feature "custom-package";
-      key "identifier";
+    list custom-schema {
+      if-feature "custom-schema";
+      key "name";
 
       description
-        "Defines a custom selectable package constructed from
-         compatible selectable-packages.";
+        "Defines a custom selectable schema constructed from
+         compatible schema";
       
-      leaf identifier {
-        type "pkg:pkg-identifier";
+      leaf name {
+        type "string";
         description
-          "Name of selectable schema, and package instance.
+          "Name of custom schema.
 
            Format can either be the form of a YANG identifer, or
            '<name>@<rev-label>'.
@@ -163,42 +158,43 @@ module ietf-schema-selection {
           "The description associated with this custom package.";
       }
 
-      leaf-list included-package {
+      leaf-list included-schema {
         type leafref {
-          path "/schema-selection/selectable-package/identifier";
+          path "/schema-selection/schema/name";
           require-instance false;
         }
+        description
+          "Lists the schema that are combined together into a single
+           selectable schema (i.e. via a union operation on each
+           datastore schema package).";
       }
     }
-
     
-    list selectable-package {
+    list schema {
+      key "name";
       config false;
-      key "identifier";
 
-      leaf identifier {
-          type leafref {
-            path "/yanglib:yang-library/yl-pkg:package/yl-pkg:identifier";
-          }
+      description
+        "All available pan-datastore schema that can be used in schema
+         version selection.";
+      
+      leaf name {
+        type string;
+
         description
-          "Identifies a specific revision of a package that MAY be
-           selected as a schema or as part of a schema.
+          "Name of the schema.
 
-           Format is '<pkg-name>@<rev-label>', using the package name
-           and revision label (revision date, revision label or
-           YANG semver).
-
-           Packages MUST represent the pan-datastore device schema
-           (XXX, define + add reference).";
+           Do we restrict what is allowed, specifically, do we allow
+           '@'";
       }
-
+      
       list datastores {
         key "datastore";
 
         description
           "The list of datastores supported for this pan-datastore
-           package, along with the package schema associated with that
-           datastore.";
+           selectable-package, along with the package schema
+           associated with that datastore.";
 
         leaf datastore {
           type ds:datastore-ref;
@@ -210,51 +206,108 @@ module ietf-schema-selection {
              (NMDA)";
         }
 
-        /*
-         * XXX, Change identifier for package to be "name@rev-label"?
-         *
-         * Note, support for multiple packages per datastore has
-         * been removed (to keep the model simple).
-         */
+        container package {
+          description
+            "YANG package associated with this datastore schema";
+          
+          leaf name {
+            type leafref {
+              path "/yanglib:yang-library/yl-pkg:package/yl-pkg:name";
+            }
+            description
+              "The name of the YANG package this schema relates to";
+          }
+          
+          leaf version {
+            type leafref {
+              path '/yanglib:yang-library/'
+                + 'yl-pkg:package[yl-pkg:name = current()/../name]/'
+                + 'yl-pkg:version';
+            }
+            
+            description
+              "The version of the YANG package this schema relates
+               to";
+          }
+
+          leaf checksum {
+            type leafref {
+              path '/yanglib:yang-library/'
+                + 'yl-pkg:package[yl-pkg:name = current()/../name]'
+                + '[yl-pkg:version = current()/../version] '
+                + '/yl-pkg:checksum';
+            }
+
+            description
+              "The checksum of the references package.";
+          }
+        }
+      }
+
+      container default-schema-selectable {
+        if-feature "default-schema";
+        presence
+          "This schema MAY be selected as the device default
+           schema.";
+        description
+          "Defines compatibility if this schema can be selected as a
+           primary schema.";
         
-        leaf package {
+        leaf-list compatible-secondary-schema {
           type leafref {
-            path "/yanglib:yang-library/yl-pkg:package/yl-pkg:identifier";
+            path "/schema-selection/schema/name";
           }
           description
-            "The name of the YANG package this schema relates to";
+            "Lists other schema that MAY be selected as secondary
+             schema is this schema is selected as a default-schema.";
         }
       }
 
-      leaf-list required-package {
-        type leafref {
-          path "/schema-selection/selectable-package/identifier";
-        }
+      container secondary-schema-selectable {
+        if-feature "secondary-schema";
+        presence
+            "This schema MAY be selected as a secondary schema,
+             selected for a particular session.";
         description
-          "Lists the available-pkgs that MUST be combined with this
-           package into a single 'selectable schema'.
+          "Defines compatibility if this schema can be selected as a
+           secondary schema.";
 
-           E.g., a package that represents an incomplete schema would
-           have to be combined into other packages to represent a
-           schema.";
+        leaf-list compatible-default-schema {
+          type leafref {
+            path "/schema-selection/schema/name";
+          }
+          description
+            "Lists other schema that MAY be selected as the default
+             schema at ths same time as this schema is selected as a
+             secondary-schema.";
+        }
+
+        leaf-list compatible-secondary-schema {
+          type leafref {
+            path "/schema-selection/schema/name";
+          }
+          description
+            "Lists other schema that MAY be selected as other secondary
+             schema is this schema is selected as a secondary-schema.";
+        }
       }
 
-      leaf-list combinable-package {
-        type leafref {
-          path "/schema-selection/selectable-package/identifier";
-        }
+      container custom-schema-selectable {
+        if-feature "custom-schema";
+        presence
+          "This schema MAY be selected as part of a custom schema.";
         description
-          "Lists the available-pkgs that MAY be combined with this
-           package into a single 'selectable schema'.";
-      }
-      
-      leaf-list compatible-package {
-        type leafref {
-          path "/schema-selection/selectable-package/identifier";
+          "Defines compatibility if this schema can be combined as
+           part of a custom schema.";
+
+        leaf-list combinable-schema {
+          type leafref {
+            path "/schema-selection/schema/name";
+          }
+          description
+            "Lists the schema that MAY be combined with this
+             schema into a single custom schema'.";
         }
-        description
-          "Lists the available-pkgs that MAY be selected for other
-           'selectable schema' entries.";
       }
     }
   }
