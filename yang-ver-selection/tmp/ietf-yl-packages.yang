@@ -15,7 +15,12 @@ module ietf-yl-packages {
 
   import ietf-yang-library {
     prefix yanglib;
-    reference "RFC 7895bis: YANG Library";
+    reference "RFC 8525: YANG Library";
+  }
+
+  import ietf-inet-types {
+    prefix inet;
+    reference "RFC 6991: Common YANG Data Types.";
   }
 
   organization
@@ -71,67 +76,79 @@ module ietf-yl-packages {
   
   augment "/yanglib:yang-library" {
     description "Add YANG package definitions into YANG library";
-    
+
     list package {
-      key "identifier";
-      config "false";
+      key "name version";
 
       description
-        "Defines the packages available on this server.";
+        "YANG package instance";
 
-      uses pkg-types:yang-pkg-compact-identification-leaf;
-      uses pkg-types:yang-pkg-common-leafs;
-      uses pkg-types:yang-pkg-module-leafs;
+      uses pkg-types:yang-pkg-instance;
+
+      leaf-list location {
+        type inet:uri;
+        description
+          "Contains a URL that represents where an instance data file
+           for this YANG package can be found.
+
+           This leaf will only be present if there is a URL available
+           for retrieval of the schema for this entry.
+
+           If multiple locations are provided, then the first location
+           in the leaf-list MUST be the definitive location that
+           uniquely identifies this package";
+      }
+      
+      leaf checksum {
+        type pkg-types:sha-256-hash;
+        description 
+          "The checksum of the package this schema relates to,
+           calculated on the 'YANG instance data file' package
+           definition.
+
+           This leaf MAY be omitted if the referenced package is
+           locally scoped without an associated checksum.";
+      }
     }
   }
 
   augment "/yanglib:yang-library/yanglib:schema" {
     description
       "Allow datastore schema to be related to a YANG package";
-    
+
     container package {
-       leaf identifier {
-         type leafref {
-           path "/yanglib:yang-library/package/identifier";
-         }
-         description
-           "The name of the package this schema relates to.
+      leaf name {
+        type leafref {
+          path "/yanglib:yang-library/package/name";
+        }
+        description
+          "The name of the package this schema relates to.
 
-            The referenced package MUST represent a referentially
-            complete schema";
-       }       
-       
-       leaf checksum {
-         type pkg-types:sha-256-hash;
-         description 
-           "The checksum of the package this schema relates to,
-            calculated on the 'YANG instance data file' package
-            definition.
+           The referenced package MUST represent a referentially
+           complete schema";
+      }
 
-            This leaf MAY be omitted if the referenced package is
-            locally scoped without an associated checksum.";
-       }
-       
-       leaf-list supported-optional-feature {
-         type pkg-types:scoped-feature;
-         description
-           "Lists all optional module features that are also
-            supported by the server when implementing the package.
+      leaf version {
+        type leafref {
+          path '/yanglib:yang-library/'
+            + 'package[name = current()/../name]/version';
+        }
 
-            This list SHOULD exclude any features in the
-            'mandatory-feature' list for the package, or any included
-            package.
+        description
+          "The package version number this schema relates to.";
+      }
+      
+      leaf checksum {
+        type leafref {
+          path '/yanglib:yang-library/'
+            + 'package[name = current()/../name]'
+            + '[version = current()/../version]/checksum';
+        }
 
-            The full set of features supported by the server for this
-            schema is the union of this list and all
-            'mandatory-feature' lists for the package and all
-            included packages.  This is equivalent to the information
-            provided via the 'feature' leaf list in YANG library.
+        description
+          "The checksum of the referenced package.";
+      }
 
-            Features are identified using
-            '<module-name>:<feature-name>'";
-       }
-       
       description
         "Describes which package the schema directly relates to, if
          any.";
