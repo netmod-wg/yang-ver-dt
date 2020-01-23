@@ -1,0 +1,356 @@
+module ietf-schema-selection {
+  yang-version 1.1;
+  namespace
+    "urn:ietf:params:xml:ns:yang:ietf-schema-selection";
+  prefix "schsel";
+
+  import ietf-yang-revisions {
+    prefix rev;
+    reference "XXXX: Updated YANG Module Revision Handling";
+  }
+
+  import ietf-datastores {
+    prefix ds;
+    rev:revision-or-derived 2018-02-14;
+    reference
+      "RFC 8342: Network Management Datastore Architecture (NMDA)";
+  }
+
+  import ietf-yang-packages {
+    prefix pkgs;
+    rev:revision-or-derived 0.2.0;
+    reference "RFC XXX: YANG Packages.";
+  }
+
+  
+  organization
+    "IETF NETMOD (Network Modeling) Working Group";
+
+  contact
+    "WG Web:   <http://tools.ietf.org/wg/netmod/>
+     WG List:  <mailto:netmod@ietf.org>
+
+     Author:   Reshad Rahman
+               <mailto:rrahman@cisco.com>
+
+     Author:   Rob Wilton
+               <mailto:rwilton@cisco.com>";
+
+  description
+    "This module provide a data model to advertise and allow the
+     selection of schema versions by clients.
+
+     Copyright (c) 2019 IETF Trust and the persons identified as
+     authors of the code.  All rights reserved.
+
+     Redistribution and use in source and binary forms, with or
+     without modification, is permitted pursuant to, and subject
+     to the license terms contained in, the Simplified BSD License
+     set forth in Section 4.c of the IETF Trust's Legal Provisions
+     Relating to IETF Documents
+     (http://trustee.ietf.org/license-info).
+
+     This version of this YANG module is part of RFC XXXX; see
+     the RFC itself for full legal notices.
+
+     The key words 'MUST', 'MUST NOT', 'REQUIRED', 'SHALL', 'SHALL
+     NOT', 'SHOULD', 'SHOULD NOT', 'RECOMMENDED', 'NOT RECOMMENDED',
+     'MAY', and 'OPTIONAL' in this document are to be interpreted as
+     described in BCP 14 (RFC 2119) (RFC 8174) when, and only when,
+     they appear in all capitals, as shown here.";
+
+
+  // RFC Ed.: update the date below with the date of RFC publication
+  // and remove this note.
+  // RFC Ed.: replace XXXX with actual RFC number and remove this
+  // note.
+  revision 2019-11-29 {
+    description
+      "Initial revision";
+    reference
+      "RFC XXXX: YANG Schema Version Selection";
+  }
+
+  /*
+   * Features
+   */
+  feature "primary-schema-set" {
+    description
+      "Feature that allows clients to choose the primary schema set
+       to be used for clients (via RPC)";
+  }
+
+  feature "secondary-schema-set" {
+    description
+      "Feature to choose if secondary schema set may be configured by
+       clients.";
+  }
+
+  feature "custom-schema-set" {
+    if-feature "primary-schema-set or secondary-schema-set";
+    description
+      "Feature to choose whether clients may configurable custom
+       schema definitions.";
+  }
+
+  /*
+   * Top level data nodes.
+   */
+  
+  container schema-set-selection {
+    description
+      "YANG schema-set selection.
+
+       Contains configuration and state related to client selectable
+       YANG schema-sets.";
+        
+    leaf primary {
+      type leafref {
+        path "/schema-set-selection/schema-set/name";
+      }
+      config false;
+      description
+        "Defines the primary schema-set used by this server.
+
+         This is the schema-set that is chosen if a NETCONF client
+         doesn't select a schema during capability negotiation, or if
+         the standard RESTCONF (or NMDA datastore URLs) are used.
+
+         This schema also represents the datastore schema that is
+         used to persist configuration for all conventional
+         configuration datastores.";
+    }
+
+    leaf-list secondary {
+      if-feature "secondary-schema-set";
+      type leafref {
+        path "/schema-set-selection/schema-set/name";
+        require-instance false;
+      }
+      description
+        "Specifies the secondary schema used by this server, that can
+         be selected by clients (either through NETCONF capability
+         negotiation or RESTCONF schema specific path).";
+    }
+
+    list custom {
+      if-feature "custom-schema-set";
+      key "name";
+      
+      description
+        "Defines a custom selectable schema constructed from
+         compatible schema";
+      
+      leaf name {
+        type "string";
+        description
+          "Name of custom schema.
+
+           Format can either be the form of a YANG identifer, or
+           '<name>@<rev-label>'.
+
+           The selectable-schema name is used in NETCONF capabilties
+           negotiation and also the RESTCONF path (XXX, is encoding
+           required, e.g. for '@'?)";
+      }
+
+      leaf description {
+        type string;
+        description
+          "The description associated with this custom package.";
+      }
+
+      leaf-list included-schema {
+        type leafref {
+          path "/schema-set-selection/schema-set/name";
+          require-instance false;
+        }
+        description
+          "Lists the schema that are combined together into a single
+           selectable schema (i.e. via a union operation on each
+           datastore schema package).";
+      }
+    }
+    
+    list schema-set {
+      key "name";
+      config false;
+
+      description
+        "Lists all available schema-set's that can be used in schema
+         version selection.";
+      
+      leaf name {
+        type string;
+
+        description
+          "Name of the schema.
+
+           Do we restrict what is allowed, specifically, do we allow
+           '@'";
+      }
+
+      list common-package {
+        key "name version";
+
+        description
+          "YANG packages associated with all datastores supported by
+           this schema-set.
+
+           Packages are unioned together, along with any per
+           datastore packages, with no conflicts allowed.";
+
+        uses pkgs:yang-pkg-ref;
+      }
+      
+      list datastore {
+        key "name";
+
+        description
+          "The list of datastores supported for this pan-datastore
+           selectable-package, along with the package schema
+           associated with that datastore.";
+
+        leaf name {
+          type ds:datastore-ref;
+          description
+            "The datastore that this datastore schema is associated
+             with.";
+          reference
+            "RFC 8342: Network Management Datastore Architecture
+             (NMDA)";
+        }
+
+        leaf read-only {
+          type empty;
+          description
+            "Indicates that this schema-set cannot be written, even
+             for writable datastores.  E.g., if <running> was a
+             supported datastore then it could be read, but not
+             written.";
+        }
+
+        list additional-package {
+          key "name version";
+
+          description
+            "YANG packages used in addition to the common-packages.
+
+             The datastore schema is represented as the union of all
+             common-packages in the schema-set joined with any per
+             datastore packages.";
+
+          uses pkgs:yang-pkg-ref;
+        }
+      }
+
+      leaf primary-selectable {
+        if-feature "primary-schema-set";
+        type empty;
+        description
+          "Indicates that this schema-set is selectable as a primary
+           schema-set.";
+      }
+
+      container secondary-selectable {
+        if-feature "secondary-schema-set";
+        presence
+          "This schema MAY be selected as a secondary schema-set";
+        description
+          "Indicates that this schema-set is selectable as a
+           secondary schema-set and also defines compatibility with
+           primary and secondary schema-sets.";
+
+        container compatible-with {
+          description
+            "Contains the compatible primary and secondary schema";
+          
+          leaf-list primary {
+            type leafref {
+              path "/schema-set-selection/schema-set/name";
+            }
+            description
+              "Lists other schema that MAY be selected as the default
+               schema at ths same time as this schema is selected as
+               a secondary-schema.";
+          }
+
+          leaf-list secondary {
+            type leafref {
+              path "/schema-set-selection/schema-set/name";
+            }
+            description
+              "Lists other schema that MAY be selected as other
+               secondary schema is this schema is selected as a
+               secondary-schema.";
+          }
+        }
+      }
+
+      container custom-selectable {
+        if-feature "custom-schema-set";
+        presence
+          "This schema MAY be selected as part of a custom
+           schema-set.";
+        description
+          "Indicates that this schema-set is selectable as part of a
+           custom schema-set and also lists other schema-sets that
+           may be combined together into a custom schema-set.";
+
+        leaf-list combinable {
+          type leafref {
+            path "/schema-set-selection/schema-set/name";
+          }
+          description
+            "Lists the schema-sets that MAY be combined with this
+             schema into a single custom schema-set'.";
+        }
+      }
+    }
+  }
+
+  /*
+   * RPCs
+   */
+  
+  rpc change-primary {
+    if-feature "primary-schema-set";
+    description
+      "RPC to allow a client to change the primary schema-set used by
+       a server.";
+
+    input {
+      leaf primary {
+        type leafref {
+          path "/schema-set-selection/schema-set/name";
+        }
+        mandatory true;
+        description
+          "Changes the primary schema-set used by this server.";
+      }
+      choice config {
+        mandatory true;
+        description
+          "Specifies how the configuration is handled when the
+           primary schema is changed to the new schema-set.";
+        
+        leaf translate {
+          type empty;
+          description
+            "Translate the existing configuration to the new
+             schema-set, or fail the operation if this is not
+             possible.";
+        }
+
+        anydata replacement-config {
+          description
+            "The configuration, in a form compatible with the new
+             schema-set, that is used to replace the existing
+             configuration, when it is changed to the new schema-set.
+             The operational MUST be failed if this new configuration
+             is not valid.";
+        }
+      }
+    }
+  }
+}
