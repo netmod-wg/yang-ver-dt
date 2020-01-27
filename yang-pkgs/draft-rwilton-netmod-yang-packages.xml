@@ -496,9 +496,7 @@
       definition via the 'tags' leaf-list.  The tags use the same
       registry and definitions used by YANG module tags.</t>
     </section>
-  </section>
-
-  <section title="YANG Packages Common Groupings">
+  <section title="YANG package core definition">
     <t>The ietf-yang-package-types.yang module defines a grouping to specify the
     core elements of the YANG package structure that is used within YANG package
     instance data documents (ietf-yang-package-instance.yang) and also on the
@@ -562,11 +560,12 @@ module: ietf-yang-package-types
         </artwork>
       </figure>
     </section>
-
-  <section title="Offline Package Instance Data Documents">
-    <t>YANG packages SHOULD be defined as YANG instance data documents <xref
-    target="I-D.ietf-netmod-yang-instance-file-format"/> using the YANG schema
-    below to define the package data itself.</t>
+  </section>
+  <section title="Package Instance Data Documents">
+    <t>YANG packages SHOULD be available offline from the server,
+    defined as YANG instance data documents <xref
+    target="I-D.ietf-netmod-yang-instance-file-format"/> using the
+    YANG schema below to define the package data.</t>
     <t>The format of the YANG package instance file MUST follow the following rules:
     <list>
       <t>The file SHOULD be encoded in JSON.</t>
@@ -612,37 +611,16 @@ module: ietf-yang-package
 
     <section title="Package Definitions on a Server">
       <section title="Package List">
-	<t>The main addition is a top level 'packages' container holding the
-	list of all versions of all packages known to the server.  Each list
-	entry uses the same common package definition, but with the addition of
-	package location and checksum information that cannot be contained
-	within a offline package definition contained in an instance data
-	document.</t>
+	<t>A top level 'packages' container holds the list of all
+	versions of all packages known to the server.  Each list entry
+	uses the common package definition, but with the addition of
+	package location and checksum information that cannot be
+	contained within a offline package definition contained in an
+	instance data document.</t>
 	<t>The '/packages/package' list MAY include multiple versions of a
 	particular package.  E.g. if the server is capable of allowing clients
 	to select which package versions should be used by the server.</t>
         <t></t>
-      </section>
-      <section title = "Binding from datastore schema to package">
-      <t>The YANG packages module also augments YANG library to allow a server
-      to optionally indicate that a datastore schema is also defined by a
-      package.  Since packages can generally be made available offline in
-      instance data documents, it may be sufficient for a client to only check
-      that a compatible version of the package is implemented by the server
-      without fetching either the package definition, or downloading and
-      comparing the full list of modules and enabled features.</t>
-      <t>If a server indicates that a datastore schema maps to a particular
-      package then it MUST exactly match the schema defined by that package,
-      taking into account enabled features and any deviations.</t>
-      <t>If a server cannot faithfully implement a package then it can define a
-      new package to accurately report what it does implement.  The new package
-      can include the original package as an included package, and the new
-      package can define additional modules containing deviations to the modules
-      in the original package, allowing the new package to accurately describe
-      the server's behavior.  There is no specific mechanism provided to
-      indicate that a mandatory-feature in package definition is not supported
-      on a server, but deviations MAY be used to disable functionality
-      predicated by an if-feature statement.</t>
       </section>
       <section title="Tree diagram">
       <figure>
@@ -659,19 +637,46 @@ module: ietf-yang-packages
         ... remainder of yang-package-instance grouping ...
         +--ro location*             inet:uri
         +--ro checksum?             pkg-types:sha-256-hash
-
-  augment /yanglib:yang-library/yanglib:schema:
-    +--ro package
-       +--ro name?       -> /packages/package/name
-       +--ro version?
-       |       -> /packages/package[name = current()/../name]/version
-       +--ro checksum?   leafref                   
           ]]>
         </artwork>
       </figure>
       </section>
     </section>
-
+    <section title = "YANG Library Package Bindings">
+      <t>The YANG packages module also augments YANG library to allow a server
+      to optionally indicate that a datastore schema is defined by a package.
+      Since packages can generally be made available offline in instance data
+      documents, it may be sufficient for a client to only check that a
+      compatible version of the package is implemented by the server without
+      fetching either the package definition, or downloading and comparing the
+      full list of modules and enabled features.</t>
+      <t>If a server indicates that a datastore schema maps to a particular
+      package then it MUST exactly match the schema defined by that package,
+      taking into account enabled features and any deviations.</t>
+      <t>If a server cannot faithfully implement a package then it can define a
+      new package to accurately report what it does implement.  The new package
+      can include the original package as an included package, and the new
+      package can define additional modules containing deviations to the modules
+      in the original package, allowing the new package to accurately describe
+      the server's behavior.  There is no specific mechanism provided to
+      indicate that a mandatory-feature in package definition is not supported
+      on a server, but deviations MAY be used to disable functionality
+      predicated by an if-feature statement.</t>
+      <figure>
+        <preamble>The "ietf-yl-packages" YANG module has the following structure:</preamble>
+        <artwork>
+          <![CDATA[
+module: ietf-yl-packages
+  augment /yanglib:yang-library/yanglib:schema:
+    +--ro package
+       +--ro name?       -> /pkgs:packages/package/name
+       +--ro version?    leafref
+       +--ro checksum?   leafref
+          ]]>
+        </artwork>
+      </figure>
+    </section>
+      
     <section title="YANG packages as schema for YANG instance data document">
       <t>YANG package definitions can be used as the schema definition for YANG
       instance data documents.  When using a package schema, the name and
@@ -1249,189 +1254,6 @@ module ietf-yang-package-types {
       <figure>
         <artwork>
           <![CDATA[
-<CODE BEGINS> file "ietf-yang-package@2020-01-21.yang"
-module ietf-yang-packages {
-  yang-version 1.1;
-  namespace "urn:ietf:params:xml:ns:yang:ietf-yang-packages";
-  prefix pkgs;
-
-  import ietf-yang-revisions {
-    prefix rev;
-    reference "XXXX: Updated YANG Module Revision Handling";
-  }
-
-  import ietf-yang-package-types {
-    prefix pkg-types;
-    rev:revision-or-derived 0.2.0;
-    reference "RFC XXX: YANG Packages.";
-  }
-
-  import ietf-yang-library {
-    prefix yanglib;
-    rev:revision-or-derived 2019-01-04;
-    reference "RFC 8525: YANG Library";
-  }
-
-  import ietf-inet-types {
-    prefix inet;
-    rev:revision-or-derived 2013-07-15;
-    reference "RFC 6991: Common YANG Data Types.";
-  }
-
-  organization
-    "IETF NETMOD (Network Modeling) Working Group";
-
-  contact
-    "WG Web:   <http://tools.ietf.org/wg/netmod/>
-     WG List:  <mailto:netmod@ietf.org>
-
-     Author:   Rob Wilton
-               <mailto:rwilton@cisco.com>";
-
-  description
-    "This module provides defined augmentations to YANG library to 
-     allow a server to report YANG package information.
-
-     Copyright (c) 2018 IETF Trust and the persons identified as
-     authors of the code.  All rights reserved.
-
-     Redistribution and use in source and binary forms, with or
-     without modification, is permitted pursuant to, and subject
-     to the license terms contained in, the Simplified BSD License
-     set forth in Section 4.c of the IETF Trust's Legal Provisions
-     Relating to IETF Documents
-     (http://trustee.ietf.org/license-info).
-
-     This version of this YANG module is part of RFC XXXX; see
-     the RFC itself for full legal notices.
-
-     The key words 'MUST', 'MUST NOT', 'REQUIRED', 'SHALL', 'SHALL
-     NOT', 'SHOULD', 'SHOULD NOT', 'RECOMMENDED', 'NOT RECOMMENDED',
-     'MAY', and 'OPTIONAL' in this document are to be interpreted as
-     described in BCP 14 (RFC 2119) (RFC 8174) when, and only when,
-     they appear in all capitals, as shown here.";
-
-  
-  // RFC Ed.: update the date below with the date of RFC publication
-  // and remove this note.
-  // RFC Ed.: replace XXXX with actual RFC number and remove this
-  // note.
-  revision 2020-01-21 {
-    rev:revision-label 0.2.0;
-    description
-      "Initial revision";
-    reference
-      "RFC XXXX: YANG Packages";
-  }
-
-  
-  /*
-   * Groupings
-   */
-
-  grouping yang-pkg-ref {
-    description
-      "Defines the leaves used to reference a YANG package";
-
-    leaf name {
-      type leafref {
-        path "/packages/package/name";
-      }
-      description
-        "The name of the references package.";
-    }
-
-    leaf version {
-      type leafref {
-        path '/packages/package[name = current()/../name]/version';
-      }
-      
-      description
-        "The version of the referenced package.";
-    }
-      
-    leaf checksum {
-      type leafref {
-        path '/packages/package[name = current()/../name]'
-          + '[version = current()/../version]/checksum';
-      }
-
-      description
-        "The checksum of the referenced package.";
-    }
-  }
-
-  
-  /*
-   * Top level data nodes.
-   */
-  
-  container packages {
-    config false;
-    description "All YANG package definitions";
-    
-    list package {
-      key "name version";
-
-      description
-        "YANG package instance";
-
-      uses pkg-types:yang-pkg-instance;
-
-      leaf-list location {
-        type inet:uri;
-        description
-          "Contains a URL that represents where an instance data file
-           for this YANG package can be found.
-
-           This leaf will only be present if there is a URL available
-           for retrieval of the schema for this entry.
-
-           If multiple locations are provided, then the first
-           location in the leaf-list MUST be the definitive location
-           that uniquely identifies this package";
-      }
-      
-      leaf checksum {
-        type pkg-types:sha-256-hash;
-        description 
-          "The checksum of the package this schema relates to,
-           calculated on the 'YANG instance data file' package
-           definition available in the 'location' leaf list.
-
-           This leaf MAY be omitted if the referenced package is
-           locally scoped without an associated checksum.";
-      }
-    }
-  }
-
-  
-  /*
-   * Augmentations
-   */
-    
-  augment "/yanglib:yang-library/yanglib:schema" {
-    description
-      "Allow datastore schema to be related to a YANG package";
-
-    container package {
-      description
-        "Identifies the YANG package that defines the schema for the
-         associated datastore.
-
-         The referenced package MUST represent a referentially
-         complete schema";
-      uses yang-pkg-ref;
-    }    
-  }
-}
-<CODE ENDS>
-]]>
-        </artwork>
-      </figure>
-      <figure>
-        <artwork>
-          <![CDATA[
 <CODE BEGINS> file "ietf-yang-package-instance@2020-01-21.yang"
 module ietf-yang-package-instance {
   yang-version 1.1;
@@ -1511,6 +1333,261 @@ module ietf-yang-package-instance {
        data document.";
     
     uses pkg-types:yang-pkg-instance;
+  }
+}
+<CODE ENDS>
+]]>
+        </artwork>
+      </figure>
+      <figure>
+        <artwork>
+          <![CDATA[
+<CODE BEGINS> file "ietf-yang-package@2020-01-21.yang"
+module ietf-yang-packages {
+  yang-version 1.1;
+  namespace "urn:ietf:params:xml:ns:yang:ietf-yang-packages";
+  prefix pkgs;
+
+  import ietf-yang-revisions {
+    prefix rev;
+    reference "XXXX: Updated YANG Module Revision Handling";
+  }
+
+  import ietf-yang-package-types {
+    prefix pkg-types;
+    rev:revision-or-derived 0.2.0;
+    reference "RFC XXX: YANG Packages.";
+  }
+
+  import ietf-inet-types {
+    prefix inet;
+    rev:revision-or-derived 2013-07-15;
+    reference "RFC 6991: Common YANG Data Types.";
+  }
+
+  organization
+    "IETF NETMOD (Network Modeling) Working Group";
+
+  contact
+    "WG Web:   <http://tools.ietf.org/wg/netmod/>
+     WG List:  <mailto:netmod@ietf.org>
+
+     Author:   Rob Wilton
+               <mailto:rwilton@cisco.com>";
+
+  description
+    "This module defines YANG packages on a server implementation.
+
+     Copyright (c) 2018 IETF Trust and the persons identified as
+     authors of the code.  All rights reserved.
+
+     Redistribution and use in source and binary forms, with or
+     without modification, is permitted pursuant to, and subject
+     to the license terms contained in, the Simplified BSD License
+     set forth in Section 4.c of the IETF Trust's Legal Provisions
+     Relating to IETF Documents
+     (http://trustee.ietf.org/license-info).
+
+     This version of this YANG module is part of RFC XXXX; see
+     the RFC itself for full legal notices.
+
+     The key words 'MUST', 'MUST NOT', 'REQUIRED', 'SHALL', 'SHALL
+     NOT', 'SHOULD', 'SHOULD NOT', 'RECOMMENDED', 'NOT RECOMMENDED',
+     'MAY', and 'OPTIONAL' in this document are to be interpreted as
+     described in BCP 14 (RFC 2119) (RFC 8174) when, and only when,
+     they appear in all capitals, as shown here.";
+
+  
+  // RFC Ed.: update the date below with the date of RFC publication
+  // and remove this note.
+  // RFC Ed.: replace XXXX with actual RFC number and remove this
+  // note.
+  revision 2020-01-21 {
+    rev:revision-label 0.2.0;
+    description
+      "Initial revision";
+    reference
+      "RFC XXXX: YANG Packages";
+  }
+
+  
+  /*
+   * Groupings
+   */
+
+  grouping yang-pkg-ref {
+    description
+      "Defines the leaves used to reference a YANG package";
+
+    leaf name {
+      type leafref {
+        path '/pkgs:packages/pkgs:package/pkgs:name';
+      }
+      description
+        "The name of the references package.";
+    }
+
+    leaf version {
+      type leafref {
+        path '/pkgs:packages'
+          + '/pkgs:package[pkgs:name = current()/../name]'
+          + '/pkgs:version';
+      }
+      
+      description
+        "The version of the referenced package.";
+    }
+      
+    leaf checksum {
+      type leafref {
+        path '/pkgs:packages'
+          + '/pkgs:package[pkgs:name = current()/../name]'
+          + '[pkgs:version = current()/../version]/pkgs:checksum';
+      }
+
+      description
+        "The checksum of the referenced package.";
+    }
+  }
+
+  
+  /*
+   * Top level data nodes.
+   */
+  
+  container packages {
+    config false;
+    description "All YANG package definitions";
+    
+    list package {
+      key "name version";
+
+      description
+        "YANG package instance";
+
+      uses pkg-types:yang-pkg-instance;
+
+      leaf-list location {
+        type inet:uri;
+        description
+          "Contains a URL that represents where an instance data file
+           for this YANG package can be found.
+
+           This leaf will only be present if there is a URL available
+           for retrieval of the schema for this entry.
+
+           If multiple locations are provided, then the first
+           location in the leaf-list MUST be the definitive location
+           that uniquely identifies this package";
+      }
+      
+      leaf checksum {
+        type pkg-types:sha-256-hash;
+        description 
+          "The checksum of the package this schema relates to,
+           calculated on the 'YANG instance data file' package
+           definition available in the 'location' leaf list.
+
+           This leaf MAY be omitted if the referenced package is
+           locally scoped without an associated checksum.";
+      }
+    }
+  }  
+}
+<CODE ENDS>
+]]>
+        </artwork>
+      </figure>
+      <figure>
+        <artwork>
+          <![CDATA[
+<CODE BEGINS> file "ietf-yl-package@2020-01-21.yang"
+module ietf-yl-packages {
+  yang-version 1.1;
+  namespace "urn:ietf:params:xml:ns:yang:ietf-yl-packages";
+  prefix yl-pkgs;
+
+  import ietf-yang-revisions {
+    prefix rev;
+    reference "XXXX: Updated YANG Module Revision Handling";
+  }
+
+  import ietf-yang-packages {
+    prefix pkgs;
+    rev:revision-or-derived 0.2.0;
+    reference "RFC XXX: YANG Packages.";
+  }
+
+  import ietf-yang-library {
+    prefix yanglib;
+    rev:revision-or-derived 2019-01-04;
+    reference "RFC 8525: YANG Library";
+  }
+
+  organization
+    "IETF NETMOD (Network Modeling) Working Group";
+
+  contact
+    "WG Web:   <http://tools.ietf.org/wg/netmod/>
+     WG List:  <mailto:netmod@ietf.org>
+
+     Author:   Rob Wilton
+               <mailto:rwilton@cisco.com>";
+
+  description
+    "This module provides defined augmentations to YANG library to 
+     allow a server to report YANG package information.
+
+     Copyright (c) 2018 IETF Trust and the persons identified as
+     authors of the code.  All rights reserved.
+
+     Redistribution and use in source and binary forms, with or
+     without modification, is permitted pursuant to, and subject
+     to the license terms contained in, the Simplified BSD License
+     set forth in Section 4.c of the IETF Trust's Legal Provisions
+     Relating to IETF Documents
+     (http://trustee.ietf.org/license-info).
+
+     This version of this YANG module is part of RFC XXXX; see
+     the RFC itself for full legal notices.
+
+     The key words 'MUST', 'MUST NOT', 'REQUIRED', 'SHALL', 'SHALL
+     NOT', 'SHOULD', 'SHOULD NOT', 'RECOMMENDED', 'NOT RECOMMENDED',
+     'MAY', and 'OPTIONAL' in this document are to be interpreted as
+     described in BCP 14 (RFC 2119) (RFC 8174) when, and only when,
+     they appear in all capitals, as shown here.";
+
+  
+  // RFC Ed.: update the date below with the date of RFC publication
+  // and remove this note.
+  // RFC Ed.: replace XXXX with actual RFC number and remove this
+  // note.
+  revision 2020-01-21 {
+    rev:revision-label 0.2.0;
+    description
+      "Initial revision";
+    reference
+      "RFC XXXX: YANG Packages";
+  }
+
+  
+  /*
+   * Augmentations
+   */
+    
+  augment "/yanglib:yang-library/yanglib:schema" {
+    description
+      "Allow datastore schema to be related to a YANG package";
+
+    container package {
+      description
+        "Identifies the YANG package that defines the schema for the
+         associated datastore.
+
+         The referenced package MUST represent a referentially
+         complete schema";
+      uses pkgs:yang-pkg-ref;
+    }    
   }
 }
 <CODE ENDS>
@@ -1704,12 +1781,22 @@ module ietf-yang-inst-data-pkg {
       <t>XML: N/A, the requested URI is an XML namespace.</t>
       </list>
       <list>
-      <t>URI: urn:ietf:params:xml:ns:yang:ietf-yang-package.yang</t>
+      <t>URI: urn:ietf:params:xml:ns:yang:ietf-yang-package-instance.yang</t>
+      <t>Registrant Contact: The IESG.</t>
+      <t>XML: N/A, the requested URI is an XML namespace.</t>
+      </list>
+      <list>
+      <t>URI: urn:ietf:params:xml:ns:yang:ietf-yang-packages.yang</t>
       <t>Registrant Contact: The IESG.</t>
       <t>XML: N/A, the requested URI is an XML namespace.</t>
       </list>
       <list>
       <t>URI: urn:ietf:params:xml:ns:yang:ietf-yl-packages.yang</t>
+      <t>Registrant Contact: The IESG.</t>
+      <t>XML: N/A, the requested URI is an XML namespace.</t>
+      </list>
+      <list>
+      <t>URI: urn:ietf:params:xml:ns:yang:ietf-yang-inst-data-pkg.yang</t>
       <t>Registrant Contact: The IESG.</t>
       <t>XML: N/A, the requested URI is an XML namespace.</t>
       </list>
@@ -1734,6 +1821,12 @@ module ietf-yang-inst-data-pkg {
       <t>Name: ietf-yang-packages.yang</t>
       <t>Namespace: urn:ietf:params:xml:ns:yang:ietf-yang-packages.yang</t>
       <t>Prefix: pkgs</t>
+      <t>Reference: RFC XXXX</t>
+      </list>
+      <list>
+      <t>Name: ietf-yl-packages.yang</t>
+      <t>Namespace: urn:ietf:params:xml:ns:yang:ietf-yl-packages.yang</t>
+      <t>Prefix: yl-pkgs</t>
       <t>Reference: RFC XXXX</t>
       </list>
       <list>
@@ -1835,7 +1928,7 @@ module ietf-yang-inst-data-pkg {
     },
     "description": "YANG package definition",
     "content-data": {
-      "ietf-yang-package:yang-package": {
+      "ietf-yang-package-instance:yang-package": {
         "name": "example-ietf-network-device-pkg",
         "version": "1.1.2",
         "timestamp": "2018-12-13T17:00:00Z",
@@ -1957,7 +2050,7 @@ module ietf-yang-inst-data-pkg {
     "module": [ "ietf-yang-package@2019-09-11.yang" ],
     "description": "YANG package definition",
     "content-data": {
-      "ietf-yang-package:yang-package": {
+      "ietf-yang-package-instance:yang-package": {
         "name": "example-ietf-routing",
         "version": "1.3.1",
         "timestamp": "2018-12-13T17:00:00Z",
@@ -2108,7 +2201,7 @@ module ietf-yang-inst-data-pkg {
     "name": "example-import-1-pkg",
     "description": "First imported example package",
     "content-data": {
-      "ietf-yang-package:yang-package": {
+      "ietf-yang-package-instance:yang-package": {
         "name": "example-import-1",
         "version": "1.0.0",
         "reference": "XXX, draft-rwilton-netmod-yang-packages",

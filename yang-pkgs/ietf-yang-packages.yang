@@ -14,12 +14,6 @@ module ietf-yang-packages {
     reference "RFC XXX: YANG Packages.";
   }
 
-  import ietf-yang-library {
-    prefix yanglib;
-    rev:revision-or-derived 2019-01-04;
-    reference "RFC 8525: YANG Library";
-  }
-
   import ietf-inet-types {
     prefix inet;
     rev:revision-or-derived 2013-07-15;
@@ -37,8 +31,7 @@ module ietf-yang-packages {
                <mailto:rwilton@cisco.com>";
 
   description
-    "This module provides defined augmentations to YANG library to 
-     allow a server to report YANG package information.
+    "This module defines YANG packages on a server implementation.
 
      Copyright (c) 2018 IETF Trust and the persons identified as
      authors of the code.  All rights reserved.
@@ -83,7 +76,7 @@ module ietf-yang-packages {
 
     leaf name {
       type leafref {
-        path "/packages/package/name";
+        path '/pkgs:packages/pkgs:package/pkgs:name';
       }
       description
         "The name of the references package.";
@@ -91,7 +84,9 @@ module ietf-yang-packages {
 
     leaf version {
       type leafref {
-        path '/packages/package[name = current()/../name]/version';
+        path '/pkgs:packages'
+          + '/pkgs:package[pkgs:name = current()/../name]'
+          + '/pkgs:version';
       }
       
       description
@@ -100,8 +95,9 @@ module ietf-yang-packages {
       
     leaf checksum {
       type leafref {
-        path '/packages/package[name = current()/../name]'
-          + '[version = current()/../version]/checksum';
+        path '/pkgs:packages'
+          + '/pkgs:package[pkgs:name = current()/../name]'
+          + '[pkgs:version = current()/../version]/pkgs:checksum';
       }
 
       description
@@ -151,25 +147,5 @@ module ietf-yang-packages {
            locally scoped without an associated checksum.";
       }
     }
-  }
-
-  
-  /*
-   * Augmentations
-   */
-    
-  augment "/yanglib:yang-library/yanglib:schema" {
-    description
-      "Allow datastore schema to be related to a YANG package";
-
-    container package {
-      description
-        "Identifies the YANG package that defines the schema for the
-         associated datastore.
-
-         The referenced package MUST represent a referentially
-         complete schema";
-      uses yang-pkg-ref;
-    }    
-  }
+  }  
 }
