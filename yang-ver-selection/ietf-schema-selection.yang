@@ -2,7 +2,7 @@ module ietf-schema-selection {
   yang-version 1.1;
   namespace
     "urn:ietf:params:xml:ns:yang:ietf-schema-selection";
-  prefix "schsel";
+  prefix "schema";
 
   import ietf-yang-revisions {
     prefix rev;
@@ -74,20 +74,7 @@ module ietf-schema-selection {
   /*
    * Features
    */
-  feature "primary-schema-set" {
-    description
-      "Feature that allows clients to choose the primary schema set
-       to be used for clients (via RPC)";
-  }
-
-  feature "secondary-schema-set" {
-    description
-      "Feature to choose if secondary schema set may be configured by
-       clients.";
-  }
-
   feature "custom-schema-set" {
-    if-feature "primary-schema-set or secondary-schema-set";
     description
       "Feature to choose whether clients may configurable custom
        schema definitions.";
@@ -98,39 +85,38 @@ module ietf-schema-selection {
    */
   
   container schema-set-selection {
+    presence "Enable schema selection";
+    
     description
       "YANG schema-set selection.
 
        Contains configuration and state related to client selectable
        YANG schema-sets.";
         
-    leaf primary {
-      type leafref {
-        path "/schema-set-selection/schema-set/name";
-      }
-      config false;
-      description
-        "Defines the primary schema-set used by this server.
-
-         This is the schema-set that is chosen if a NETCONF client
-         doesn't select a schema during capability negotiation, or if
-         the standard RESTCONF (or NMDA datastore URLs) are used.
-
-         This schema also represents the datastore schema that is
-         used to persist configuration for all conventional
-         configuration datastores.";
-    }
-
-    leaf-list secondary {
-      if-feature "secondary-schema-set";
+    leaf-list selectable {
       type leafref {
         path "/schema-set-selection/schema-set/name";
         require-instance false;
       }
+      min-elements 1;
+      
       description
-        "Specifies the secondary schema used by this server, that can
-         be selected by clients (either through NETCONF capability
-         negotiation or RESTCONF schema specific path).";
+        "Specifies the selectable schema used by this server, that
+         can be selected by clients (either through NETCONF
+         capability negotiation or RESTCONF schema specific path).";
+    }
+
+    leaf default {
+      type leafref {
+        path "/schema-set-selection/selectable";
+      }
+      mandatory true;
+      description
+        "Defines the default schema-set used by this server.
+
+         This is the schema-set that is chosen if a NETCONF client
+         doesn't select a schema during capability negotiation, or if
+         the standard RESTCONF (or NMDA datastore URLs) are used.";
     }
 
     list custom {
@@ -190,19 +176,14 @@ module ietf-schema-selection {
            '@'";
       }
 
-      list common-package {
-        key "name version";
-
+      leaf partial {
+        type empty;
+        
         description
-          "YANG packages associated with all datastores supported by
-           this schema-set.
-
-           Packages are unioned together, along with any per
-           datastore packages, with no conflicts allowed.";
-
-        uses pkgs:yang-pkg-ref;
+          "Indicates that this schema-set only represents a subset of
+           the full configurable schema of the device.";
       }
-      
+            
       list datastore {
         key "name";
 
@@ -224,67 +205,26 @@ module ietf-schema-selection {
         leaf read-only {
           type empty;
           description
-            "Indicates that this schema-set cannot be written, even
-             for writable datastores.  E.g., if <running> was a
+            "For datastores that are normally writable, the read-only
+             flag indicates that the datastore cannot be written
+             using this schema-set.  E.g., if <running> was a
              supported datastore then it could be read, but not
-             written.";
+             written.
+
+             This flag is not required for datastores, like
+             operational, that are defined as being read-only.";
         }
 
-        list additional-package {
-          key "name version";
-
-          description
-            "YANG packages used in addition to the common-packages.
-
-             The datastore schema is represented as the union of all
-             common-packages in the schema-set joined with any per
-             datastore packages.";
-
-          uses pkgs:yang-pkg-ref;
-        }
+        uses pkgs:yang-ds-pkg-ref;
       }
 
-      leaf primary-selectable {
-        if-feature "primary-schema-set";
-        type empty;
-        description
-          "Indicates that this schema-set is selectable as a primary
-           schema-set.";
-      }
-
-      container secondary-selectable {
-        if-feature "secondary-schema-set";
-        presence
-          "This schema MAY be selected as a secondary schema-set";
-        description
-          "Indicates that this schema-set is selectable as a
-           secondary schema-set and also defines compatibility with
-           primary and secondary schema-sets.";
-
-        container compatible-with {
-          description
-            "Contains the compatible primary and secondary schema";
-          
-          leaf-list primary {
-            type leafref {
-              path "/schema-set-selection/schema-set/name";
-            }
-            description
-              "Lists other schema that MAY be selected as the default
-               schema at ths same time as this schema is selected as
-               a secondary-schema.";
-          }
-
-          leaf-list secondary {
-            type leafref {
-              path "/schema-set-selection/schema-set/name";
-            }
-            description
-              "Lists other schema that MAY be selected as other
-               secondary schema is this schema is selected as a
-               secondary-schema.";
-          }
+      leaf-list compatible-with {
+        type leafref {
+          path "/schema-set-selection/schema-set/name";
         }
+        description
+          "Lists other schema-sets that MAY be selected at the same
+           time as this schema.";
       }
 
       container custom-selectable {
@@ -313,26 +253,41 @@ module ietf-schema-selection {
    * RPCs
    */
   
-  rpc change-primary {
-    if-feature "primary-schema-set";
+  rpc change-selectable-schema {
     description
-      "RPC to allow a client to change the primary schema-set used by
+      "RPC to allow a client to change the schema-set used by
        a server.";
 
     input {
-      leaf primary {
+      leaf old {
+        type leafref {
+          path "/schema-set-selection/selectable";
+        }
+        mandatory true;
+        description
+          "Selectable schema-set in use by this server.";
+      }
+      leaf new {
         type leafref {
           path "/schema-set-selection/schema-set/name";
         }
         mandatory true;
         description
-          "Changes the primary schema-set used by this server.";
+          "Changes the schema-set used by this server.";
       }
+      leaf make-default {
+        type empty;
+
+        description
+          "Indicates that the schema-set should become the default
+           schema-set used by the server.";
+      }
+
       choice config {
         mandatory true;
         description
           "Specifies how the configuration is handled when the
-           primary schema is changed to the new schema-set.";
+           default schema is changed to the new schema-set.";
         
         leaf translate {
           type empty;

@@ -24,9 +24,9 @@
 <?rfc inline="yes"?>
 <?rfc compact="yes"?>
 <?rfc subcompact="no"?>
-<rfc category="std" ipr="trust200902" docName="draft-wilton-netmod-yang-ver-selection-01" updates="6241,8040">
+<rfc category="std" ipr="trust200902" docName="draft-wilton-netmod-yang-ver-selection-01">
   <front>
-    <title abbrev="YANG Schema Version Selection">YANG Schema Version Selection</title>
+    <title abbrev="YANG Schema Selection">YANG Schema Selection</title>
 
     <author initials="R." surname="Wilton" fullname="Robert Wilton">
       <organization>Cisco Systems, Inc.</organization>
@@ -49,10 +49,12 @@
     <date/>
     <abstract>
       <t>
-	This document defines protocol mechanisms to allow clients, using NETCONF or RESTCONF, to choose which YANG schema to
-	use for interactions with a server, out of the available YANG schemas supported by a server.
-	The provided functionality allow servers to support clients in a backwards compatible way,
-	at the same time allowing for non-backwards-compatible updates to YANG modules.</t>
+	This document defines a mechanism to allow clients, using NETCONF or RESTCONF, to configure
+	and choose YANG schema for interactions with a server out of a set of available YANG schemas
+	supported by a server.  This functionality can help servers support clients using older
+	revisions of YANG modules even if later revisions contain non-backwards-compatible changes.
+	It can also be used to allow clients to select between YANG schema defined by different
+	organizations.</t>
       <t>This draft provides a solution to YANG versioning requirements 3.1 and 3.2.</t>
     </abstract>
 
@@ -64,51 +66,52 @@
       as described in BCP 14 <xref target="RFC2119"/> <xref target="RFC8174"/> when, and only when,
       they appear in all capitals, as shown here.</t>
       
-      <t>This document uses terminology introduced in the YANG versioning requirements document <xref
-      target="I-D.verdt-netmod-yang-versioning-reqs"/>, the YANG Module Versioning document
-      <xref target="I-D.verdt-netmod-yang-module-versioning"/> and the YANg Packages document
+      <t>This document uses terminology introduced in the YANG versioning requirements <xref
+      target="I-D.verdt-netmod-yang-versioning-reqs"/>, YANG Module Versioning
+      <xref target="I-D.verdt-netmod-yang-module-versioning"/> and YANG Packages
       <xref target="I-D.rwilton-netmod-yang-packages"/>.</t>
-      <t>This document also makes of the following terminology introduced in the Network Management
+      <t>This document makes of the following terminology introduced in the Network Management
       Datastore Architecture <xref target="RFC8342"/>:
         <list style="symbols">
           <t>datastore schema</t>
         </list>
       </t>      
-      <t>In addition, this document makes use of the following terminology:
+      <t>This document defines the following terminology:
         <list style="symbols">
 	  <t>YANG schema: The combined set of schema nodes for a set of YANG module revisions,
 	  taking into consideration any deviations and enabled features.</t>
 	  <t>versioned schema: A YANG schema with an associated YANG semantic version number, e.g.,
 	  as might be described by a YANG package<xref target="I-D.rwilton-netmod-yang-packages"/>.</t>
-	  <t>schema set: A set of related versioned YANG schema, one for each datastore that is
+	  <t>schema-set: A set of related versioned YANG schema, one for each datastore that is
 	  supported.</t>
         </list>
       </t>
-      <t>TODO - 'schema' and 'versioned schema' could be defined in the
+      <t>TODO - 'YANG schema' and 'versioned schema' could be defined in the
       packages draft.</t>
     </section>
     <section anchor="intro" title="Introduction">
-      <t>This document describes how NETCONF and RESTCONF clients can choose a particular YANG schema
-      they wish to choose to interact with a server.</t>
+      <t>This document describes how NETCONF and RESTCONF clients can use protocol extensions, along
+      with a version selection YANG module, to choose particular YANG schema for interactions with a
+      server.</t>
 
       <t><xref target="I-D.verdt-netmod-yang-versioning-reqs"/> defines requirements that any
       solution to YANG versioning must have.</t>
 
-      <t><xref target="I-D.verdt-netmod-yang-semver"/>, which is based on <xref target="I-D.verdt-netmod-yang-module-versioning"/>, 
-      specifies a partial solution to the YANG versioning requirements that focuses on using semantic 
-      versioning within individual YANG modules, but does not address all the requirements listed in the requirements document.  
-      Of particular relevance here, requirements 3.1 and 3.2 are not addressed.</t>
+      <t>YANG Semver <xref target="I-D.verdt-netmod-yang-semver"/>, based on YANG Module Versioning,
+      specifies a partial solution to the YANG versioning requirements that focuses on using
+      semantic versioning within individual YANG modules, but does not address all requirements
+      listed in the YANG versioning requirements document.  Of particular relevance here,
+      requirements 3.1 and 3.2 are not addressed.</t>
 
-      <t><xref target="I-D.rwilton-netmod-yang-packages"/> describes how sets of related YANG
-      modules can be grouped together into a logical entity that is versioned using the YANG
-      semantic versioning number scheme.  Different packages can be defined for different sets of
-      YANG modules, e.g., packages could be defined for the IETF YANG modules, OpenConfig YANG
-      modules, a vendor's YANG modules.  Different versions of these package definitions can be
-      defined as the contents of these packages evolve over time, and as the versions of the YANG
-      modules included in the package evolve.</t>
+      <t>YANG Packages describes how sets of related YANG module revisions can be grouped together
+      into a logical entity that defines a YANG schema.  Different packages can be defined for
+      different sets of YANG modules, e.g., packages could be defined for the IETF YANG modules,
+      OpenConfig YANG modules, or a vendor's YANG modules.  Different versions of these package
+      definitions can be defined as the contents of these packages evolve over time, and as new
+      revisions of the YANG modules included in the package are created.</t>
 
-      <t>This document defines how YANG packages can be used to represent versioned datastore schema,
-      and how clients can choose which versioned schemas to use during interactions with a
+      <t>This document defines how YANG packages are used to represent versioned datastore schema,
+      and how clients can choose which versioned schemas to use during protocol interactions with a
       device.</t>
     </section>
     <section anchor="background" title="Background">
@@ -124,22 +127,22 @@
 	<t>Allow non-backwards-compatible updates to YANG modules, and use a mechanism such as
 	semantic version numbers to communicate the likely impact of any changes to module users,
 	but require that clients handle non-backwards-compatible changes in servers by migrating to
-	new versions of the modules.  Without version selection, this is what the <xref
-	target="I-D.verdt-netmod-yang-semver"/> approach likely achieves.</t>
+	new versions of the modules.  Without version selection, this is what the YANG Semver
+	approach likely achieves.</t>
 
 	<t>Allow non-backwards-compatible updates to YANG modules, but also provide mechanisms to
 	allow servers to support multiple versions of YANG modules, and provide clients with some
 	ability to select which versions of YANG modules they wish to interact with, subject to some
-	reasonable constraints.  This is the approach that this document aims to address.  It is worth
-	noting that the idea of supporting multiple versions of an API is not new in the wider
-	software industry, and there any many examples of where this approach has been successfully
-	used.</t>
+	reasonable constraints.  This is the approach that this document aims to address.  It is
+	worth noting that the idea of supporting multiple versions of an API is not new in the wider
+	software industry, and there any many examples of where this approach has been used
+	successfully.</t>
       </list>
       </t>
     </section>
     
     <section anchor="objectives" title="Objectives">
-      <t>The goals of the schema version selection document are:
+      <t>The goals of YANG schema selection are:
       <list style="symbols">
 	<t>To provide a mechanism where non-backwards-compatible changes and bug fixes can be made
 	to YANG modules without forcing clients to immediately migrate to new versions of those
@@ -147,15 +150,37 @@
 
 	<t>To allow servers to support multiple versions of a particular YANG schema, and to allow
 	clients to choose which YANG schema version to use when interoperating with the server.  The
-	aim here is to give operators more flexibility as to when they update their software.</t>
+	aim here is to give operators more flexibility as to when they update their management
+	clients.</t>
 
 	<t>To provide a mechanism to allow different YANG schema families (e.g., SDO models,
 	OpenConfig models, Vendor models) to be supported by a server, and to allow clients to
 	choose which YANG schema family is used to interoperate with the server.</t>
+
+        <t>To closely align with existing NETCONF/RESTCONF protocol semantics.  I.e., with the
+        exception of the new mechanisms required to select the schema-set at the beginning of
+        NETCONF session or RESTCONF request, protocol interactions between client and server are the
+        same as when schema selection is not being used.</t>
+
+        <t>To allow considerable freedom for server implementations to decide how to implement
+        schema selection, and choose the schema selection capabilities they support.  In particular:
+        <list>
+          <t>Servers determine which schema-sets can be selected by clients, and which combinations
+          of schema-sets are compatible with each other during concurrent sessions/operations.</t>
+          <t>Servers can make some schema-sets automatically available for client selection, or
+          require clients to configure the selectable schema-sets before they can be used.</t>
+          <t>Servers can limit clients to selecting only a single schema for all client connections,
+          i.e., replacing the devices default schema-set, or allow clients to use different schema
+          for concurrent sessions/operations.</t>
+          <t>Servers can restrict some read-write datastore schema to be read-only in a schema-set.</t>
+          <t>Servers may allow clients to combine schema-sets into named custom schema-sets, or only
+          support predefined schema-sets.</t>
+        </list>
+        </t>
       </list>
       </t>
 
-      <t>The following points are non objective of this document:
+      <t>The following points are non objectives of this document:
       <list style="symbols">
 	<t>This document does not provide a mechanism to allow clients to choose arbitrary sets of YANG
 	module versions to interoperate with the server.</t>
@@ -173,66 +198,109 @@
 
 	<t>There is no requirement to support all parts of all versioned schemas.  For some nbc
 	changes in modules, it is not possible for a server to support both the old and new module
-	versions, and to convert between the two.  Where appropriate deviations can be used, and
-	otherwise an out of band mechanism is used to indicate where a mapping has failed.</t>
+	versions, and to convert between the two.  Where appropriate, deviations SHOULD be used, and
+	otherwise an out of band mechanism SHOULD be used to indicate where a mapping has
+	failed.</t>
       </list>
       </t>
     </section>
 
-    <section anchor="overview" title="Solution Overview">
-      <t>An overview of the solution is as follows:
-      <list style="numbers">
-	<t>YANG packages, specified in <xref target="I-D.rwilton-netmod-yang-packages"/>, are defined 
-	for the different versioned schema supported by a server:
-	<list style="symbols">
-	  <t>Separate packages can be defined for different families of schema, e.g., SDO,
-	  OpenConfig, or vendor native.</t>
-	  <t>Separate packages can be defined for each versioned schema within a schema family.</t>
-	  <t>Separate packages may be defined for different datastores, if the datastores use
-	  different datastore schema.  For example, a different datastore schema, and hence package,
-	  might be used for &lt;operational&gt; vs the conventional datastores.</t>
-	</list></t>
-	<t>Each server advertises, via an operational data model:
-	<list style="symbols">
-	  <t>All of the YANG packages that may be used during version selection.  The packages can
-	  also be made available for offline consumption via instance data documents, as described
-	  in <xref target="I-D.rwilton-netmod-yang-packages"/>.</t>
-	  <t>Grouped sets of versioned schema, where each set defines the versioned schema used by
-	  each supported datastore, and each versioned schema is represented by a YANG package
-	  instance.</t>
-	</list></t>
-	<t>Each server supports the operations to:
-	<list style="symbols">
-	  <t>Allow a client to configure which schema version set to use for the default
-	  NETCONF/RESTCONF connections.</t>
-	  <t>Allow a client to configure additional separate RESTCONF protocol
-	  instances, which use different schema version sets on those protocol instances. 
-	  See <xref target="restconf"/>.</t>
-	  <t>Allow a client using NETCONF to use the "select-schema-sets" RPC to choose which schema sets 
-	  it wants to use for the lifetime of the current NECONF session. See <xref target="netconf"/>.</t>
-	</list></t>
-	<t>The server internally maps requests between the different protocol instances to the
-	internal device implementation.</t>
-      </list>
+    <section anchor="overview" title="Solution">
+      <t>An outline of the solution is as follows:
+        <list style="numbers">
+	  <t>YANG packages are used to define versioned schema that represent a partial or full
+	  schema for one or more datastores.</t>
+          <t>Schema-sets are named structures that define a set of supported datastores, along with
+          the schema associated with each of those datastores, specified via leaf references to YANG
+          packages.</t>
+          <t>The configurable 'selectable' leaf-list defines which schema-sets may be selected by
+          clients, and the associated configurable 'default' leaf defines the default schema-set,
+          used by clients do not select a schema-set.</t>
+          <t>Clients choose which selectable schema-set to use via NETCONF capability exchange
+          during session initiation, or RESTCONF path.</t>
+          <t>Optionally, the configurable 'custom-schema-set' list allows clients to combine
+          schema-sets together into new named schema-sets for selection.</t>
+          <t>The 'change-selectable-schema' RPC allows clients to change the 'seletable' leaf-list,
+          'default' leaf, and provide a replacement configuration in a single operation.</t>
+          </list>
       </t>
+
+      <section anchor="packages" title="Packages">
+        <t>Section 5.3 of YANG Packages specifies how packages SHOULD be used to represent datastore schema.</t>
+	<t>Additional guidance on how YANG packages are specified for version selection are:
+	<list style="symbols">
+	  <t>Separate packages MAY be defined for different families of schema, e.g., SDO,
+	  OpenConfig, or vendor native.</t>
+	  <t>Separate packages MAY be defined for each versioned schema within a schema family.</t>
+          <t>All packages referenced for schema selection, and any recursive included package
+          dependencies, MUST be available on the server in the '/packages' container in the
+          operational state datastore.</t>
+          <t>Globally scoped packages used for schema selection SHOULD be made available offline in
+          YANG instance data documents.</t>
+	</list></t>
+      </section>
+
+      <section anchor="schema-sets" title="Schema-sets">
+        <t>A schema-set defines a set of datastore schema that could potentially be used for
+        client schema selection.</t>
+        <t>Each schema-set has a unique name that identifies the schema-set during schema selection
+        protocol operations, e.g., it is used in both the NETCONF capabilities exchange and the RESTCONF
+        path.</t>
+        <t>A schema-set defines the set of supported datastores that are available when clients use
+        the selected schema-set.  The schema for each datastore is specified as the union of one or more
+        compatible YANG packages.  Writable datastores (e.g., running) can also be labelled as being
+        read-only if they cannot be written to via client interactions using the schema-set.</t>
+        <t>Not all schema-sets are necessarily compatible with each other, allowing one schema-set
+        to be selected may prevent other schema-sets from being selected at the same time.  Hence,
+        each schema-set lists the other schema-sets that it compatible with.</t>
+        <t>The schema-sets supported by the server are available at
+        '/ietf-schema-selection/schema-set' in the operational state datastore.</t>
+        <t>TODO - It also makes sense for schema-sets to be made available offline in YANG
+        instance-data documents.  The intention is that the ietf-schema-selection YANG module should
+        be usable in a YANG instance data document.</t>
+      </section>
+
+      <section anchor="selectables" title="Defining and changing client selectable schema-sets">
+        <t>A device may have to allocate resources to support selectable schema-sets, and the selectable
+        leaf-list '/schema-set-selection/selectable' is the mechanism to constrain the set of
+        schema-sets that can be selected by clients.</t>
+        <t>In the operational state datastore, the 'selectable' leaf-list contains the names of all
+        schema-sets that a client may select from.  Entries in this list MAY be added by the system
+        without prior configuration.  In addition, the 'default' leaf indicates which schema-set is
+        used by clients that do not explicitly select a schema.</t>
+        <t>In configuration, the 'selectable' leaf-list allows clients to specify the schema-sets
+        that a client may select from.  The client can also choose the default schema-set that is
+        used if a client connects without naming a schema.</t>
+      </section>
+
+      <section anchor="protocol-ops" title="Schema selection protocol operations">
       <section anchor="netconf" title="NETCONF">
-         <section anchor="newcap" title="New capability to advertise schema sets supported">
-            <t>A new NETCONF :schema-sets capability, using base:1.1 defined in  <xref target="RFC6241"/>,
-            is used to indicate what schema sets the server is willing to support. The server sends 
-            an unordered comma separated list (with no white spaces) of schema sets it supports. A 
-            server MAY concurrently support clients using different YANG package versions.</t>
+         <section anchor="newcap" title="schema-sets NETCONF capability">
+            <t>A new NETCONF :schema-sets capability, using base:1.1 defined in <xref
+            target="RFC6241"/></t>
+            <t>This capability is used by the server is advertise selectable schema.  The server
+            sends an comma separated list (with no white spaces) of selectable schema-sets it
+            supports.  For consistency, the order of the entries in the list SHOULD match the order
+            in the '/schema-set-selection/selectable' leaf-list.</t>
+            <t>This capability is used by clients to select a particular schema.  The client sends
+            an ordered list of selectable schema that it is willing to use.</t>
+            <t>The selected schema is the first entry in the client schema-set list that is also
+            contained in the server schema-set list.  If there is no common entry then the session
+            is terminated with an error.</t>
+            <t>If the client does not include the schema-set capability during the capability
+            exchange then the default selectable schema-set is used.</t>            
             <t>The :schema-sets capability is identified by the following capability string:
             <list hangIndent="4" style="hanging">
-               <t hangText="    urn:ietf:params:netconf:capability:schema-sets:1.0"></t>
+               <t hangText="urn:ietf:params:netconf:capability:schema-sets:1.0"></t>
             </list>
             </t>
             <t>In this example, the server advertises its (abbreviated) &lt;hello&gt; as
-               follows. This indicates that the server supports the following schema sets:
+               follows. This indicates that the server supports the following schema-sets:
                <list style="hanging">
                   <t hangText="example-ietf-routing:">Versions 2.1.0 and 1.3.1</t>
                   <t hangText="example-vendor-xxx:">Versions 9.2.3 and 8.4.2</t>
                </list>
-                  
+                 
                Some extra white spaces have been added for display purposes only.
  
  <figure><artwork><![CDATA[
@@ -244,14 +312,62 @@
  urn:ietf:params:netconf:capability:schema-sets:1.0?list=
  example-ietf-routing@2.1.0,example-ietf-routing@1.3.1,
  example-vendor-xxx@9.2.3,example-vendor-xxx@8.4.2
- </capability>
+ </capability> 
  </capabilities>
  </hello>
  
 ]]></artwork></figure>
             </t>
-            <t>TODO - add mechanism to indicate default version</t>
+            <t>The client advertises its (abbreviated) &lt;hello&gt; as follows. This indicates the
+            the client prefers to use the example-ietf-routing schema version 2.1.0, but can also
+            use version 1.3.1.  Because both the client and server support version 2.1.0, and
+            because the client listed it first, the selected schema-set is
+            example-ietf-routing@2.1.0:
+                 
+               Some extra white spaces have been added for display purposes only.
+ 
+ <figure><artwork><![CDATA[
+ <hello xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
+ <capabilities>
+ <capability>urn:ietf:params:netconf:base:1.1</capability>
+ <capability>
+ urn:ietf:params:netconf:capability:schema-sets:1.0?list=
+ example-ietf-routing@2.1.0,example-ietf-routing@1.3.1
+ </capability> 
+ </capabilities>
+ </hello>
+ 
+]]></artwork></figure>
+            </t>
          </section>
+      </section>
+      <section anchor="restconf" title="RESTCONF">
+        <t>For RESTCONF, schema-sets are chosen via use of their name in the request path.</t>
+
+        <t>Clients select the desired schema-set by choosing the corresponding RESTCONF root resource</t>
+        <t>This updates Section 3.1 of <xref target="RFC8040"/>. For example, consider a device
+        which has been configured with root-path "/restconf/example-ietf-routing-1.3.1" for
+        secondary schema-set "example-ietf-routing-1.3.1". Any operations by the client on
+        schema-set "example-ietf-routing-1.3.1" would use "/restconf/example-ietf-routing-1.3.1" as
+        the RESTCONF root resource.</t>
+
+        <t>TODO - Expand this explanation</t>
+      </section>
+    </section>
+    <section anchor="custom_schema_sets" title="Custom schema-sets">
+      <t>Custom schema-sets, if supported by the server, allow clients to:
+      <list>
+        <t>Configure client meaningful names for selectable schema-sets.</t>
+        <t>Combine compatible schema-sets together into a combined named schema-set that is then
+        selectable by clients.  E.g. a client might want to use a combination of standard
+        configuration models along with vendor configuration models to manage functionality not
+        covered by the standard models.</t>
+      </list>
+      </t>
+    </section>
+  </section>
+  <section anchor="protocol" title="RPC protocol">
+    <t>TODO - This section needs to be reworked for the updated RPC that only changes schema selection.</t>
          <section title="&lt;select-schema-sets&gt; operation">
             <t>Description: Used by a client to select schema-sets which 
                have been advertised by the server via the mechanism described above in <xref target="newcap"/>.
@@ -268,7 +384,7 @@
       &lt;rpc-reply&gt; if the request cannot be completed for any reason. A &lt;select-schema-sets&gt; operation 
       can fail for a number of reasons, such as a YANG package version is not supported by the server, or a
       different version of a YANG package has already been selected by another client.</t>
-            <t>Example: a client selects schema sets example-ietf-routing version 1.3.1 and example-vendor-xxx version 9.2.3:
+            <t>Example: a client selects schema-sets example-ietf-routing version 1.3.1 and example-vendor-xxx version 9.2.3:
 <figure><artwork><![CDATA[
      <rpc message-id="101"
           xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
@@ -282,28 +398,14 @@
 
      <rpc-reply message-id="101"
           xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
-       <ok/> <!-- Schema set selection succeeded -->
+       <ok/> <!-- schema-set selection succeeded -->
      </rpc-reply>
 
 ]]></artwork></figure>                  
                </t>
                <t>TODO - add error indication</t>
          </section>
-      </section>
-      <section anchor="restconf" title="RESTCONF">
-         <t>To enable servers which can support different versions of YANG packages:
-            <list style="symbols">
-               <t>On servers, a unique RESTCONF root resource can be configured to map to each schema-set</t>
-               <t>A default schema-set can be configured.</t>
-            </list>
-         </t>
-         <t>Clients select the desired schema-set by choosing the corresponding RESTCONF root resource</t>
-         <t>This updates Section 3.1 of <xref target="RFC8040"/>. For example, consider a device which has
-            been configured with root-path "/restconf/example-ietf-routing-1.3.1" for secondary schema set
-            "example-ietf-routing-1.3.1". Any operations by the client on schema set "example-ietf-routing-1.3.1"
-            would use "/restconf/example-ietf-routing-1.3.1" as the RESTCONF root resource.</t>
-      </section>
-    </section>
+      </section>      
     <section title="Version selection from a server perspective">
     <t>The general premise of this solution is that servers generally implement one native schema,
     and the version selection scheme is used to support older version of that native schema and also
@@ -316,20 +418,20 @@
     <t>Server implementations MUST serialize configuration requests across the different schema.
     The expectation is that this would be achieved by mapping all requests to the device's native
     schema version.</t>
-    <t>Datastore validation needs to be performed in two places, firstly in whichever schema a
+    <t>Datastore validation MAY need to be performed in two places, firstly in whichever schema a
     client is interacting in, and secondly in the native schema for the device.  This could have a
     negative performance impact.</t>
     <t>Depending on the complexity of the mappings between schema versions, it may be necessary for
     the mappings to be stateful.</t>
-    <t>TODO - Figure out how hot fixes that slightly modify the schema are handled.</t>
     </section>
-    <section title="Version selection from a client's perspective">
-      <t>Clients can use configuration to choose which schema sets are available.</t>
+    <section title="Version selection from a client perspective">
+      <t>Clients can use configuration to choose which schema-sets are
+      available for selection.</t>
       <t>Clients cannot choose arbitrary individual YANG module versions, and are instead constrained
-      by the versions that the server makes available.</t>
-      <t>Each client protocol connection is to one particular schema set.  From that client session
+      by the versions that the server makes available via schema-sets.</t>
+      <t>Each client protocol connection is to one particular schema-set.  From that client session
       perspective it appears as if the client is interacting with a regular server.  If the client
-      queries YANG library that the version of YANG Library that is returned matches the schema set
+      queries YANG library that the version of YANG Library that is returned matches the schema-set
       that is being used for that server instance.</t>
       <t>The server may not support a schema with the exact version desired by the client, and they
       have to accept a later version that is backwards compatible with their desired version.
@@ -341,7 +443,6 @@
       <t>If clients interact with a server using multiple versions, they should not exact that all
       data nodes in later module versions can always be backported to older schema versions.  TODO -
       Specify how mapping errors can be reported to client.</t>
-      
     </section>
     <section title="Limitations of the solution">
       <t>Not all schema conversions are possible.  E.g. an impossible type conversion, or something
@@ -356,10 +457,10 @@
       <t>The primary schema-set is the datastore schema reported by YANG Library.</t>
       <t>If secondary schema-sets are configured:
       <list>
-         <t>With NETCONF, the "select-schema-sets" RPC is used by the client to chosse which schema set(s) 
+         <t>With NETCONF, the "select-schema-sets" RPC is used by the client to chosse which schema-set(s) 
             it wants to use for the current NETCONF session.</t>
          <t>With RESTCONF, the configured root path prefix is used by the client for a particular 
-            schema set.</t>
+            schema-set.</t>
       </list>
       </t>
       <t>Different schema-sets may support different datastores.</t>
@@ -368,28 +469,44 @@
         <preamble>The "ietf-schema-version-selection" YANG module has the following structure:</preamble>
         <artwork>
           <![CDATA[
-module: ietf-schema-version-selection
-  +--rw schema-selection
-     +--rw schema-sets* [name]
-     |  +--rw name          string
-     |  +--ro datastores* [datastore]
-     |     +--ro datastore    ds:datastore-ref
-     |     +--ro packages* [package]
-     |        +--ro package    -> /yanglib:yang-library/pkg:package/name
-     |        +--ro version?   -> /yanglib:yang-library/pkg:package[pkg:name = current()
-     |                            /../package]/version
-     +--rw restconf {secondary-schema-set}?
-     |  +--rw schema-sets* [schema-set]
-     |     +--rw schema-set    -> /schema-selection/schema-sets/name
-     |     +--rw root-path     inet:uri
-     +--rw default-schema-set?   -> /schema-selection/schema-sets/name {default-schema-set}?
+module: ietf-schema-selection
+  +--rw schema-set-selection!
+     +--rw selectable*   -> /schema-set-selection/schema-set/name
+     +--rw default       -> /schema-set-selection/selectable
+     +--rw custom* [name] {custom-schema-set}?
+     |  +--rw name               string
+     |  +--rw description?       string
+     |  +--rw included-schema*
+     |          -> /schema-set-selection/schema-set/name
+     +--ro schema-set* [name]
+        +--ro name                 string
+        +--ro partial?             empty
+        +--ro datastore* [name]
+        |  +--ro name         ds:datastore-ref
+        |  +--ro read-only?   empty
+        |  +--ro package* [name version]
+        |     +--ro name        -> /pkgs:packages/package/name
+        |     +--ro version     leafref
+        |     +--ro checksum?   leafref
+        +--ro compatible-with*
+        |       -> /schema-set-selection/schema-set/name
+        +--ro custom-selectable! {custom-schema-set}?
+           +--ro combinable*
+                   -> /schema-set-selection/schema-set/name
 
   rpcs:
-    +---x select-schema-sets
+    +---x change-selectable-schema
        +---w input
-          +---w schema-sets* [schema-set]
-             +---w schema-set    -> /schema-selection/schema-sets/name
-               
+          +---w old
+          |       -> /schema-set-selection/selectable
+          +---w new
+          |       -> /schema-set-selection/schema-set/name
+          +---w make-default?               empty
+          +---w (config)
+             +--:(translate)
+             |  +---w translate?            empty
+             +--:(replacement-config)
+                +---w replacement-config?   <anydata>
           ]]>
         </artwork>
       </figure>
@@ -400,31 +517,32 @@ module: ietf-schema-version-selection
       <figure>
         <artwork>
           <![CDATA[
-<CODE BEGINS> file "ietf-schema-version-selection@2019-10-31.yang"
-module ietf-schema-version-selection {
+<CODE BEGINS> file "ietf-schema-version-selection@2019-11-29.yang"
+module ietf-schema-selection {
   yang-version 1.1;
   namespace
-    "urn:ietf:params:xml:ns:yang:ietf-schema-version-selection";
-  prefix "ver-sel";
+    "urn:ietf:params:xml:ns:yang:ietf-schema-selection";
+  prefix "schema";
 
-  import ietf-inet-types {
-    prefix inet;
-    reference "RFC 6991: Common YANG Data Types.";
+  import ietf-yang-revisions {
+    prefix rev;
+    reference "XXXX: Updated YANG Module Revision Handling";
   }
+
   import ietf-datastores {
     prefix ds;
+    rev:revision-or-derived 2018-02-14;
     reference
       "RFC 8342: Network Management Datastore Architecture (NMDA)";
   }
-  import ietf-yang-library {
-    prefix yanglib;
-    reference "RFC 8525: YANG Library";
-  }
-  import ietf-yl-packages {
-    prefix pkg;
-    reference "draft-rwilton-netmod-yang-packages-02";
+
+  import ietf-yang-packages {
+    prefix pkgs;
+    rev:revision-or-derived 0.2.0;
+    reference "RFC XXX: YANG Packages.";
   }
 
+  
   organization
     "IETF NETMOD (Network Modeling) Working Group";
 
@@ -453,13 +571,20 @@ module ietf-schema-version-selection {
      (http://trustee.ietf.org/license-info).
 
      This version of this YANG module is part of RFC XXXX; see
-     the RFC itself for full legal notices.";
+     the RFC itself for full legal notices.
+
+     The key words 'MUST', 'MUST NOT', 'REQUIRED', 'SHALL', 'SHALL
+     NOT', 'SHOULD', 'SHOULD NOT', 'RECOMMENDED', 'NOT RECOMMENDED',
+     'MAY', and 'OPTIONAL' in this document are to be interpreted as
+     described in BCP 14 (RFC 2119) (RFC 8174) when, and only when,
+     they appear in all capitals, as shown here.";
+
 
   // RFC Ed.: update the date below with the date of RFC publication
   // and remove this note.
   // RFC Ed.: replace XXXX with actual RFC number and remove this
   // note.
-  revision 2019-10-31 {
+  revision 2019-11-29 {
     description
       "Initial revision";
     reference
@@ -469,152 +594,250 @@ module ietf-schema-version-selection {
   /*
    * Features
    */
-
-  feature "default-schema-set" {
+  feature "custom-schema-set" {
     description
-      "Feature that allows clients to choose the default schema set
-       to be used for clients.
-
-       Implementations may choose to only support this feature in
-       <operational> to report the default-schema-set without
-       allowing it to be configured.";
+      "Feature to choose whether clients may configurable custom
+       schema definitions.";
   }
 
-  feature "secondary-schema-set" {
+  /*
+   * Top level data nodes.
+   */
+  
+  container schema-set-selection {
+    presence "Enable schema selection";
+    
     description
-      "Feature to choose if secondary schema sets may be configured by
-       clients.
+      "YANG schema-set selection.
 
-       Implementations may choose to only support this feature in
-       <operational> to report secondary schema sets without
-       allowing them to be configured.";
-  }
-
-  container schema-selection {
+       Contains configuration and state related to client selectable
+       YANG schema-sets.";
+        
+    leaf-list selectable {
+      type leafref {
+        path "/schema-set-selection/schema-set/name";
+        require-instance false;
+      }
+      min-elements 1;
+      
       description
-        "YANG schema version selection";
+        "Specifies the selectable schema used by this server, that
+         can be selected by clients (either through NETCONF
+         capability negotiation or RESTCONF schema specific path).";
+    }
 
-    list schema-sets {
+    leaf default {
+      type leafref {
+        path "/schema-set-selection/selectable";
+      }
+      mandatory true;
+      description
+        "Defines the default schema-set used by this server.
+
+         This is the schema-set that is chosen if a NETCONF client
+         doesn't select a schema during capability negotiation, or if
+         the standard RESTCONF (or NMDA datastore URLs) are used.";
+    }
+
+    list custom {
+      if-feature "custom-schema-set";
       key "name";
-
+      
       description
-        "All schema-sets that are available for selection by clients.";
-
+        "Defines a custom selectable schema constructed from
+         compatible schema";
+      
       leaf name {
-        type "string" {
-          length "1..255";
-        }
+        type "string";
         description
-          "The server assigned name of the schema-set.
+          "Name of custom schema.
 
-           This should include the schema family, and appropriate
-           versioning or release information";
+           Format can either be the form of a YANG identifer, or
+           '<name>@<rev-label>'.
+
+           The selectable-schema name is used in NETCONF capabilties
+           negotiation and also the RESTCONF path (XXX, is encoding
+           required, e.g. for '@'?)";
       }
 
-      list datastores {
-        config false;
-        key "datastore";
+      leaf description {
+        type string;
+        description
+          "The description associated with this custom package.";
+      }
+
+      leaf-list included-schema {
+        type leafref {
+          path "/schema-set-selection/schema-set/name";
+          require-instance false;
+        }
+        description
+          "Lists the schema that are combined together into a single
+           selectable schema (i.e. via a union operation on each
+           datastore schema package).";
+      }
+    }
+    
+    list schema-set {
+      key "name";
+      config false;
+
+      description
+        "Lists all available schema-set's that can be used in schema
+         version selection.";
+      
+      leaf name {
+        type string;
 
         description
-          "The list of datastores supported for this schema set";
+          "Name of the schema.
 
-        leaf datastore {
+           Do we restrict what is allowed, specifically, do we allow
+           '@'";
+      }
+
+      leaf partial {
+        type empty;
+        
+        description
+          "Indicates that this schema-set only represents a subset of
+           the full configurable schema of the device.";
+      }
+            
+      list datastore {
+        key "name";
+
+        description
+          "The list of datastores supported for this pan-datastore
+           selectable-package, along with the package schema
+           associated with that datastore.";
+
+        leaf name {
           type ds:datastore-ref;
           description
             "The datastore that this datastore schema is associated
-             with";
+             with.";
           reference
             "RFC 8342: Network Management Datastore Architecture
              (NMDA)";
         }
 
-        list packages {
-          key "package";
+        leaf read-only {
+          type empty;
           description
-            "YANG packages associated with this datastore schema";
+            "For datastores that are normally writable, the read-only
+             flag indicates that the datastore cannot be written
+             using this schema-set.  E.g., if <running> was a
+             supported datastore then it could be read, but not
+             written.
 
-          leaf package {
-            type leafref {
-              path "/yanglib:yang-library/pkg:package/pkg:name";
-            }
-            description
-              "The name of the YANG package this schema relates to";
-          }
-          leaf version {
-            type leafref {
-              path '/yanglib:yang-library/'
-               + 'pkg:package[pkg:name = current()/../package]/'
-               + 'pkg:version';
-            }
+             This flag is not required for datastores, like
+             operational, that are defined as being read-only.";
+        }
 
-            description
-              "The version of the YANG package this schema relates to";
-          }
+        list package {
+          key "name version";
+
+          description
+            "YANG packages that define the datastore schema
+
+             The datastore schema is defined as the union of all
+             datastore packages.";
+
+          uses pkgs:yang-pkg-ref;
         }
       }
-    }
 
+      leaf-list compatible-with {
+        type leafref {
+          path "/schema-set-selection/schema-set/name";
+        }
+        description
+          "Lists other schema-sets that MAY be selected at the same
+           time as this schema.";
+      }
 
-    container restconf {
-      if-feature "secondary-schema-set";
+      container custom-selectable {
+        if-feature "custom-schema-set";
+        presence
+          "This schema MAY be selected as part of a custom
+           schema-set.";
+        description
+          "Indicates that this schema-set is selectable as part of a
+           custom schema-set and also lists other schema-sets that
+           may be combined together into a custom schema-set.";
 
-      description
-        "RESTCONF protocol settings for schema sets";
-
-      list schema-sets {
-        key "schema-set";
-        unique "root-path";
-        description "The schema-sets accessed via RESTCONF";
-
-        leaf schema-set {
+        leaf-list combinable {
           type leafref {
-            path '/schema-selection/schema-sets/name';
+            path "/schema-set-selection/schema-set/name";
           }
-          description "A schema-set being used by RESTCONF";
-        }
-        leaf root-path {
-          type inet:uri;
-          mandatory true;
           description
-            "The root path to use to access the RESTCONF
-            protocol instance for this schema-set";
-          reference
-            "RFC8040";
+            "Lists the schema-sets that MAY be combined with this
+             schema into a single custom schema-set'.";
         }
       }
-    }
-
-    leaf default-schema-set {
-      if-feature "default-schema-set";
-      type leafref {
-        path '/schema-selection/schema-sets/name';
-      }
-      description
-        "Specifies the default schema-set used by this device.  This
-         is the set of datastore schema that is used if a client
-         connects using the standard URLs";
     }
   }
 
   /*
    * RPCs
    */
-   rpc select-schema-sets {
-     description
-       "This RPC allows a NETCONF client to select which schema-sets, among the
-        ones advertised by the server, the clients wants to use for this session";
+  
+  rpc change-selectable-schema {
+    description
+      "RPC to allow a client to change the schema-set used by
+       a server.";
 
-     input {
-       list schema-sets {
-         key "schema-set";
-         leaf schema-set {
-           type leafref {
-             path '/schema-selection/schema-sets/name';
-           }
-         }
-       }
-     }
-   }
+    input {
+      leaf old {
+        type leafref {
+          path "/schema-set-selection/selectable";
+        }
+        mandatory true;
+        description
+          "Selectable schema-set in use by this server.";
+      }
+      leaf new {
+        type leafref {
+          path "/schema-set-selection/schema-set/name";
+        }
+        mandatory true;
+        description
+          "Changes the schema-set used by this server.";
+      }
+      leaf make-default {
+        type empty;
+
+        description
+          "Indicates that the schema-set should become the default
+           schema-set used by the server.";
+      }
+
+      choice config {
+        mandatory true;
+        description
+          "Specifies how the configuration is handled when the
+           default schema is changed to the new schema-set.";
+        
+        leaf translate {
+          type empty;
+          description
+            "Translate the existing configuration to the new
+             schema-set, or fail the operation if this is not
+             possible.";
+        }
+
+        anydata replacement-config {
+          description
+            "The configuration, in a form compatible with the new
+             schema-set, that is used to replace the existing
+             configuration, when it is changed to the new schema-set.
+             The operational MUST be failed if this new configuration
+             is not valid.";
+        }
+      }
+    }
+  }
 }
 <CODE ENDS>
 ]]>
@@ -680,5 +903,336 @@ module ietf-schema-version-selection {
       <?rfc include="reference.I-D.ietf-netmod-artwork-folding"?>
     </references>
     <?rfc needLines="100"?>
+    <section title="Version selection examples">
+      <t>Some common simplifications have been made to all of the examples:
+      <list>
+        <t>Only the packages and schema-selection subtrees are
+        illustrated.  Other parts of '/yang-library' are omitted for
+        brevity.</t>
+        <t>Only minimal information is provided in the package
+        definitions.</t>
+        <t>Package and module checksums have been omitted to minimize
+        line wrapping.</t>
+      </list>
+      </t>
+      <section title="Supporting older versions of a schema">
+        <t>To facilitate an easier migration path for clients, a server may choose to support older
+        versions of a schema, for example this might be done to minimize impact on clients if
+        non-backwards-compatible changes have been made between schema versions.</t>
+        <t>It is expected that the server can dynamically translate from the older schema version to
+        the latest, but this is not possible in all cases (e.g., if support for some functionality
+        has been removed from the server), when deviations against the old schema version may be
+        required to accurately describe the supported functionality.</t>
+        <t>The example below illustrates a server that offers up two versions of the vendor's native
+        schema, and allows the client to choose which version to use as the device default schema.
+        The device defaults to the latest version of the schema, 'vendor-schema@2.1.0', but the
+        client may configure the device to instead use an earlier version of the schema,
+        'vendor-schema@1.4.5'.  Modifying the devices default schema means that this will be the
+        schema version that all clients see, is the schema version used for persisted configuration
+        (e.g., written to the startup datastore), and will be used for the datastore schema reported
+        in YANG library.</t>
+        <t>TODO - Insert instance data examples</t>
+        <t>This example illustrates a device is that capable of supporting 3 different versions of its native manageability schema.
+ - The clients can decide (via configuration or RPC) which version of schema should be supported by the device, and which version is default.</t>
+<t>  
+  Variantions:
+  <list>
+    <t>If the device could only support the clients interacting with a single verison of the schema,
+    it could deviate "/schema-set-selection/selectable" to constrain the maximum number of elements
+    to 1 (which must also be the default schema).</t>
+    
+    <t>If the device could only support clients configuring the device using a single schema
+    version, but allow the configuration to be read back in later versions, then that can be
+    acheived via having separate read-only and read-write versions of the schema-sets.  The
+    "compatible-with" leaf-list could ensure that the necessary constraints are expressed in
+    /schema-set-selection/schema-set/.</t>
+  </list>
+</t>
+        <figure>
+        <preamble></preamble>
+        <artwork>
+          <![CDATA[
+<?xml version="1.0" encoding="utf-8"?>
+<rpc-reply xmlns="urn:ietf:params:xml:ns:netconf:base:1.0" message-id="101">
+    <data>
+        <yang-library>
+            <package>
+                <name>vendor-schema</name>
+                <version>3.0.0</version>
+                <module>
+                    <name>vendor-interfaces</name>
+                    <revision>3.0.0</revision>
+                </module>
+                <module>
+                    <name>vendor-routing-protocol</name>
+                    <revision>2.0.0</revision>
+                </module>
+            </package>
+            <package>
+                <name>vendor-schema</name>
+                <version>2.1.0</version>
+                <module>
+                    <name>vendor-interfaces</name>
+                    <revision>3.0.0</revision>
+                </module>
+                <module>
+                    <name>vendor-routing-protocol</name>
+                    <revision>1.3.1</revision>
+                </module>
+            </package>
+            <package>
+                <name>vendor-schema</name>
+                <version>1.4.5</version>
+                <module>
+                    <name>vendor-interfaces</name>
+                    <revision>2.0.0</revision>
+                </module>
+                <module>
+                    <name>vendor-routing-protocol</name>
+                    <revision>1.2.1</revision>
+                </module>
+            </package>
+        </yang-library>
+        <schema-set-selection>
+            <schema-set>
+                <name>vendor-schema@3.0.0</name>
+                <common-package>
+                    <name>vendor-schema</name>
+                    <version>3.0.0</version>
+                </common-package>
+                <datastore>
+                    <name>ds:running</name>
+                </datastore>
+                <datastore>
+                    <name>ds:operational</name>
+                </datastore>
+                <compatible-with>vendor-schema@1.4.5</compatible-with>
+                <compatible-with>vendor-schema@2.1.0</compatible-with>
+            </schema-set>
+            <schema-set>
+                <name>vendor-schema@2.1.0</name>
+                <common-package>
+                    <name>vendor-schema</name>
+                    <version>2.1.0</version>
+                </common-package>
+                <datastore>
+                    <name>ds:running</name>
+                </datastore>
+                <datastore>
+                    <name>ds:operational</name>
+                </datastore>
+                <compatible-with>vendor-schema@1.4.5</compatible-with>
+                <compatible-with>vendor-schema@3.0.0</compatible-with>
+            </schema-set>
+            <schema-set>
+                <name>vendor-schema@1.4.5</name>
+                <comon-package>
+                    <name>vendor-schema</name>
+                    <version>1.4.5</version>
+                </common-package>
+                <datastore>
+                    <name>ds:running</name>
+                </datastore>
+                <datastore>
+                    <name>ds:operational</name>
+                </datastore>
+                <compatible-with>vendor-schema@2.1.0</compatible-with>
+                <compatible-with>vendor-schema@3.0.0</compatible-with>
+            </schema-set>
+        </schema-set-selection>
+    </data>
+</rpc-reply>
+
+Choosing/configuring the device default schema to run version 2.1.0 of the software.
+
+<?xml version="1.0" encoding="utf-8"?>
+<config xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
+    <schema-set-selection>
+        <selectable>vendor-schema@1.4.5</selectable>
+        <default>vendor-schema@1.4.5</default>
+    </schema-set-selection>
+</config>
+]]>
+        </artwork>
+      </figure>
+
+      </section>
+      <section title="Supporting different schema families">
+        <t>Some devices may allow clients to configure the device using
+        different YANG schema (e.g. vendor native, vs IETF, vs
+        OpenConfig).</t>
+        <t>TODO - Expand description</t>
+        <figure>
+        <preamble></preamble>
+        <artwork>
+          <![CDATA[
+Schema families, with custom schema
+===================================
+
+This example illustrates a device is that capable of supporting 3 different schema families (native, oc, ietf).
+
+The clients may configure the device in three different ways:
+
+(1) If the client wants to use a single schema family for all interactions with the device then they can choose a single schema-set and configure it as the default schema-set:
+
+<?xml version="1.0" encoding="utf-8"?>
+<config xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
+    <schema-set-selection>
+        <selectable>oc-schema</selectable>
+        <default>oc-schema</default>
+    </schema-set-selection>
+</config>
+
+
+(2) If the clients wants to use multiple schema families, but restrict some interactions to a particular schema family, then they configure the default schema as "combined-schema", but also configure their desired secondary schema (any combination or "vendor-schema", "ietf-schema" or "oc-schema").
+
+<?xml version="1.0" encoding="utf-8"?>
+<config xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
+    <schema-set-selection>
+        <selectable>combined-schema</selectable>
+        <selectable>oc-schema</selectable>
+        <default>combined-schema</default>
+    </schema-set-selection>
+</config>
+
+
+(3) If there is a need for the client to use ietf or OC schema alongside the vendor schema, then this can be achieved by configuring a custom schema.  Two custom schema can be configured, either "vendor + ietf schema", or "vendor + oc schema".  Once the custom schema has been configured then it could be used either as the single default schema, or it could be used as a selectable schema with the default schema set to "combined-schema".
+
+<?xml version="1.0" encoding="utf-8"?>
+<config xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
+    <schema-set-selection>
+        <custom>
+            <name>my-custom-schema</name>
+            <description>Restrict the primary schema to OC and vendor</description>
+            <included-schema>vendor-schema</included-schema>
+            <included-schema>oc-schema</included-schema>
+        </custom>
+        <selectable>my-custom-schema</selectable>
+        <default>my-custom-schema</default>
+    </schema-set-selection>
+</config>
+
+
+Note, for the last case, rather than requiring the client to configure custom schema, the device could predefine "vendor + ietf" and "vendor + oc" schema-sets.
+
+<?xml version="1.0" encoding="utf-8"?>
+<rpc-reply xmlns="urn:ietf:params:xml:ns:netconf:base:1.0" message-id="101">
+    <data>
+        <yang-library>
+            <package>
+                <name>vendor-schema</name>
+                <version>1.0.0</version>
+                <module>
+                    <name>vendor-interfaces</name>
+                    <!--Module list of vendor YANG modules elided for brevity -->
+                </module>
+            </package>
+            <package>
+                <name>ietf-schema</name>
+                <version>1.0.0</version>
+                <module>
+                    <name>ietf-interfaces</name>
+                    <!--Module list of IETF YANG modules elided for brevity -->
+                </module>
+            </package>
+            <package>
+                <name>oc-schema</name>
+                <version>1.0.0</version>
+                <module>
+                    <name>openconfig-interfaces</nmae>
+                    <!--Module list of OpenConfig YANG modules elided for brevity -->
+                </module>
+            </package>
+        </yang-library>
+        <schema-set-selection>
+            <schema-set>
+                <name>full-schema</name>
+                <common-package>
+                    <name>vendor-schema</name>
+                    <version>1.0.0</version>
+                </common-package>
+                <common-package>
+                    <name>ietf-schema</name>
+                    <version>1.0.0</version>
+                </common-package>
+                <common-package>
+                    <name>oc-schema</name>
+                    <version>1.0.0</version>
+                </common-package>
+                <datastore>
+                    <name>ds:running</name>
+                </datastore>
+                <datastore>
+                    <name>ds:operational</name>
+                </datastore>
+            </schema-set>
+            <schema-set>
+                <name>vendor-schema</name>
+                <partial/>
+                <common-package>
+                    <name>vendor-schema</name>
+                    <version>1.0.0</version>
+                </common-package>
+                <datastore>
+                    <name>ds:running</name>
+                </datastore>
+                <datastore>
+                    <name>ds:operational</name>
+                </datastore>
+                <compatible-with>combined-schema</compatible-with>
+                <compatible-with>ietf-schema</compatible-with>
+                <compatible-with>oc-schema</compatible-with>
+                <custom-selectable>
+                    <combinable>ietf-schema</combinable>
+                    <combinable>oc-schema</combinable>
+                </custom-selectable>
+            </schema-set>
+            <schema-set>
+                <name>ietf-schema</name>
+                <partial/>
+                <common-package>
+                    <name>ietf-schema</name>
+                    <version>1.0.0</version>
+                </common-package>
+                <datastore>
+                    <name>ds:running</name>
+                </datastore>
+                <datastore>
+                    <name>ds:operational</name>
+                </datastore>
+                <compatible-with>combined-schema</compatible-with>
+                <compatible-with>vendor-schema</compatible-with>
+                <compatible-with>oc-schema</compatible-with>
+                <custom-selectable>
+                    <combinable>vendor-schema</combinable>
+                </custom-selectable>
+            </schema-set>
+            <schema-set>
+                <name>oc-schema</name>
+                <partial/>
+                <common-package>
+                    <name>oc-schema</name>
+                    <version>1.0.0</version>
+                </common-package>
+                <datastore>
+                    <name>ds:running</name>
+                </datastore>
+                <datastore>
+                    <name>ds:operational</name>
+                </datastore>
+                <compatible-with>combined-schema</compatible-with>
+                <compatible-with>vendor-schema</compatible-with>
+                <compatible-with>ietf-schema</compatible-with>
+                <custom-selectable>
+                    <combinable>vendor-schema</combinable>
+                </custom-selectable>
+            </schema-set>
+        </schema-set-selection>
+    </data>
+</rpc-reply>]]>
+        </artwork>
+      </figure>
+    </section>
+    </section>
   </back>
 </rfc>
