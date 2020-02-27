@@ -12,6 +12,7 @@
   <!ENTITY RFC8040 SYSTEM "reference.RFC.8040.xml">
   <!ENTITY RFC8174 SYSTEM "reference.RFC.8174.xml">
   <!ENTITY RFC8342 SYSTEM "reference.RFC.8342.xml">
+  <!ENTITY RFC8342 SYSTEM "reference.RFC.8527.xml">
 ]>
 <?xml-stylesheet type="text/xsl" href="rfc2629.xslt" ?>
 <?rfc toc="yes"?>
@@ -359,17 +360,47 @@
          </section>
       </section>
       <section anchor="restconf" title="RESTCONF">
-        <t>For RESTCONF, schema-sets are chosen via use of their name in the request path.</t>
-        <t>If the chosen schema-set is not available then the SERVER MUST fail the operation and
-        return an XXX error.</t>
-        <t>Clients select the desired schema-set by choosing the corresponding RESTCONF root resource</t>
-        <t>This updates Section 3.1 of <xref target="RFC8040"/>. For example, consider a device
-        which has been configured with root-path "/restconf/example-ietf-routing-1.3.1" for
-        secondary schema-set "example-ietf-routing-1.3.1". Any operations by the client on
-        schema-set "example-ietf-routing-1.3.1" would use "/restconf/example-ietf-routing-1.3.1" as
-        the RESTCONF root resource.</t>
+        <t>For RESTCONF, schema-sets are chosen via use of their name in the
+        request URI.</t>
 
-        <t>TODO - Expand this explanation</t>
+        <t>Clients select the desired schema-set by choosing the corresponding
+        RESTCONF root resource. This is done by appending the schema-set name to
+        the RESTCONF API root <xref target="RFC8040"/>. This updates Section 3.1
+        of <xref target="RFC8040"/> and Section 3 of <xref target="RFC8527"/>.</t>
+
+        <t>Clients will use RESTCONF root resource {+restconf}/schema/&lt;schema-name&gt;
+        for all requests pertaining to resources specific to a schema-set.
+        Consider a device which supports schema-sets vendor-schema@3.0.0,
+        vendor-schema@2.1.0 and vendor-schema@1.4.5: clients will use RESTCONF
+        root resource {+restconf}/schema/vendor-schema@X.Y.Z for all requests
+        pertaining to resources defined in schema-set vendor-schema@X.Y.Z. This
+        applies to all RESTCONF resources defined in vendor-schema@X.Y.Z.</t>
+
+        <t>Here are some examples where {+restconf} is /restconf/.</t>
+
+        <t>Examples for servers which are NOT NMDA-compliant as per
+        <xref target="RFC8527"/>:
+        <list style="numbers">
+          <t>/restconf/schema/vendor-schema@X.Y.Z/data for datastore resources.</t>
+          <t>/restconf/schema/vendor-schema@X.Y.Z/data/module-A:data-X for data resource
+          ”data-X” defined in module ”module-A”.</t>
+          <t>/restconf/schema/vendor-schema@X.Y.Z/operations/module-B:op-Y for RPC
+          ”op-Y” defined in module ”module-B”</t>
+          <t>/restconf/schema/vendor-schema@X.Y.Z/data/module-C:containerZ/myaction for
+          action “myaction” defined  in top-container “containerZ” of module ”module-C”</t>
+        </list>
+        </t>
+        <t>Examples for servers which are NMDA-compliant as per <xref target="RFC8527"/>:
+        <list style="numbers">
+          <t>/restconf/schema/vendor-schema@X.Y.Z/ds/&lt;datastore&gt;/ for datastore
+          resources, e.g. /restconf/schema/vendor-schema@X.Y.Z/ds/ietf-datastores:running
+          refers to the Running configuration datastore.</t>
+          <t>/restconf/schema/vendor-schema@X.Y.Z/ds/ietf-datastores:operational
+          for YANG actions.</t>
+        </list>
+        </t>
+        <t>If the chosen schema-set is not available then an error response
+        containing a "404 Not Found" status-line MUST be returned by the server.</t>
       </section>
     </section>
     <section anchor="custom_schema_sets" title="Custom schema-sets">
@@ -826,6 +857,7 @@ module ietf-schema-selection {
       <?rfc include="reference.RFC.8174"?>
       <?rfc include="reference.RFC.8342"?>
       <?rfc include="reference.RFC.8525"?>
+      <?rfc include="reference.RFC.8527"?>
       <?rfc include="reference.I-D.verdt-netmod-yang-versioning-reqs"?>
       <?rfc include="reference.I-D.verdt-netmod-yang-module-versioning"?>
       <?rfc include="reference.I-D.verdt-netmod-yang-semver"?>
