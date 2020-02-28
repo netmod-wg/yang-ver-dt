@@ -93,13 +93,11 @@
 	  taking into consideration any deviations and enabled features.</t>
 	  <t>versioned schema: A YANG schema with an associated YANG semantic version number, e.g.,
 	  as might be described by a YANG package<xref target="I-D.rwilton-netmod-yang-packages"/>.</t>
-	  <t>schema set: A named set of datastore schemas for supported datastores, where every
-	  datastore schema is specified as a union of compatible YANG packages.  A schema set is the
+	  <t>schema-set: A named set of datastore schemas for supported datastores, where every
+	  datastore schema is specified as a union of compatible YANG packages.  A schema-set is the
 	  basic unit of client schema selection.</t>
         </list>
       </t>
-      <t>TODO - 'YANG schema' and 'versioned schema' could be defined in the
-      packages draft.</t>
     </section>
     <section anchor="intro" title="Introduction">
       <t>This document describes how NETCONF and RESTCONF clients can use protocol extensions, along
@@ -267,9 +265,6 @@
         <t>Not all schema-sets are necessarily compatible with each other, allowing one schema-set
         to be selected may prevent other schema-sets from being selected at the same time.  Hence,
         each schema-set lists the other schema-sets that it compatible with.</t>
-        <t>TODO - It also makes sense for schema-sets to be made available offline in YANG
-        instance-data documents.  The intention is that the ietf-schema-selection YANG module should
-        be usable in a YANG instance data document.</t>
       </section>
 
       <section anchor="selectables" title="Defining and changing client selectable schema-sets">
@@ -360,7 +355,7 @@
       </section>
       <section anchor="restconf" title="RESTCONF">
         <t>For RESTCONF, schema-sets are chosen via use of their name in the request path.</t>
-        <t>If the chosen schema-set is not available then the SERVER MUST fail the operation and
+        <t>If the chosen schema-set is not available then the server MUST fail the operation and
         return an XXX error.</t>
         <t>Clients select the desired schema-set by choosing the corresponding RESTCONF root resource</t>
         <t>This updates Section 3.1 of <xref target="RFC8040"/>. For example, consider a device
@@ -368,8 +363,6 @@
         secondary schema-set "example-ietf-routing-1.3.1". Any operations by the client on
         schema-set "example-ietf-routing-1.3.1" would use "/restconf/example-ietf-routing-1.3.1" as
         the RESTCONF root resource.</t>
-
-        <t>TODO - Expand this explanation</t>
       </section>
     </section>
     <section anchor="custom_schema_sets" title="Custom schema-sets">
@@ -411,8 +404,9 @@
       perspective it appears as if the client is interacting with a regular server using the
       selected schema.  If the client queries YANG library, then the version of YANG Library that is
       returned matches the schema-set that has been selected by the client.</t>
-      <t>The selection of a schema-set by a client MUST NOT change the behavior of other clients
-      connected using a different schema set.</t>
+      <t>The selection of a schema-set by a client MUST NOT change the behaviour of the server
+      experienced by other clients.  For example, the get-data response to one client MUST be the
+      same before and after another client selects a schema-set.</t>
       <t>The server may not support a schema with the exact version desired by the client, and the client
       may have to choose a later version that is backwards compatible with their desired version.
       Clients may also have to accept later schema versions that contain NBC fixes, although the
@@ -421,8 +415,7 @@
       versions.  Deviations SHOULD be used where necessary to indicate that the server is unable to
       faithfully implement the older schema version.</t>
       <t>If clients interact with a server using multiple versions, they should not expect that all
-      data nodes in later module versions can always be backported to older schema versions.  TODO -
-      Specify how mapping errors can be reported to client.</t>
+      data nodes in later module versions can always be backported to older schema versions.</t>
       <section title="Examples">
         <t>Here is a simple example of a NETCONF client migrating to a new schema-set with a server
         that has multiple schema-sets in the 'selectable' leaf-list:
@@ -462,23 +455,13 @@
       this solution does not provide a magic bullet that can solve all versioning issues.</t>
     </section>
     <section title="Schema Selection YANG module">
-      <t>The YANG schema selection YANG module is used by a device to report the schema-sets
-      that are available, and to allow clients to choose which schema-set they wish to use.</t>
-      <t>Feature are used to allow servers to decide whether they allow the primary schema-set to be
-      changed, and/or allow secondary schema-sets to be configured.</t>
-      <t>The primary schema-set is the datastore schema reported by YANG Library.</t>
-      <t>If secondary schema-sets are configured:
-      <list>
-         <t>With NETCONF, the "select-schema-sets" RPC is used by the client to chosse which schema-set(s) 
-            it wants to use for the current NETCONF session.</t>
-         <t>With RESTCONF, the configured root path prefix is used by the client for a particular 
-            schema-set.</t>
-      </list>
-      </t>
-      <t>Different schema-sets may support different datastores.</t>
-      
+      <t>The YANG schema selection YANG module is used by a server to report the schema-sets that
+      are generally available, and to allow clients to configure which schema-sets are available for
+      client selection and which is the default.</t>
+      <t>Custom schema-sets, if supported, allows clients to configure custom combinations of
+      schema-sets that can then be selected by clients.</t>
       <figure>
-        <preamble>The "ietf-schema-version-selection" YANG module has the following structure:</preamble>
+        <preamble>The "ietf-schema-selection" YANG module has the following structure:</preamble>
         <artwork>
           <![CDATA[
 module: ietf-schema-selection
@@ -500,10 +483,10 @@ module: ietf-schema-selection
         |     +--ro name        -> /pkgs:packages/package/name
         |     +--ro version     leafref
         |     +--ro checksum?   leafref
-        +--ro compatible-with*
+        +--ro selectable-with*
         |       -> /schema-set-selection/schema-set/name
         +--ro custom-selectable! {custom-schema-set}?
-           +--ro combinable*
+           +--ro combinable-with*
                    -> /schema-set-selection/schema-set/name
           ]]>
         </artwork>
@@ -515,7 +498,7 @@ module: ietf-schema-selection
       <figure>
         <artwork>
           <![CDATA[
-<CODE BEGINS> file "ietf-schema-version-selection@2019-11-29.yang"
+<CODE BEGINS> file "ietf-schema-selection@2019-02-14.yang"
 module ietf-schema-selection {
   yang-version 1.1;
   namespace
@@ -733,20 +716,10 @@ module ietf-schema-selection {
              operational, that are defined as being read-only.";
         }
 
-        list package {
-          key "name version";
-
-          description
-            "YANG packages that define the datastore schema
-
-             The datastore schema is defined as the union of all
-             datastore packages.";
-
-          uses pkgs:yang-pkg-ref;
-        }
+        uses pkgs:yang-ds-pkg-ref;
       }
 
-      leaf-list compatible-with {
+      leaf-list selectable-with {
         type leafref {
           path "/schema-set-selection/schema-set/name";
         }
@@ -765,7 +738,7 @@ module ietf-schema-selection {
            custom schema-set and also lists other schema-sets that
            may be combined together into a custom schema-set.";
 
-        leaf-list combinable {
+        leaf-list combinable-with {
           type leafref {
             path "/schema-set-selection/schema-set/name";
           }
@@ -787,7 +760,27 @@ module ietf-schema-selection {
       <t>To be defined.</t>
     </section>
     <section anchor="iana" title="IANA Considerations">
-      <t>TODO - Add registrations for YANG modules defined in this document.</t>
+      <t>This document requests IANA to registers a URI in the "IETF XML Registry" <xref target="RFC3688"/>.
+      Following the format in RFC 3688, the following registrations are requested.
+      <?rfc subcompact="yes" ?>
+      <list>
+      <t>URI: urn:ietf:params:xml:ns:yang:ietf-schema-selection</t>
+      <t>Registrant Contact: The IESG.</t>
+      <t>XML: N/A, the requested URI is an XML namespace.</t>
+      </list>
+      <?rfc subcompact="no" ?>
+      </t>
+      <t>This document requests that the following YANG modules are added in the
+      "YANG Module Names" registry <xref target="RFC6020"/>:
+      <?rfc subcompact="yes" ?>
+      <list>
+      <t>Name: ietf-schema-selection.yang</t>
+      <t>Namespace: urn:ietf:params:xml:ns:yang:ietf-schema-selection</t>
+      <t>Prefix: schema</t>
+      <t>Reference: RFC XXXX</t>
+      </list>
+      <?rfc subcompact="no" ?>
+      </t>
       <t>This document registers a URI.</t>
       <section title="NETCONF Capability URNs">
          <t>This document registers a URI in the IETF XML
@@ -821,6 +814,7 @@ module ietf-schema-selection {
       <?rfc include="reference.RFC.3688"?>
       <?rfc include="reference.RFC.6241"?>
       <?rfc include="reference.RFC.6536"?>
+      <?rfc include="reference.RFC.6020"?>
       <?rfc include="reference.RFC.7950"?>
       <?rfc include="reference.RFC.8040"?>
       <?rfc include="reference.RFC.8174"?>
@@ -859,7 +853,7 @@ module ietf-schema-selection {
           <list>
             <t>vendor-schema@3.0.0, the device defaults to the latest version of the schema</t>
             <t>vendor-schema@2.1.0, a preceding NBC software version</t>
-            <t>vendor-schema@1.3.1, a preceding NBC software version</t>
+            <t>vendor-schema@1.4.5, a preceding NBC software version</t>
           </list>
         </t>
         
@@ -905,8 +899,8 @@ module ietf-schema-selection {
             <version>3.0.0</version>
           </package>
         </datastore>
-        <compatible-with>vendor-schema@1.4.5</compatible-with>
-        <compatible-with>vendor-schema@2.1.0</compatible-with>
+        <selectable-with>vendor-schema@1.4.5</selectable-with>
+        <selectable-with>vendor-schema@2.1.0</selectable-with>
       </schema-set>
       <schema-set>
         <name>vendor-schema@2.1.0</name>
@@ -924,8 +918,8 @@ module ietf-schema-selection {
             <version>2.1.0</version>
           </package>
         </datastore>
-        <compatible-with>vendor-schema@1.4.5</compatible-with>
-        <compatible-with>vendor-schema@3.0.0</compatible-with>
+        <selectable-with>vendor-schema@1.4.5</selectable-with>
+        <selectable-with>vendor-schema@3.0.0</selectable-with>
       </schema-set>
       <schema-set>
         <name>vendor-schema@1.4.5</name>
@@ -943,8 +937,8 @@ module ietf-schema-selection {
             <version>1.4.5</version>
           </package>
         </datastore>
-        <compatible-with>vendor-schema@2.1.0</compatible-with>
-        <compatible-with>vendor-schema@3.0.0</compatible-with>
+        <selectable-with>vendor-schema@2.1.0</selectable-with>
+        <selectable-with>vendor-schema@3.0.0</selectable-with>
       </schema-set>
     </schema-set-selection>
   </data>
@@ -1001,177 +995,224 @@ module ietf-schema-selection {
         <t>Some devices may allow clients to configure the device using
         different YANG schema (e.g. vendor native, vs IETF, vs
         OpenConfig).</t>
-        <t>TODO - Expand description</t>
+        <t>This example illustrates a device is that capable of supporting 3 different schema
+        families (native, oc, ietf).</t>
+
+                <figure>
+        <preamble></preamble>
+        <artwork>
+          <![CDATA[
+<?xml version="1.0" encoding="utf-8"?>
+<rpc-reply xmlns="urn:ietf:params:xml:ns:netconf:base:1.0" message-id="101">
+<data>
+  <packages>
+    <package>
+      <name>vendor-schema</name>
+      <version>1.0.0</version>
+      <module>
+        <name>vendor-interfaces</name>
+      </module>
+      <!--Module list of vendor YANG modules elided -->
+    </package>
+    <package>
+      <name>ietf-schema</name>
+      <version>1.0.0</version>
+      <module>
+        <name>ietf-interfaces</name>
+      </module>
+      <!--Module list of IETF YANG modules elided -->
+    </package>
+    <package>
+      <name>oc-schema</name>
+      <version>1.0.0</version>
+      <module>
+        <name>openconfig-interfaces</name>
+      </module>
+      <!--Module list of OpenConfig YANG modules elided -->
+    </package>
+  </packages>
+  <schema-set-selection>
+    <schema-set>
+      <name>combined-schema</name>
+        <datastore>
+          <name>ds:running</name>
+          <package>
+            <name>vendor-schema</name>
+            <version>1.0.0</version>
+          </package>
+          <package>
+            <name>ietf-schema</name>
+            <version>1.0.0</version>
+          </package>
+          <package>
+            <name>oc-schema</name>
+            <version>1.0.0</version>
+          </package>
+        </datastore>
+        <datastore>
+          <name>ds:operational</name>
+          <package>
+            <name>vendor-schema</name>
+            <version>1.0.0</version>
+          </package>
+          <package>
+            <name>ietf-schema</name>
+            <version>1.0.0</version>
+          </package>
+          <package>
+            <name>oc-schema</name>
+            <version>1.0.0</version>
+          </package>
+        </datastore>
+      </schema-set>
+      <schema-set>
+        <name>vendor-schema</name>
+        <partial/>
+        <datastore>
+          <name>ds:running</name>
+          <package>
+            <name>vendor-schema</name>
+            <version>1.0.0</version>
+          </package>
+        </datastore>
+        <datastore>
+          <name>ds:operational</name>
+          <package>
+            <name>vendor-schema</name>
+            <version>1.0.0</version>
+          </package>
+        </datastore>
+        <selectable-with>combined-schema</selectable-with>
+        <selectable-with>ietf-schema</selectable-with>
+        <selectable-with>oc-schema</selectable-with>
+        <custom-selectable>
+          <combinable-with>ietf-schema</combinable-with>
+          <combinable-with>oc-schema</combinable-with>
+        </custom-selectable>
+      </schema-set>
+      <schema-set>
+        <name>ietf-schema</name>
+        <partial/>
+        <datastore>
+          <name>ds:running</name>
+          <package>
+            <name>ietf-schema</name>
+            <version>1.0.0</version>
+          </package>
+        </datastore>
+        <datastore>
+          <name>ds:operational</name>
+          <package>
+            <name>ietf-schema</name>
+            <version>1.0.0</version>
+          </package>
+        </datastore>
+        <selectable-with>combined-schema</selectable-with>
+        <selectable-with>vendor-schema</selectable-with>
+        <selectable-with>oc-schema</selectable-with>
+        <custom-selectable>
+          <combinable-with>vendor-schema</combinable-with>
+        </custom-selectable>
+      </schema-set>
+      <schema-set>
+        <name>oc-schema</name>
+        <partial/>
+        <datastore>
+          <name>ds:running</name>
+          <package>
+            <name>oc-schema</name>
+            <version>1.0.0</version>
+          </package>
+        </datastore>
+        <datastore>
+          <name>ds:operational</name>
+          <package>
+            <name>oc-schema</name>
+            <version>1.0.0</version>
+          </package>
+        </datastore>
+        <selectable-with>combined-schema</selectable-with>
+        <selectable-with>vendor-schema</selectable-with>
+        <selectable-with>ietf-schema</selectable-with>
+        <custom-selectable>
+          <combinable-with>vendor-schema</combinable-with>
+        </custom-selectable>
+      </schema-set>
+    </schema-set-selection>
+  </data>
+</rpc-reply>
+]]>
+        </artwork>
+      </figure>
+
+      <t>The clients may configure the device in three different ways.</t>
+
+      <section title="Choosing a single schema family">
+        <t>A client that wishes to use a single schema family for all interactions with the device can choose a single schema-set and configure it as the default schema-set:</t>
         <figure>
         <preamble></preamble>
         <artwork>
           <![CDATA[
-Schema families, with custom schema
-===================================
-
-This example illustrates a device is that capable of supporting 3 different schema families (native, oc, ietf).
-
-The clients may configure the device in three different ways:
-
-(1) If the client wants to use a single schema family for all interactions with the device then they can choose a single schema-set and configure it as the default schema-set:
-
 <?xml version="1.0" encoding="utf-8"?>
 <config xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
-    <schema-set-selection>
-        <selectable>oc-schema</selectable>
-        <default>oc-schema</default>
-    </schema-set-selection>
+  <schema-set-selection>
+    <selectable>oc-schema</selectable>
+    <default>oc-schema</default>
+  </schema-set-selection>
 </config>
-
-
-(2) If the clients wants to use multiple schema families, but restrict some interactions to a particular schema family, then they configure the default schema as "combined-schema", but also configure their desired secondary schema (any combination or "vendor-schema", "ietf-schema" or "oc-schema").
-
-<?xml version="1.0" encoding="utf-8"?>
-<config xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
-    <schema-set-selection>
-        <selectable>combined-schema</selectable>
-        <selectable>oc-schema</selectable>
-        <default>combined-schema</default>
-    </schema-set-selection>
-</config>
-
-
-(3) If there is a need for the client to use ietf or OC schema alongside the vendor schema, then this can be achieved by configuring a custom schema.  Two custom schema can be configured, either "vendor + ietf schema", or "vendor + oc schema".  Once the custom schema has been configured then it could be used either as the single default schema, or it could be used as a selectable schema with the default schema set to "combined-schema".
-
-<?xml version="1.0" encoding="utf-8"?>
-<config xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
-    <schema-set-selection>
-        <custom>
-            <name>my-custom-schema</name>
-            <description>Restrict the primary schema to OC and vendor</description>
-            <included-schema>vendor-schema</included-schema>
-            <included-schema>oc-schema</included-schema>
-        </custom>
-        <selectable>my-custom-schema</selectable>
-        <default>my-custom-schema</default>
-    </schema-set-selection>
-</config>
-
-
-Note, for the last case, rather than requiring the client to configure custom schema, the device could predefine "vendor + ietf" and "vendor + oc" schema-sets.
-
-<?xml version="1.0" encoding="utf-8"?>
-<rpc-reply xmlns="urn:ietf:params:xml:ns:netconf:base:1.0" message-id="101">
-    <data>
-        <yang-library>
-            <package>
-                <name>vendor-schema</name>
-                <version>1.0.0</version>
-                <module>
-                    <name>vendor-interfaces</name>
-                    <!--Module list of vendor YANG modules elided for brevity -->
-                </module>
-            </package>
-            <package>
-                <name>ietf-schema</name>
-                <version>1.0.0</version>
-                <module>
-                    <name>ietf-interfaces</name>
-                    <!--Module list of IETF YANG modules elided for brevity -->
-                </module>
-            </package>
-            <package>
-                <name>oc-schema</name>
-                <version>1.0.0</version>
-                <module>
-                    <name>openconfig-interfaces</nmae>
-                    <!--Module list of OpenConfig YANG modules elided for brevity -->
-                </module>
-            </package>
-        </yang-library>
-        <schema-set-selection>
-            <schema-set>
-                <name>full-schema</name>
-                <common-package>
-                    <name>vendor-schema</name>
-                    <version>1.0.0</version>
-                </common-package>
-                <common-package>
-                    <name>ietf-schema</name>
-                    <version>1.0.0</version>
-                </common-package>
-                <common-package>
-                    <name>oc-schema</name>
-                    <version>1.0.0</version>
-                </common-package>
-                <datastore>
-                    <name>ds:running</name>
-                </datastore>
-                <datastore>
-                    <name>ds:operational</name>
-                </datastore>
-            </schema-set>
-            <schema-set>
-                <name>vendor-schema</name>
-                <partial/>
-                <common-package>
-                    <name>vendor-schema</name>
-                    <version>1.0.0</version>
-                </common-package>
-                <datastore>
-                    <name>ds:running</name>
-                </datastore>
-                <datastore>
-                    <name>ds:operational</name>
-                </datastore>
-                <compatible-with>combined-schema</compatible-with>
-                <compatible-with>ietf-schema</compatible-with>
-                <compatible-with>oc-schema</compatible-with>
-                <custom-selectable>
-                    <combinable>ietf-schema</combinable>
-                    <combinable>oc-schema</combinable>
-                </custom-selectable>
-            </schema-set>
-            <schema-set>
-                <name>ietf-schema</name>
-                <partial/>
-                <common-package>
-                    <name>ietf-schema</name>
-                    <version>1.0.0</version>
-                </common-package>
-                <datastore>
-                    <name>ds:running</name>
-                </datastore>
-                <datastore>
-                    <name>ds:operational</name>
-                </datastore>
-                <compatible-with>combined-schema</compatible-with>
-                <compatible-with>vendor-schema</compatible-with>
-                <compatible-with>oc-schema</compatible-with>
-                <custom-selectable>
-                    <combinable>vendor-schema</combinable>
-                </custom-selectable>
-            </schema-set>
-            <schema-set>
-                <name>oc-schema</name>
-                <partial/>
-                <common-package>
-                    <name>oc-schema</name>
-                    <version>1.0.0</version>
-                </common-package>
-                <datastore>
-                    <name>ds:running</name>
-                </datastore>
-                <datastore>
-                    <name>ds:operational</name>
-                </datastore>
-                <compatible-with>combined-schema</compatible-with>
-                <compatible-with>vendor-schema</compatible-with>
-                <compatible-with>ietf-schema</compatible-with>
-                <custom-selectable>
-                    <combinable>vendor-schema</combinable>
-                </custom-selectable>
-            </schema-set>
-        </schema-set-selection>
-    </data>
-</rpc-reply>]]>
+]]>
         </artwork>
-      </figure>
+        </figure>
+      </section>
+      <section title="Restricting some sessions to particular schema family">
+        <t>If the clients wishes to use multiple schema families for configuration, but restrict
+        some sessions to a particular schema family, then they may configure the default schema as
+        "combined-schema", but also allow secondary schema to be selected.</t>
+        <figure>
+        <preamble></preamble>
+        <artwork>
+          <![CDATA[
+<?xml version="1.0" encoding="utf-8"?>
+<config xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
+  <schema-set-selection>
+    <selectable>combined-schema</selectable>
+    <selectable>oc-schema</selectable>
+    <default>combined-schema</default>
+  </schema-set-selection>
+</config>
+]]>
+        </artwork>
+        </figure>
+      </section>
+      <section title="Custom combinable schema-set">
+        <t>If there is a need for the client to use ietf or OC schema alongside the vendor schema,
+        then this can be achieved by configuring a custom schema-set.  Two custom schema-sets can be
+        configured, either "vendor + ietf schema", or "vendor + oc schema".  The example below
+        defines and selects a custom schema-set that combines the vandor and oc schema-sets.</t>
+        <figure>
+        <preamble></preamble>
+        <artwork>
+          <![CDATA[
+<?xml version="1.0" encoding="utf-8"?>
+<config xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
+  <schema-set-selection>
+    <custom>
+      <name>my-custom-schema</name>
+      <description>Restrict the primary schema to OC and vendor</description>
+      <included-schema>vendor-schema</included-schema>
+      <included-schema>oc-schema</included-schema>
+    </custom>
+    <selectable>my-custom-schema</selectable>
+    <default>my-custom-schema</default>
+  </schema-set-selection>
+</config>
+]]>
+        </artwork>
+        </figure>
+        <t>Note, for the last case, rather than requiring the client to configure custom schema, the
+        device could predefine "vendor + ietf" and "vendor + oc" schema-sets.</t>
+
+      </section>
     </section>
   </section>
   </back>
