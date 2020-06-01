@@ -1,7 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE rfc SYSTEM "rfc2629.dtd" [
-<!ENTITY RFC7895 SYSTEM "reference.RFC.7895.xml">
-]>
+<!DOCTYPE rfc SYSTEM "rfc2629.dtd" [ ]>
 <?xml-stylesheet type="text/xsl" href="rfc2629.xslt" ?>
 <?rfc toc="yes"?>
 <?rfc tocompact="yes"?>
@@ -13,7 +11,7 @@
 <?rfc inline="yes"?>
 <?rfc compact="yes"?>
 <?rfc subcompact="no"?>
-<rfc category="std" ipr="trust200902" docName="draft-ietf-netmod-yang-semver-00">
+<rfc updates="8407" category="std" ipr="trust200902" docName="draft-ietf-netmod-yang-semver-00">
 <front>
 <title abbrev="YANG Semver">YANG Semantic Versioning</title>
 
@@ -490,6 +488,74 @@
     module A derives from 2.0.0.</t>
 </section>
 
+<section anchor="guidelines" title="Guidelines for Using Semver During Module Development">
+    <t>This section and the IETF-specific sub-section below provides YANG semver-specific
+	guidelines to consider when developing new YANG modules.  As such this section
+	updates <xref target="RFC8407"/>.</t>
+
+    <t>Development of a brand new YANG module that uses YANG semver as its
+	revision-label scheme SHOULD begin with a 0 for the MAJOR
+	version component.  This allows the module to disregard strict
+	semver rules with respect to non-backwards-compatible changes
+	during its initial development.  However, module developers MAY choose
+	to use the semver pre-release syntax instead with a 1 for the MAJOR
+	version component.  For example, an initial module revision-label might
+	be either 0.0.1 or 1.0.0-dev1.  If the authors choose to use the 0 MAJOR version
+	component scheme, they MAY switch to the pre-release scheme with a
+	MAJOR version component of 1 when the module is nearing initial release
+	(e.g., a module's revision label may transition from 0.3.0 to
+	1.0.0-beta1 to indicate it is more mature and ready for testing).</t>
+
+    <t>When developing a new revision of an existing module using the YANG
+	semver revision-label scheme, the intended target semver version MUST
+	be used along with pre-release notation.  For example, if a released
+	module which has a current revision-label of 1.0.0 is being modified
+	with the intent to make non-backwards-compatible changes, the first
+	development MAJOR version component must be 2 with some pre-release
+	notation such as -dev1, making the version 2.0.0-dev1.  That said,
+	every publicly available release of a module MUST have a unique YANG
+	semver revision-label (where a publicly available release is one that
+	could be implemented by a vendor or consumed by an end user).
+	Therefore, it may be prudent to include the
+	year or year and month development began (e.g., 2.0.0-201907-dev1).
+	As a module undergoes development, it is possible that the original
+	intent changes.  For example, a 1.0.0 version of a module that was
+	destined to become 2.0.0 after a development cycle may have had a
+	scope change such that the final version has no
+	non-backwards-compatible changes and becomes 1.1.0 instead.  This
+	change is acceptable to make during the development phase so long as
+	pre-release notation is present in both versions (e.g., 2.0.0-dev3
+	becomes 1.1.0-alpha1).  However, on the next development cycle (after 1.1.0 is released), if
+	again the new target release is 2.0.0, new pre-release components
+	must be used such that every revision-label for a given module MUST
+	be unique throughout its entire lifecycle (e.g., the first pre-release
+	version might be 2.0.0-202005-dev1 if keeping the same year and month
+	notation mentioned above).</t>
+
+    <section anchor="ietf_guidelines" title="YANG Semver in IETF Modules">
+	<t>When an existing IETF module is being revised, it MUST use the
+	    target version for the revision-label with a pre-release string
+	    that includes the current RFC number plus the string "bis".  For
+	    example, if the module defined in RFCXXXX at version 1.0.0 is being
+	    revised to include non-backwards-compatible changes, its
+	    development revision-labels MUST include 2.0.0-XXXXbis.  Since they
+	    MUST also be unique, additional alphanumeric identifiers MUST be
+	    used (e.g., 2.0.0-XXXXbis-dev1).  Since each new bis will work off
+	    a new RFC number, this nomenclature ensures uniqueness for the
+	    module throughout its lifecycle.</t>
+
+	<t>If a module is being revised and the original module never had a
+	    revision-label (i.e., you wish to start using YANG semver in future
+	    module revisions), choose a semver value that makes the most sense
+	    based on the module's history.  For example, if a module started
+	    out in the pre-NMDA world and then had NMDA support added without
+	    removing any legacy "state" branches, and you are looking to add
+	    additional new features, a sensible choice for the target YANG
+	    semver would be 1.2.0 (since 1.0.0 would have been the initial,
+	    pre-NMDA release, and 1.1.0 would have been the NMDA revision).</t>
+    </section>
+</section>
+
 <section anchor="yang_module" title="YANG Module">
   <t>This YANG module contains the typedef for the YANG semantic version.</t>
 
@@ -561,75 +627,6 @@
           </figure>
     </section>
 
-<!--
-
-<section title="Updates to ietf-yang-library" anchor="ietf_yang_library_updates">
-    <t>YANG library <xref target="RFC7895"/> <xref target="RFC8525"/> is
-    modified to support semantic versioning in three ways.</t>
-
-    <section title="Advertising module version number">
-    <t>The ietf-semver YANG module augments the 'module' list in
-    ietf-yang-library with a 'version' leaf to optionally declare the
-    YANG semantic version of each module.</t>
-    </section>
-    <section title="Resolving ambiguous module imports">
-      <t>A YANG datastore schema, defined in
-      <xref target="RFC8525"/>, can specify multiple
-      revisions of a YANG module in the schema using the 'import-only'
-      list, with the requirement from <xref target="RFC7950"/> that only
-      a single revision of a YANG module may be implemented.</t>
-      <t>If a YANG module import statement does not specify a specific
-      version or revision within the datastore schema then it could be
-      ambiguous as to which module revision the import statement should
-      resolve to.  Hence, a datastore schema constructed by a client
-      using the information contained in YANG library may not exactly
-      match the datastore schema actually used by the server.</t>
-      <t>The following rules remove the ambiguity:</t>
-      <t>If a module import statement could resolve to more than one
-      module revision defined in the datastore schema, and one of those
-      revisions is implemented (i.e., not an 'import-only' module), then
-      the import statement MUST resolve to the revision of the module
-      that is defined as being implemented by the datastore schema.</t>
-      <t>If a module import statement could resolve to more than one
-      module revision defined in the datastore schema, and none of those
-      revisions are implemented, but one of more modules revisions
-      specify a YANG semantic version, then the import MUST resolve to
-      the module with the greatest version number, according to the
-      version comparison rules in <xref target="import_semver"/>.</t>
-      <t>If a module import statement could resolve to more than one
-      module revision defined in the datastore schema, none of those
-      revisions are implemented, and none of the modules revisions have
-      a YANG semantic version number, then the import MUST resolve to
-      the module that has the most recent revision date.</t>
-    </section>
-
-<section title="Semantic versioning of YANG instance data">
-<t>Instance data sets <xref
-target="I-D.ietf-netmod-yang-instance-file-format"/> do not have an
-associated YANG semantic version, as compatibility for instance data is
-undefined.</t>
-
-<t>However, instance data may reference an associated YANG schema, and
-that schema could make use of semantic version numbers, both for the
-individual YANG modules that comprise the schema, and potentially for
-the entire schema itself (e.g., <xref
-target="I-D.rwilton-netmod-yang-packages"/>).</t>
-
-<t>In this way, the versioning of a schema associated with an instance
-data set, may allow a client to determine whether the instance data
-could also be used in conjunction with other versions of the YANG
-schema, or other versions of the modules that define the schema.</t>
-
-<t>One common scenario, where instance data may have to cope with
-changes to the schema is for the &lt;startup&gt; datastore when a server
-is restarted with a different YANG schema (e.g. due to a software
-upgrade or downgrade).  How a server restores the configuration from
-&lt;startup&gt; during such upgrades or downgrades is outside the scope
-of this specification.</t>
-</section>
-
--->
-
 <section anchor="contributor" title="Contributors">
   <t>This document grew out of the YANG module versioning design team
   that started after IETF 101. The design team consists of the following
@@ -671,13 +668,11 @@ of this specification.</t>
 <references title="Normative References">
    <?rfc include='reference.RFC.2119'?>
    <?rfc include='reference.RFC.8174'?>
-   <?rfc include='reference.RFC.7895'?>
-   <?rfc include='reference.RFC.8525'?>
+   <?rfc include='reference.RFC.8407'?>
    <?ref include='reference.I-D.verdt-netmod-yang-module-versioning'?>
 </references>
 <references title="Informative References">
    <?rfc include='reference.I-D.clacla-netmod-yang-model-update'?>
-   <?rfc include='reference.I-D.ietf-netmod-yang-instance-file-format'?>
    <?rfc include='reference.I-D.rwilton-netmod-yang-packages'?>
    <reference anchor="openconfigsemver" target="http://www.openconfig.net/docs/semver/">
      <front>
