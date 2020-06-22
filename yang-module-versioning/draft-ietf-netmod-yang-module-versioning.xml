@@ -240,8 +240,7 @@
     provide an additional versioning identifier associated with the revision.</t>
     <t>YANG Semver <xref target="I-D.verdt-netmod-yang-semver"/> defines a 
     versioning scheme based on Semver 2.0.0 <xref target="semver"/> that can
-    be used as a revision label.  All revision labels that match the pattern for the "version" typedef in the
-    ietf-yang-semver YANG module MUST be interpreted as YANG semantic version numbers.</t>
+    be used as a revision label.</t>
     <t>The revision date and revision label within a submodule's revision history have no effect on the including
     module's revision.  Submodules MUST NOT use revision label schemes that could be confused with the including
     module's revision label scheme.</t>
@@ -268,6 +267,17 @@
       module. If two YANG modules contain the same module name and the same 
       revision-label in their latest revision statement, then the two modules 
       MUST be the same (except for possible white space at the end of each line.)    </t>
+      <section anchor="revision_label-scheme" title="Revision label scheme extension statement">
+         <t>The "rev:revision-label-scheme" extension statement is used to indicate which versioning
+            scheme a module uses. The argument to this extension statement:
+            <list style="symbols">
+              <t>Specifies the versioning scheme used by the module</t>
+              <t>Is defined in the document which specifies the versioning scheme</t>
+              <t>MUST be an identity derived from "revision-label-scheme-base-identity"</t>
+            </list>
+          </t>
+         <t>The versioning scheme used by a module SHOULD not change during the lifetime of the module.</t>
+      </section>
   </section>
 
   <section anchor="example_versions" title="Examples for updating the YANG module revision history">
@@ -630,10 +640,10 @@ module: ietf-yl-revisions
 <section anchor="yang_modules" title="Module Versioning Extension YANG Modules">
   <t>
     <figure>
-      <preamble> YANG module with extension statements for annotating NBC changes, revision label, status description,
+      <preamble> YANG module with extension statements for annotating NBC changes, revision label, revision label scheme,
       and importing by version.</preamble>
-      <artwork name="ietf-yang-revisions@2019-09-18.yang"><![CDATA[
-<CODE BEGINS> file "ietf-yang-revisions@2019-09-18.yang"
+      <artwork name="ietf-yang-revisions@2020-06-22.yang"><![CDATA[
+<CODE BEGINS> file "ietf-yang-revisions@2020-06-22.yang"
 module ietf-yang-revisions {
   yang-version 1.1;
   namespace "urn:ietf:params:xml:ns:yang:ietf-yang-revisions";
@@ -699,7 +709,7 @@ module ietf-yang-revisions {
   // RFC Ed.: replace XXXX (inc above) with actual RFC number and
   // remove this note.
 
-  revision 2019-09-18 {
+  revision 2020-06-22 {
     description
       "Initial version.";
     reference
@@ -790,6 +800,20 @@ module ietf-yang-revisions {
        Section 3.3, Revision label";
   }
 
+  extension revision-label-scheme {
+    argument revision-label-scheme-identity;
+    description
+      "The revision label scheme specifies which versioning scheme the
+       module uses.
+
+       The revision-label-scheme-identity argument MUST be an identity
+       derived from revision-label-scheme-base-identity.";
+
+    reference
+      "XXXX: Updated YANG Module Revision Handling;
+       Section 3.3.1, Revision label scheme extension statement";
+  }
+
   extension revision-or-derived {
     argument revision-date-or-label;
     description
@@ -829,6 +853,11 @@ module ietf-yang-revisions {
     reference
       "XXXX: Updated YANG Module Revision Handling;
        Section 4, Import by derived revision";
+  }
+
+  identity revision-label-scheme-base-identity {
+    description
+      "Base identity from which all revision label schemes are derived";
   }
 }
 <CODE ENDS>
