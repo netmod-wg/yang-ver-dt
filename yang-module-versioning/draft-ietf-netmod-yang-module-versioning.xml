@@ -188,8 +188,11 @@
   all revisions of a module MUST have unique revision dates.</t>
 
   <t>A module's name and revision date identifies a specific immutable definition of that module within its revision
-  history.  Hence, if a module includes submodules then the module's "include" statements MUST use "revision-date"
-  substatements to specify the exact revision date of each included submodule.</t>
+  history.  Hence, if a module includes submodules then the module's "include" statements SHOULD use "revision-date"
+  substatements to specify the exact revision date of each included submodule. When a module does not include its
+  submodules by revision-date,  the revision of submodules used cannot be derived from the including module. If the
+  revision of submodules is needed, mechanisms such as YANG packages, as specified in <xref target="I-D.rwilton-netmod-yang-packages"/>,
+  and YANG library, defined in <xref target="RFC7895"/> <xref target="RFC8525"/>, can be used.</t>
 
   <t><xref target="RFC7950"/> section 11 requires that all updates to a YANG module are BC to the previous revision of
   the module.  This document allows for more flexible evolution of YANG modules: NBC changes between module revisions
@@ -245,9 +248,14 @@
     <t>YANG Semver <xref target="I-D.verdt-netmod-yang-semver"/> defines a 
     versioning scheme based on Semver 2.0.0 <xref target="semver"/> that can
     be used as a revision label.</t>
-    <t>The revision date and revision label within a submodule's revision history have no effect on the including
-    module's revision.  Submodules MUST NOT use revision label schemes that could be confused with the including
-    module's revision label scheme.</t>
+    <t>Submodules MAY use a revision label scheme. When they use a revision
+    label scheme, submodules MAY use a revision label scheme that is different from
+    the one used in the including module.</t>
+    <t>The revision label space of submodules is separate from the revision label space of the including module.
+    A change in one submodule MUST result in a new revision label of that submodule and the including module,
+    but the actual values of the revision labels in the module and submodule  could be completely different. A
+    change in one submodule does not result in a new revision label in another submodule. A change in a module
+    revision label does not necessarily mean a change to the revision label in all included submodules.</t>
     <t>If a revision has an associated revision label, then it may be used 
       instead of the revision date in an "rev:revision-or-derived" extension 
       statement argument.
@@ -592,9 +600,10 @@ module: ietf-yang-library-revisions
       <t>The "rev:revision-or-derived" extension should be used in YANG module imports to indicate revision dependencies
       between modules in preference to the "revision-date" statement, which causes overly strict import dependencies and
       SHOULD NOT be used.</t>
-      <t>A module that includes submodules MUST use the "revision-date" statement to include specific submodule
-      revisions.  Changing a module's include statements to include different submodule revisions requires a new
-      revision of the module.</t>
+      <t>A module that includes submodules SHOULD use the "revision-date" statement to include specific submodule
+      revisions.  The revision of the including module MUST be updated when any included submodule has changed. The
+      revision-label substatement used in the new module revision MUST indicate the nature of the change, i.e. NBC, BC or
+      editorial, to the module's schema tree.</t>
 
       
        <section title="Making non-backwards-compatible changes to a YANG module">
@@ -819,6 +828,9 @@ module ietf-yang-revisions {
 
        This extension is only valid as a top-level statement, i.e., given as
        as a substatement to 'module' or 'submodule'.
+
+       This extension MUST be used if there is a revision-label statement in
+       the module or submodule.
 
        The statement MUST NOT have any substatements.";
 
