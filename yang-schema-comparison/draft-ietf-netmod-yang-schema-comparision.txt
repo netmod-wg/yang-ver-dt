@@ -4,12 +4,12 @@
 
 Network Working Group                                          R. Wilton
 Internet-Draft                                       Cisco Systems, Inc.
-Intended status: Standards Track                          March 17, 2020
-Expires: September 18, 2020
+Intended status: Standards Track                         1 November 2020
+Expires: 5 May 2021
 
 
                          YANG Schema Comparison
-              draft-ietf-netmod-yang-schema-comparison-00
+              draft-ietf-netmod-yang-schema-comparison-01
 
 Abstract
 
@@ -36,49 +36,55 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on September 18, 2020.
+   This Internet-Draft will expire on 5 May 2021.
 
 Copyright Notice
 
    Copyright (c) 2020 IETF Trust and the persons identified as the
    document authors.  All rights reserved.
 
-   This document is subject to BCP 78 and the IETF Trust's Legal
-   Provisions Relating to IETF Documents
-   (https://trustee.ietf.org/license-info) in effect on the date of
-   publication of this document.  Please review these documents
-   carefully, as they describe your rights and restrictions with respect
-   to this document.  Code Components extracted from this document must
-   include Simplified BSD License text as described in Section 4.e of
 
 
 
-Wilton                 Expires September 18, 2020               [Page 1]
+
+
+
+
+
+
+
+Wilton                     Expires 5 May 2021                   [Page 1]
 
-Internet-Draft           YANG Schema Comparison               March 2020
+Internet-Draft           YANG Schema Comparison            November 2020
 
 
-   the Trust Legal Provisions and are provided without warranty as
-   described in the Simplified BSD License.
+   This document is subject to BCP 78 and the IETF Trust's Legal
+   Provisions Relating to IETF Documents (https://trustee.ietf.org/
+   license-info) in effect on the date of publication of this document.
+   Please review these documents carefully, as they describe your rights
+   and restrictions with respect to this document.  Code Components
+   extracted from this document must include Simplified BSD License text
+   as described in Section 4.e of the Trust Legal Provisions and are
+   provided without warranty as described in the Simplified BSD License.
 
 Table of Contents
 
    1.  Introduction  . . . . . . . . . . . . . . . . . . . . . . . .   2
    2.  Terminology and Conventions . . . . . . . . . . . . . . . . .   4
    3.  Generic YANG schema tree comparison algorithm . . . . . . . .   4
-     3.1.  YANG module revision scope extension annotations  . . . .   5
-   4.  YANG module comparison algorithm  . . . . . . . . . . . . . .   5
+     3.1.  YANG module revision scope extension annotations  . . . .   6
+   4.  YANG module comparison algorithm  . . . . . . . . . . . . . .   6
    5.  YANG schema comparison algorithms . . . . . . . . . . . . . .   6
      5.1.  Standard YANG schema comparison algorithm . . . . . . . .   6
-     5.2.  Filtered YANG schema comparison algorithm . . . . . . . .   6
+     5.2.  Filtered YANG schema comparison algorithm . . . . . . . .   7
    6.  Comparison tooling  . . . . . . . . . . . . . . . . . . . . .   7
-   7.  Module Versioning Extension YANG Modules  . . . . . . . . . .   7
-   8.  Contributors  . . . . . . . . . . . . . . . . . . . . . . . .  10
+   7.  Module Versioning Extension YANG Modules  . . . . . . . . . .   8
+   8.  Contributors  . . . . . . . . . . . . . . . . . . . . . . . .  11
    9.  Security Considerations . . . . . . . . . . . . . . . . . . .  11
    10. IANA Considerations . . . . . . . . . . . . . . . . . . . . .  11
      10.1.  YANG Module Registrations  . . . . . . . . . . . . . . .  11
-   11. References  . . . . . . . . . . . . . . . . . . . . . . . . .  11
-     11.1.  Normative References . . . . . . . . . . . . . . . . . .  11
+   11. References  . . . . . . . . . . . . . . . . . . . . . . . . .  12
+     11.1.  Normative References . . . . . . . . . . . . . . . . . .  12
      11.2.  Informative References . . . . . . . . . . . . . . . . .  13
    Author's Address  . . . . . . . . . . . . . . . . . . . . . . . .  13
 
@@ -90,35 +96,33 @@ Table of Contents
    expected, if this approach is accepted by the WG.
 
    This document defines a solution to Requirement 2.2 in
-   [I-D.verdt-netmod-yang-versioning-reqs].  Complementary documents
+   [I-D.ietf-netmod-yang-versioning-reqs].  Complementary documents
    provide a complete solution to the YANG versioning requirements, with
    the overall relationship of the solution drafts described in
-   [I-D.verdt-netmod-yang-solutions].
+   [I-D.ietf-netmod-yang-solutions].
 
    YANG module 'revision-labels'
-   [I-D.verdt-netmod-yang-module-versioning] and the use of YANG
-   semantic version numbers [I-D.verdt-netmod-yang-semver] can be used
-   to help manage and report changes between revisions of individual
-   YANG modules.
+   [I-D.ietf-netmod-yang-module-versioning] and the use of YANG semantic
+   version numbers [I-D.ietf-netmod-yang-semver] can be used to help
+   manage and report changes between revisions of individual YANG
+   modules.
 
-   YANG packages [I-D.rwilton-netmod-yang-packages] along with YANG
+
+
+Wilton                     Expires 5 May 2021                   [Page 2]
+
+Internet-Draft           YANG Schema Comparison            November 2020
+
+
+   YANG packages [I-D.ietf-netmod-yang-packages] along with YANG
    semantic version numbers can be used to help manage and report
    changes between revisions of YANG schema.
 
-
-
-
-
-Wilton                 Expires September 18, 2020               [Page 2]
-
-Internet-Draft           YANG Schema Comparison               March 2020
-
-
-   [I-D.verdt-netmod-yang-module-versioning] and
-   [I-D.rwilton-netmod-yang-packages] define how to classify changes
+   [I-D.ietf-netmod-yang-module-versioning] and
+   [I-D.ietf-netmod-yang-packages] define how to classify changes
    between two module or package revisions, respectively, as backwards
    compatible or non-backwards-compatible.
-   [I-D.verdt-netmod-yang-semver] refines the definition, to allow
+   [I-D.ietf-netmod-yang-semver] refines the definition, to allow
    backwards compatible changes to be classified as 'minor changes' or
    'editorial changes'.
 
@@ -143,6 +147,29 @@ Internet-Draft           YANG Schema Comparison               March 2020
    represented by YANG packages), to determine the changes, and scope of
    changes between the revisions/versions.
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Wilton                     Expires 5 May 2021                   [Page 3]
+
+Internet-Draft           YANG Schema Comparison            November 2020
+
+
    For many YANG statements, programmatic tooling can determine whether
    the changes between the statements constitutes a backwards-compatible
    or non-backwards-compatible change.  However, for some statements, it
@@ -160,15 +187,8 @@ Internet-Draft           YANG Schema Comparison               March 2020
    scope of changes in cases that cannot be determined by algorithmic
    comparison.
 
-   Open issues are tracked at <https://github.com/netmod-wg/yang-ver-dt/
-   issues>, tagged with 'schema-comparison'.
-
-
-
-Wilton                 Expires September 18, 2020               [Page 3]
-
-Internet-Draft           YANG Schema Comparison               March 2020
-
+   Open issues are tracked at https://github.com/netmod-wg/yang-ver-dt/
+   issues, tagged with 'schema-comparison'.
 
 2.  Terminology and Conventions
 
@@ -179,16 +199,16 @@ Internet-Draft           YANG Schema Comparison               March 2020
    capitals, as shown here.
 
    This document uses terminology introduced in the YANG versioning
-   requirements document [I-D.verdt-netmod-yang-versioning-reqs].
+   requirements document [I-D.ietf-netmod-yang-versioning-reqs].
 
    This document makes of the following terminology introduced in the
-   YANG Packages [I-D.rwilton-netmod-yang-packages]:
+   YANG Packages [I-D.ietf-netmod-yang-packages]:
 
-   o  YANG schema
+   *  YANG schema
 
    In addition, this document defines the terminology:
 
-   o  Change scope: Whether a change between two revisions is classified
+   *  Change scope: Whether a change between two revisions is classified
       as non-backwards-compatible, backwards-compatible, or editorial.
 
 3.  Generic YANG schema tree comparison algorithm
@@ -197,6 +217,14 @@ Internet-Draft           YANG Schema Comparison               March 2020
    This could be a schema associated with an individual YANG module, or
    a YANG schema represented by a set of modules, e.g., specified by a
    YANG package.
+
+
+
+
+Wilton                     Expires 5 May 2021                   [Page 4]
+
+Internet-Draft           YANG Schema Comparison            November 2020
+
 
    The algorithm performs a recursive tree wise comparison of two
    revisions of a YANG schema, with the following behavior:
@@ -219,13 +247,6 @@ Internet-Draft           YANG Schema Comparison               March 2020
       identifier in the new schema revision cannot be found in the old
       schema revision.
 
-
-
-Wilton                 Expires September 18, 2020               [Page 4]
-
-Internet-Draft           YANG Schema Comparison               March 2020
-
-
       YANG extensions, features, identities, typedefs are checked by
       comparing the properties defined by their YANG sub-statements
       between the two revisions.
@@ -236,11 +257,11 @@ Internet-Draft           YANG Schema Comparison               March 2020
       recursively checking the data definition statements.
 
       The rules specified in section 3 of
-      [I-D.verdt-netmod-yang-module-versioning] determine whether the
+      [I-D.ietf-netmod-yang-module-versioning] determine whether the
       changes are backwards-compatible or non-backwards-compatible.
 
       The rules specified in section 3.2 of
-      [I-D.rwilton-netmod-yang-packages] determine whether backwards-
+      [I-D.ietf-netmod-yang-packages] determine whether backwards-
       compatible changes are 'minor' or 'editorial'.
 
       For YANG description", "must", and "when" statements, the
@@ -252,11 +273,21 @@ Internet-Draft           YANG Schema Comparison               March 2020
       the revisions in the module history probably need to be available
       for this to work in the general branched revisions case.
 
+
+
+
+
+Wilton                     Expires 5 May 2021                   [Page 5]
+
+Internet-Draft           YANG Schema Comparison            November 2020
+
+
       Submodules are not relevant for schema comparison purposes, i.e.
       the comparison is performed after submodule resolution has been
       completed.
 
 3.1.  YANG module revision scope extension annotations
+
 
 4.  YANG module comparison algorithm
 
@@ -274,14 +305,6 @@ Internet-Draft           YANG Schema Comparison               March 2020
       Changes to augmentations and deviations should be sorted by path
       and compared.
 
-
-
-
-Wilton                 Expires September 18, 2020               [Page 5]
-
-Internet-Draft           YANG Schema Comparison               March 2020
-
-
 5.  YANG schema comparison algorithms
 
 5.1.  Standard YANG schema comparison algorithm
@@ -291,14 +314,14 @@ Internet-Draft           YANG Schema Comparison               March 2020
    by the schema using the algorithm defined in Section 4 and then
    aggregating the results together:
 
-   o  If all implemented modules in the schema have only changed in an
+   *  If all implemented modules in the schema have only changed in an
       editorial way then the schema is changed in an editorial way
 
-   o  If all implemented modules in the schema have only been changed in
+   *  If all implemented modules in the schema have only been changed in
       an editorial or backwards-compatible way then the schema is
       changed in a backwards-compatible way
 
-   o  Otherwise if any implemented module in the schema has been changed
+   *  Otherwise if any implemented module in the schema has been changed
       in a non-backwards-compatible way then the schema is changed in a
       non-backwards-compatible way.
 
@@ -307,6 +330,13 @@ Internet-Draft           YANG Schema Comparison               March 2020
    packages, because it allows the package version to be calculated
    based on changes to implemented modules revision history (or YANG
    semantic version number if used to identify module revisions).
+
+
+
+Wilton                     Expires 5 May 2021                   [Page 6]
+
+Internet-Draft           YANG Schema Comparison            November 2020
+
 
 5.2.  Filtered YANG schema comparison algorithm
 
@@ -328,15 +358,6 @@ Internet-Draft           YANG Schema Comparison               March 2020
 
       All "grouping" statements can be ignored (after all "use"
       statements have been processed when constructing the schema).
-
-
-
-
-
-Wilton                 Expires September 18, 2020               [Page 6]
-
-Internet-Draft           YANG Schema Comparison               March 2020
-
 
       All module and submodule metadata information (i.e. module level
       description, contact, organization, reference) can be ignored.
@@ -366,6 +387,13 @@ Internet-Draft           YANG Schema Comparison               March 2020
    TODO, it would be helpful if there is reference tooling for schema
    comparison.
 
+
+
+Wilton                     Expires 5 May 2021                   [Page 7]
+
+Internet-Draft           YANG Schema Comparison            November 2020
+
+
 7.  Module Versioning Extension YANG Modules
 
    YANG module with extension statements for annotating NBC changes,
@@ -385,14 +413,6 @@ Internet-Draft           YANG Schema Comparison               March 2020
 
         Author:   Robert Wilton
                   <mailto:rwilton@cisco.com>";
-
-
-
-
-Wilton                 Expires September 18, 2020               [Page 7]
-
-Internet-Draft           YANG Schema Comparison               March 2020
-
 
      description
        "This YANG 1.1 module contains extensions to annotation to YANG
@@ -422,6 +442,14 @@ Internet-Draft           YANG Schema Comparison               March 2020
         they appear in all capitals, as shown here.";
 
      // RFC Ed.: update the date below with the date of RFC publication
+
+
+
+Wilton                     Expires 5 May 2021                   [Page 8]
+
+Internet-Draft           YANG Schema Comparison            November 2020
+
+
      // and remove this note.
      // RFC Ed.: replace XXXX (inc above) with actual RFC number and
      // remove this note.
@@ -442,14 +470,6 @@ Internet-Draft           YANG Schema Comparison               March 2020
           previous revision listed in the revision history.
 
           The format of the revision-label argument MUST conform to the
-
-
-
-Wilton                 Expires September 18, 2020               [Page 8]
-
-Internet-Draft           YANG Schema Comparison               March 2020
-
-
           pattern defined for the ietf-yang-revisions
           revision-date-or-label typedef.
 
@@ -478,6 +498,14 @@ Internet-Draft           YANG Schema Comparison               March 2020
           revision history.
 
           The format of the revision-label argument MUST conform to the
+
+
+
+Wilton                     Expires 5 May 2021                   [Page 9]
+
+Internet-Draft           YANG Schema Comparison            November 2020
+
+
           pattern defined for the ietf-yang-revisions
           revision-date-or-label typedef.
 
@@ -498,14 +526,6 @@ Internet-Draft           YANG Schema Comparison               March 2020
      extension renamed-from {
        argument yang-identifier;
        description
-
-
-
-Wilton                 Expires September 18, 2020               [Page 9]
-
-Internet-Draft           YANG Schema Comparison               March 2020
-
-
          "Specifies a previous name for this identifier.
 
           This can be used when comparing schema to optimize handling
@@ -531,6 +551,17 @@ Internet-Draft           YANG Schema Comparison               March 2020
    }
    <CODE ENDS>
 
+
+
+
+
+
+
+Wilton                     Expires 5 May 2021                  [Page 10]
+
+Internet-Draft           YANG Schema Comparison            November 2020
+
+
 8.  Contributors
 
    This document grew out of the YANG module versioning design team that
@@ -538,37 +569,29 @@ Internet-Draft           YANG Schema Comparison               March 2020
    members of the design team and have worked on the YANG versioning
    project:
 
-   o  Balazs Lengyel
+   *  Balazs Lengyel
 
-   o  Benoit Claise
+   *  Benoit Claise
 
-   o  Bo Wu
+   *  Bo Wu
 
-   o  Ebben Aries
+   *  Ebben Aries
 
-   o  Jason Sterne
+   *  Jason Sterne
 
-   o  Joe Clarke
+   *  Joe Clarke
 
-   o  Juergen Schoenwaelder
+   *  Juergen Schoenwaelder
 
-   o  Mahesh Jethanandani
+   *  Mahesh Jethanandani
 
+   *  Michael Wang
 
+   *  Qin Wu
 
+   *  Reshad Rahman
 
-Wilton                 Expires September 18, 2020              [Page 10]
-
-Internet-Draft           YANG Schema Comparison               March 2020
-
-
-   o  Michael Wang
-
-   o  Qin Wu
-
-   o  Reshad Rahman
-
-   o  Rob Wilton
+   *  Rob Wilton
 
    The ideas for a tooling based comparison of YANG module revisions was
    first described in [I-D.clacla-netmod-yang-model-update].  This
@@ -588,6 +611,13 @@ Internet-Draft           YANG Schema Comparison               March 2020
 
    The ietf-yang-rev-annotations module:
 
+
+
+Wilton                     Expires 5 May 2021                  [Page 11]
+
+Internet-Draft           YANG Schema Comparison            November 2020
+
+
       Name: ietf-yang-rev-annotations
 
       XML Namespace: urn:ietf:params:xml:ns:yang:ietf-yang-rev-
@@ -601,96 +631,66 @@ Internet-Draft           YANG Schema Comparison               March 2020
 
 11.1.  Normative References
 
-   [I-D.rwilton-netmod-yang-packages]
+   [I-D.ietf-netmod-yang-module-versioning]
+              Wilton, R., Rahman, R., Lengyel, B., Clarke, J., Sterne,
+              J., Claise, B., and K. D'Souza, "Updated YANG Module
+              Revision Handling", Work in Progress, Internet-Draft,
+              draft-ietf-netmod-yang-module-versioning-01, 10 July 2020,
+              <https://tools.ietf.org/html/draft-ietf-netmod-yang-
+              module-versioning-01>.
+
+   [I-D.ietf-netmod-yang-packages]
               Wilton, R., Rahman, R., Clarke, J., Sterne, J., and W. Bo,
-              "YANG Packages", draft-rwilton-netmod-yang-packages-03
-              (work in progress), February 2020.
+              "YANG Packages", Work in Progress, Internet-Draft, draft-
+              ietf-netmod-yang-packages-00, 17 March 2020,
+              <https://tools.ietf.org/html/draft-ietf-netmod-yang-
+              packages-00>.
 
-
-
-
-
-
-
-
-Wilton                 Expires September 18, 2020              [Page 11]
-
-Internet-Draft           YANG Schema Comparison               March 2020
-
-
-   [I-D.verdt-netmod-yang-module-versioning]
-              Claise, B., Clarke, J., Rahman, R., Wilton, R., Lengyel,
-              B., Sterne, J., and K. D'Souza, "Updated YANG Module
-              Revision Handling", draft-verdt-netmod-yang-module-
-              versioning-01 (work in progress), October 2019.
-
-   [I-D.verdt-netmod-yang-semver]
+   [I-D.ietf-netmod-yang-semver]
               Claise, B., Clarke, J., Rahman, R., Wilton, R., Lengyel,
               B., Sterne, J., and K. D'Souza, "YANG Semantic
-              Versioning", draft-verdt-netmod-yang-semver-01 (work in
-              progress), October 2019.
+              Versioning", Work in Progress, Internet-Draft, draft-ietf-
+              netmod-yang-semver-01, 13 July 2020,
+              <https://tools.ietf.org/html/draft-ietf-netmod-yang-
+              semver-01>.
 
-   [I-D.verdt-netmod-yang-solutions]
-              Wilton, R., "YANG Versioning Solution Overview", draft-
-              verdt-netmod-yang-solutions-03 (work in progress),
-              February 2020.
+   [I-D.ietf-netmod-yang-solutions]
+              Wilton, R., "YANG Versioning Solution Overview", Work in
+              Progress, Internet-Draft, draft-ietf-netmod-yang-
+              solutions-00, 19 March 2020, <https://tools.ietf.org/html/
+              draft-ietf-netmod-yang-solutions-00>.
 
-   [I-D.verdt-netmod-yang-versioning-reqs]
-              Clarke, J., "YANG Module Versioning Requirements", draft-
-              verdt-netmod-yang-versioning-reqs-02 (work in progress),
-              November 2018.
+   [I-D.ietf-netmod-yang-versioning-reqs]
+              Clarke, J., "YANG Module Versioning Requirements", Work in
+              Progress, Internet-Draft, draft-ietf-netmod-yang-
+              versioning-reqs-03, 29 June 2020,
+              <https://tools.ietf.org/html/draft-ietf-netmod-yang-
+              versioning-reqs-03>.
+
+
+
+Wilton                     Expires 5 May 2021                  [Page 12]
+
+Internet-Draft           YANG Schema Comparison            November 2020
+
 
    [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
               Requirement Levels", BCP 14, RFC 2119,
               DOI 10.17487/RFC2119, March 1997,
               <https://www.rfc-editor.org/info/rfc2119>.
 
-   [RFC7895]  Bierman, A., Bjorklund, M., and K. Watsen, "YANG Module
-              Library", RFC 7895, DOI 10.17487/RFC7895, June 2016,
-              <https://www.rfc-editor.org/info/rfc7895>.
-
-   [RFC7950]  Bjorklund, M., Ed., "The YANG 1.1 Data Modeling Language",
-              RFC 7950, DOI 10.17487/RFC7950, August 2016,
-              <https://www.rfc-editor.org/info/rfc7950>.
-
    [RFC8174]  Leiba, B., "Ambiguity of Uppercase vs Lowercase in RFC
               2119 Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174,
               May 2017, <https://www.rfc-editor.org/info/rfc8174>.
-
-   [RFC8407]  Bierman, A., "Guidelines for Authors and Reviewers of
-              Documents Containing YANG Data Models", BCP 216, RFC 8407,
-              DOI 10.17487/RFC8407, October 2018,
-              <https://www.rfc-editor.org/info/rfc8407>.
-
-   [RFC8525]  Bierman, A., Bjorklund, M., Schoenwaelder, J., Watsen, K.,
-              and R. Wilton, "YANG Library", RFC 8525,
-              DOI 10.17487/RFC8525, March 2019,
-              <https://www.rfc-editor.org/info/rfc8525>.
-
-
-
-Wilton                 Expires September 18, 2020              [Page 12]
-
-Internet-Draft           YANG Schema Comparison               March 2020
-
 
 11.2.  Informative References
 
    [I-D.clacla-netmod-yang-model-update]
               Claise, B., Clarke, J., Lengyel, B., and K. D'Souza, "New
-              YANG Module Update Procedure", draft-clacla-netmod-yang-
-              model-update-06 (work in progress), July 2018.
-
-   [I-D.ietf-netmod-yang-instance-file-format]
-              Lengyel, B. and B. Claise, "YANG Instance Data File
-              Format", draft-ietf-netmod-yang-instance-file-format-08
-              (work in progress), March 2020.
-
-   [RFC8340]  Bjorklund, M. and L. Berger, Ed., "YANG Tree Diagrams",
-              BCP 215, RFC 8340, DOI 10.17487/RFC8340, March 2018,
-              <https://www.rfc-editor.org/info/rfc8340>.
-
-   [semver]   "Semantic Versioning 2.0.0", <https://www.semver.org>.
+              YANG Module Update Procedure", Work in Progress, Internet-
+              Draft, draft-clacla-netmod-yang-model-update-06, 2 July
+              2018, <https://tools.ietf.org/html/draft-clacla-netmod-
+              yang-model-update-06>.
 
 Author's Address
 
@@ -725,4 +725,4 @@ Author's Address
 
 
 
-Wilton                 Expires September 18, 2020              [Page 13]
+Wilton                     Expires 5 May 2021                  [Page 13]
