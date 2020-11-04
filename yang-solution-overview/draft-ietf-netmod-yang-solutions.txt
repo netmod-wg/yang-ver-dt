@@ -1,0 +1,448 @@
+
+
+
+
+Network Working Group                                     R. Wilton, Ed.
+Internet-Draft                                       Cisco Systems, Inc.
+Intended status: Informational                           1 November 2020
+Expires: 5 May 2021
+
+
+                   YANG Versioning Solution Overview
+                  draft-ietf-netmod-yang-solutions-01
+
+Abstract
+
+   This document gives an overview of the different documents that
+   comprise a full solution to the YANG versioning requirements
+   document.  The purpose of this document is to help readers understand
+   how the discrete parts of the YANG versioning solution fit together
+   during working group development of the solution documents.
+
+Status of This Memo
+
+   This Internet-Draft is submitted in full conformance with the
+   provisions of BCP 78 and BCP 79.
+
+   Internet-Drafts are working documents of the Internet Engineering
+   Task Force (IETF).  Note that other groups may also distribute
+   working documents as Internet-Drafts.  The list of current Internet-
+   Drafts is at https://datatracker.ietf.org/drafts/current/.
+
+   Internet-Drafts are draft documents valid for a maximum of six months
+   and may be updated, replaced, or obsoleted by other documents at any
+   time.  It is inappropriate to use Internet-Drafts as reference
+   material or to cite them other than as "work in progress."
+
+   This Internet-Draft will expire on 5 May 2021.
+
+Copyright Notice
+
+   Copyright (c) 2020 IETF Trust and the persons identified as the
+   document authors.  All rights reserved.
+
+   This document is subject to BCP 78 and the IETF Trust's Legal
+   Provisions Relating to IETF Documents (https://trustee.ietf.org/
+   license-info) in effect on the date of publication of this document.
+   Please review these documents carefully, as they describe your rights
+   and restrictions with respect to this document.  Code Components
+   extracted from this document must include Simplified BSD License text
+   as described in Section 4.e of the Trust Legal Provisions and are
+   provided without warranty as described in the Simplified BSD License.
+
+
+
+
+Wilton                     Expires 5 May 2021                   [Page 1]
+
+Internet-Draft      YANG Versioning Solution Overview      November 2020
+
+
+Table of Contents
+
+   1.  Introduction  . . . . . . . . . . . . . . . . . . . . . . . .   2
+   2.  Solution Documents  . . . . . . . . . . . . . . . . . . . . .   3
+     2.1.  Updated YANG Module Revision Handling . . . . . . . . . .   3
+     2.2.  YANG Semantic Versioning  . . . . . . . . . . . . . . . .   4
+     2.3.  Versioned YANG packages . . . . . . . . . . . . . . . . .   4
+     2.4.  Dynamic YANG schema selection . . . . . . . . . . . . . .   5
+     2.5.  YANG Schema Comparison  . . . . . . . . . . . . . . . . .   6
+   3.  Contributors  . . . . . . . . . . . . . . . . . . . . . . . .   6
+   4.  Security Considerations . . . . . . . . . . . . . . . . . . .   7
+   5.  IANA Considerations . . . . . . . . . . . . . . . . . . . . .   7
+   6.  References  . . . . . . . . . . . . . . . . . . . . . . . . .   7
+     6.1.  Normative References  . . . . . . . . . . . . . . . . . .   7
+     6.2.  Informative References  . . . . . . . . . . . . . . . . .   7
+   Author's Address  . . . . . . . . . . . . . . . . . . . . . . . .   8
+
+1.  Introduction
+
+   [I-D.ietf-netmod-yang-versioning-reqs] documents the requirements for
+   any solution to the YANG [RFC7950] versioning problem.  In
+   particular, chapter 5 lists the formal requirements that a solution
+   requires.
+
+   The complete solution to all of the YANG versioning requirements is
+   comprised of five documents, each addressing different aspects of the
+   solution.  These documents are:
+
+   1.  [I-D.ietf-netmod-yang-module-versioning]
+
+   2.  [I-D.ietf-netmod-yang-semver]
+
+   3.  [I-D.ietf-netmod-yang-packages]
+
+   4.  [I-D.ietf-netmod-yang-ver-selection]
+
+   5.  [I-D.ietf-netmod-yang-schema-comparison]
+
+   The aim of this document is to help readers understand how these
+   different solution documents fit together, and also which documents
+   contribute solutions that address particular individual requirements.
+
+   Open issues, across all of the solution documents are tracked at
+   https://github.com/netmod-wg/yang-ver-dt/issues.
+
+
+
+
+
+
+
+Wilton                     Expires 5 May 2021                   [Page 2]
+
+Internet-Draft      YANG Versioning Solution Overview      November 2020
+
+
+2.  Solution Documents
+
+2.1.  Updated YANG Module Revision Handling
+
+   In summary, [I-D.ietf-netmod-yang-module-versioning] specifies
+   minimal extensions and updates to the YANG language, YANG Library,
+   and YANG author guidelines to provide more flexible YANG module
+   revision handling.  The intent is that these changes and extensions
+   could be folded into future revisions of the updated specifications.
+   The document provides a base solution for all requirements except Req
+   2.2, Req 3.1 and Req 3.2.
+
+   The extensions and changes in the document can be summarized thus:
+
+   *  It defines a YANG extension statement to indicate where non-
+      backwards-compatible changes have occurred in a module's revision
+      history.
+
+   *  It relaxes the rules for the module revision history to allow for
+      a non-linear module revision history.  I.e., any given module
+      revision may have multiple revisions directly derived from it.
+
+   *  It defines a new import extension statement that restricts the
+      allowed module revisions that satisfy the import to only those
+      derived from a specified module revision.
+
+   *  It defines a revision label extension statement to allow an
+      informative name to be associated with a particular revision date,
+      and to be used in import statements, YANG module filenames, and is
+      available in YANG library.  One example of how the revision label
+      could be used is to associate a semantic versioning scheme to YANG
+      module revisions.
+
+   *  It updates the YANG rules for changes between module revisions
+      that are allowed to be classified as backwards-compatible.  In
+      particular, marking a node as obsolete is no longer classified as
+      a backwards compatible change.
+
+   *  It provides updated guidance on how servers handle deprecated and
+      obsolete YANG nodes and augments YANG library with additional
+      leaves to report the server's behavior to clients.
+
+   *  It provides an extension statement to allow a description
+      statement to be associated with a YANG status statement, providing
+      more information about why the status has changed.
+
+   *  It defines how versioning relates to YANG instance data.
+
+
+
+
+Wilton                     Expires 5 May 2021                   [Page 3]
+
+Internet-Draft      YANG Versioning Solution Overview      November 2020
+
+
+   *  It refines the guidelines for updating modules, taking into
+      consideration that non-backwards-compatible changes are sometimes
+      necessary for various pragmatic reasons.
+
+2.2.  YANG Semantic Versioning
+
+   [I-D.ietf-netmod-yang-semver] defines a semantic versioning scheme,
+   derived from the semver.org 2.0.0 specification, that can be used in
+   conjunction with the revision label extension statement defined in
+   Section 2.1 to allow semantic version numbers to be used to manage
+   the revision lifecycle of YANG modules and other related YANG assets,
+   e.g., YANG packages.  This document provides an enhanced solution for
+   Req 2.1, but organizations authoring modules are not obliged to use
+   this specific versioning scheme, and could choose a different
+   overlaid versioning scheme, or none at all and rely solely on
+   revision dates.
+
+   The aims of the YANG semantic versioning scheme are:
+
+   *  to generally allow clients to determine whether NBC changes have
+      occurred between two revisions from the version number alone,
+      without having to check the full revision history;
+
+   *  to give a more informative identifier for a branched revision
+      history over revision dates alone;
+
+   *  to allow revision branches that contain fixes for published non-
+      latest releases.
+
+2.3.  Versioned YANG packages
+
+   The two previous solution documents primarily address version and
+   revision management of individual modules.
+   [I-D.ietf-netmod-yang-packages] provides a mechanism to group sets of
+   related YANG modules revisions together, into constructs called YANG
+   packages, and to apply a versioning scheme to the groups.
+
+   The core part of this document are YANG module definitions that
+   define a YANG package.  The definitions are used as an augmentation
+   to YANG library and also in YANG instance data documents for offline
+   access.
+
+   The principle aims of YANG packages are:
+
+      To define an efficient hierarchical structure that can precisely
+      specify a YANG schema.
+
+
+
+
+
+Wilton                     Expires 5 May 2021                   [Page 4]
+
+Internet-Draft      YANG Versioning Solution Overview      November 2020
+
+
+      To provide an simple alternative mechanism to manage conformance
+      of modules.  Rather than checking conformance against a set of
+      individual YANG module revisions and enabled features, it should
+      be easier to check for conformance against a much smaller set of
+      YANG package versions.
+
+      To provide a more efficient mechanism for servers to share
+      conformance information with clients.  Rather that downloading and
+      comparing all individual module revisions and features via YANG
+      library, the client can just check whether the package version is
+      compatible instead.  The package definition could be retrieved and
+      cached from multiple sources.
+
+      To define constructs that can be used for YANG schema selection.
+
+   Although the YANG packages document does not satisfy any versioning
+   requirements directly, it provides foundational building blocks for
+   the schema selection solution, described in Section 2.4, that does
+   address two of the requirements.
+
+2.4.  Dynamic YANG schema selection
+
+   [I-D.ietf-netmod-yang-ver-selection] specifies a solution for
+   requirements 3.1 and 3.2 via the use of
+   [I-D.ietf-netmod-yang-packages] and a model and protocol based schema
+   selection scheme that can be used by clients to choose which schemas
+   to use when interacting with the device from the available schema
+   that are supported and advertised by the server.
+
+   The dynamic YANG schema selection solution:
+
+      allows servers to define named 'schema-sets' which specify the
+      schema for each supported datastore via references to YANG
+      packages;
+
+      can support clients choosing a single default schema-set (from
+      those advertised by the server) that is used for all NETCONF/
+      RESTCONF protocol sessions;
+
+      can support clients enabling multiple compatible secondary schema-
+      sets that can be used on separate NETCONF/RESTCONF protocol
+      sessions;
+
+      can support clients configuring named custom schema-sets that can
+      be selected as default or secondary schema-sets;
+
+      can support different module versions via placing them in
+      different schema-sets;
+
+
+
+Wilton                     Expires 5 May 2021                   [Page 5]
+
+Internet-Draft      YANG Versioning Solution Overview      November 2020
+
+
+      can support different schema families (e.g., IETF YANG modules ,
+      native vendor, or OpenConfig);
+
+      allows considerable freedom in the schema selection capabilities
+      that servers choose to support.
+
+2.5.  YANG Schema Comparison
+
+   The final piece of the solution jigsaw is a document that describes
+   how to algorithmically compare YANG schema, addressing Req 2.2.
+
+   [I-D.ietf-netmod-yang-schema-comparison] specifies an algorithm that
+   can be used to compare two revisions of a YANG schema to determine
+   the overall scope of the changes, and a list of the specific changes,
+   between the two revisions.
+
+   The YANG Schema Comparison solution:
+
+      defines a algorithm for comparing two YANG schema, identifying the
+      differences and classifying them as backwards-compatible, non-
+      backwards-compatible or editorial;
+
+      can be used to compare individual YANG module revisions;
+
+      can be used to compare YANG schema defined using YANG packages;
+
+      can filter the comparison output to the subset of the schema nodes
+      that are of interest, providing a more precise answer for clients
+      to determine whether they would likely be affected when upgrading
+      between two schema versions;
+
+      defines YANG extensions to improve the accuracy of the comparison
+      algorithm by explicitly annotating the type of change to
+      statements within a YANG module, for use where the type of change
+      would otherwise be ambiguous to a simple programmatic comparison
+      algorithm.
+
+3.  Contributors
+
+   This document grew out of the YANG module versioning design team that
+   started after IETF 101.  The following individuals are (or have been)
+   members of that design team and have contributed to defining the
+   problem, specifying the requirements, and working on a solution:
+
+   *  Balazs Lengyel
+
+   *  Benoit Claise
+
+
+
+
+Wilton                     Expires 5 May 2021                   [Page 6]
+
+Internet-Draft      YANG Versioning Solution Overview      November 2020
+
+
+   *  Ebben Aries
+
+   *  Jason Sterne
+
+   *  Joe Clarke
+
+   *  Juergen Schoenwaelder
+
+   *  Mahesh Jethanandani
+
+   *  Michael (Wangzitao)
+
+   *  Qin Wu
+
+   *  Reshad Rahman
+
+   *  Rob Wilton
+
+   *  Susan Hares
+
+   *  Wu Bo
+
+4.  Security Considerations
+
+   The document does not define any new protocol or data model.  There
+   is no security impact.
+
+5.  IANA Considerations
+
+   None.
+
+6.  References
+
+6.1.  Normative References
+
+   [I-D.ietf-netmod-yang-versioning-reqs]
+              Clarke, J., "YANG Module Versioning Requirements", Work in
+              Progress, Internet-Draft, draft-ietf-netmod-yang-
+              versioning-reqs-03, 29 June 2020,
+              <https://tools.ietf.org/html/draft-ietf-netmod-yang-
+              versioning-reqs-03>.
+
+   [RFC7950]  Bjorklund, M., Ed., "The YANG 1.1 Data Modeling Language",
+              RFC 7950, DOI 10.17487/RFC7950, August 2016,
+              <https://www.rfc-editor.org/info/rfc7950>.
+
+6.2.  Informative References
+
+
+
+
+Wilton                     Expires 5 May 2021                   [Page 7]
+
+Internet-Draft      YANG Versioning Solution Overview      November 2020
+
+
+   [I-D.ietf-netmod-yang-module-versioning]
+              Wilton, R., Rahman, R., Lengyel, B., Clarke, J., Sterne,
+              J., Claise, B., and K. D'Souza, "Updated YANG Module
+              Revision Handling", Work in Progress, Internet-Draft,
+              draft-ietf-netmod-yang-module-versioning-01, 10 July 2020,
+              <https://tools.ietf.org/html/draft-ietf-netmod-yang-
+              module-versioning-01>.
+
+   [I-D.ietf-netmod-yang-packages]
+              Wilton, R., Rahman, R., Clarke, J., Sterne, J., and W. Bo,
+              "YANG Packages", Work in Progress, Internet-Draft, draft-
+              ietf-netmod-yang-packages-00, 17 March 2020,
+              <https://tools.ietf.org/html/draft-ietf-netmod-yang-
+              packages-00>.
+
+   [I-D.ietf-netmod-yang-schema-comparison]
+              Wilton, R., "YANG Schema Comparison", Work in Progress,
+              Internet-Draft, draft-ietf-netmod-yang-schema-comparison-
+              00, 17 March 2020, <https://tools.ietf.org/html/draft-
+              ietf-netmod-yang-schema-comparison-00>.
+
+   [I-D.ietf-netmod-yang-semver]
+              Claise, B., Clarke, J., Rahman, R., Wilton, R., Lengyel,
+              B., Sterne, J., and K. D'Souza, "YANG Semantic
+              Versioning", Work in Progress, Internet-Draft, draft-ietf-
+              netmod-yang-semver-01, 13 July 2020,
+              <https://tools.ietf.org/html/draft-ietf-netmod-yang-
+              semver-01>.
+
+   [I-D.ietf-netmod-yang-ver-selection]
+              Wilton, R., Rahman, R., Clarke, J., Sterne, J., and W. Bo,
+              "YANG Schema Selection", Work in Progress, Internet-Draft,
+              draft-ietf-netmod-yang-ver-selection-00, 17 March 2020,
+              <https://tools.ietf.org/html/draft-ietf-netmod-yang-ver-
+              selection-00>.
+
+Author's Address
+
+   Robert Wilton (editor)
+   Cisco Systems, Inc.
+
+   Email: rwilton@cisco.com
+
+
+
+
+
+
+
+
+
+Wilton                     Expires 5 May 2021                   [Page 8]
