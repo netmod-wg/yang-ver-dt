@@ -129,7 +129,7 @@
     of a YANG library datastore schema resolves ambiguous imports for modules which are not "import-only".</t>
     <t>This document updates <xref target="RFC8407"/> section 4.7. <xref target="guidelines"/> provides guidelines on managing the
     lifecycle of YANG modules that may contain non-backwards-compatible changes and a branched revision history.</t>
-    <t>This document updates <xref target="RFC7950"/> section 5.2. <xref target="revision_label"/> describes the use of a revision
+    <t>This document updates <xref target="RFC7950"/> section 5.2. <xref target="file_names"/> describes the use of a revision
     label in the name of a file containing a YANG module or submodule.</t>
   </section>
 </section>
@@ -174,8 +174,8 @@
   is not constrained by the "include" statement.</t>
 
   <t><xref target="RFC7950"/> section 11 requires that all updates to a YANG module are BC to the previous revision of
-  the module.  This document allows for more flexible evolution of YANG modules: NBC changes between module revisions
-  are allowed and are documented using a new "nbc-changes" YANG extension statement in the module revision history.</t>
+  the module.  This document introduces a method to indicate that an NBC change has occurred between module revisions:
+  this is done by using a new "non-backwards-compatible-changes" YANG extension statement in the module revision history.</t>
 
   <t>Two revisions of a module MAY have identical content except for the revision history. This could occur,
   for example, if a module has a branched history and identical changes are applied in multiple branches.</t>
@@ -187,8 +187,9 @@
     target="bc_update_rules"/>.</t>
     <t>A new module revision MAY contain NBC changes, i.e., the semantics of an existing definition
     MAY be changed in an NBC way without requiring a new definition with a new identifier.  A new
-    module revision with NBC changes MUST include the "rev:nbc-changes" extension substatement to
+    module revision with NBC changes MUST include the "rev:non-backwards-compatible-changes" extension substatement to
     signal the potential for incompatibility to existing module users and readers.</t>
+    <t>As per <xref target="RFC7950"/>, all published revisions of a module are given a new unique revision date.  This applies even for module revisions containing only changes to any whitespace, formatting, comments or line endings (e.g. DOS vs UNIX).</t>
 
     <section anchor="bc_update_rules" title="Backwards-compatible rules for config data">
       <t>A change between two module revisions is defined as being "backwards-compatible" if the change conforms to
@@ -248,19 +249,17 @@
     </section>
   </section>
   
-  <section anchor="nbc_marker" title="nbc-changes revision extension statement">
-    <t>The "rev:nbc-changes" extension statement is used to indicate YANG module revisions that contain
+  <section anchor="nbc_marker" title="non-backwards-compatible-changes revision extension statement">
+    <t>The "rev:non-backwards-compatible-changes" extension statement is used to indicate YANG module revisions that contain
     NBC changes.</t>
     <t>If a revision of a YANG module contains changes, relative to the preceding revision in the revision history,
     that do not conform to the module update rules defined in <xref target="bc_update_rules"/> or <xref target="bc_update_rules_config_false"/>, then a
-    "rev:nbc-changes" extension statement MUST be added as a substatement to the "revision" statement.</t>
-    <t>Conversely, if a revision does not contain an "rev:nbc-changes" extension substatement then all changes, relative
+    "rev:non-backwards-compatible-changes" extension statement MUST be added as a substatement to the "revision" statement.</t>
+    <t>Conversely, if a revision does not contain an "rev:non-backwards-compatible-changes" extension substatement then all changes, relative
     to the preceding revision in the revision history, MUST be backwards-compatible.</t>
   </section>
   
   <section anchor="revision_label" title="Revision label">
-    <t>This section updates <xref target="RFC7950"/> section 5.2, it explains how a revision label can be used
-    in the name of a file containing a YANG module or submodule.</t>
     <t>Each revision entry in a module or submodule MAY have a revision label associated with it, providing an
     alternative alias to identify a particular revision of a module or submodule.  The revision label could be used to
     provide an additional versioning identifier associated with the revision.</t>
@@ -282,8 +281,10 @@
       <t>A specific revision-label identifies a specific revision (variant) of the 
       module. If two YANG modules contain the same module name and the same 
       revision-label (and hence also the same revision-date) in their latest revision statement,
-      then the contents of the two modules, including the revision history, MUST be identical.</t>
-    <t>If a revision has an associated revision label, then the revision-label may be used 
+      then the file contents of the two modules, including the revision history, MUST be identical.</t>
+      <section anchor="file_names" title="File names">
+      <t>This section updates <xref target="RFC7950"/> section 5.2.</t>
+      <t>If a revision has an associated revision label, then the revision-label may be used 
       instead of the revision date in the filename of a YANG file,
       where it takes the form:
       <figure align="center" anchor="filename" suppress-title="true">
@@ -301,9 +302,11 @@
       Typically, only one file name SHOULD exist for the same module (or submodule) revision.
       Two file names, one with the revision date and another with the revision
       label, MAY exist for the same module (or submodule) revision, e.g when migrating from one scheme to the other.</t>
+      </section>
+
       <section anchor="revision_label-scheme" title="Revision label scheme extension statement">
-         <t>The "rev:revision-label-scheme" extension statement is used to indicate which revision-label
-            scheme a module or submodule uses. The mandatory argument to this extension statement:
+         <t>The optional "rev:revision-label-scheme" extension statement is used to indicate which revision-label
+            scheme a module or submodule uses. There MUST NOT be more than one revision label scheme in a module or submodule. The mandatory argument to this extension statement:
             <list style="symbols">
               <t>Specifies the revision-label scheme used by the module or submodule</t>
               <t>Is defined in the document which specifies the revision-label scheme</t>
@@ -328,7 +331,7 @@
 
   <section anchor="example_versions" title="Examples for updating the YANG module revision history">
     <t>The following diagram, explanation, and module history illustrates how the branched revision history,
-    "nbc-changes" extension statement, and "revision-label" extension statement could be used:</t>
+    "non-backwards-compatible-changes" extension statement, and "revision-label" extension statement could be used:</t>
     <figure>
       <preamble>Example YANG module with branched revision history.</preamble>
       <artwork>
@@ -369,14 +372,14 @@
 
       revision 2019-03-01 {
         rev:revision-label 3.0.0;
-        rev:nbc-changes;
+        rev:non-backwards-compatible-changes;
         description
           "Add new functionality. Remove some deprecated nodes.";
       }
 
       revision 2019-02-01 {
         rev:revision-label 2.0.0;
-        rev:nbc-changes;
+        rev:non-backwards-compatible-changes;
         description "Apply bugfix to pattern statement";
       }
 
@@ -414,7 +417,7 @@
 
       revision 2019-02-01 {
         rev:revision-label 2.0.0;
-        rev:nbc-changes;
+        rev:non-backwards-compatible-changes;
         description "Apply bugfix to pattern statement";
       }
 
@@ -598,7 +601,7 @@ module: ietf-yang-library-revisions
 	</t>
 	<t>Servers SHOULD set both the "deprecated-nodes-implemented" and "obsolete-nodes-absent" leaves to "true".</t>
 	<t>If a server does not set the "deprecated-nodes-implemented" leaf to "true", then clients MUST NOT rely solely on the
-	"rev:nbc-changes" statements to determine whether two module revisions are backwards-compatible, and MUST also
+	"rev:non-backwards-compatible-changes" statements to determine whether two module revisions are backwards-compatible, and MUST also
 	consider whether the status of any nodes has changed to "deprecated" and whether those nodes are implemented by
 	the server.</t>
       </section>
@@ -627,7 +630,7 @@ module: ietf-yang-library-revisions
          RECOMMENDED to minimize NBC changes and keep changes BC whenever possible.</t>
       <t>When NBC changes are introduced, consideration should be given to the impact on clients and YANG module authors SHOULD 
       try to mitigate that impact.</t>
-      <t>A "rev:nbc-changes" statement MUST be added if there are NBC changes relative to the previous revision.</t>
+      <t>A "rev:non-backwards-compatible-changes" statement MUST be added if there are NBC changes relative to the previous revision.</t>
       <t>Removing old revision statements from a module's revision history could break import by revision, and hence it is RECOMMENDED to retain them.
          If all depencencies have been updated to not import specific revisions of a module, then the corresponding revision statements can be removed from that module.
          An alternative solution, if the revision section is too long, would be remove, or curtail, the older description statements associated with the previous revisions.</t>
@@ -699,7 +702,7 @@ module: ietf-yang-library-revisions
       <preamble> YANG module with extension statements for annotating NBC changes, revision label, revision label scheme,
       and importing by revision.</preamble>
       <artwork name="ietf-yang-revisions@2021-02-17.yang"><![CDATA[
-<CODE BEGINS> file "ietf-yang-revisions@2021-02-17.yang"
+<CODE BEGINS> file "ietf-yang-revisions@2021-05-16.yang"
  module ietf-yang-revisions {
    yang-version 1.1;
    namespace "urn:ietf:params:xml:ns:yang:ietf-yang-revisions";
@@ -767,7 +770,7 @@ module: ietf-yang-library-revisions
    // RFC Ed.: replace XXXX (inc above) with actual RFC number and
    // remove this note.
 
-   revision 2021-02-17 {
+   revision 2021-05-16 {
      description
        "Initial version.";
      reference
@@ -777,7 +780,7 @@ module: ietf-yang-library-revisions
    typedef revision-label {
      type string {
        length "1..255";
-       pattern ''[a-zA-Z0-9,\-_.+]+';
+       pattern '[a-zA-Z0-9,\-_.+]+';
        pattern '\d{4}-\d{2}-\d{2}' {
          modifier invert-match;
        }
@@ -802,32 +805,32 @@ module: ietf-yang-library-revisions
        "Represents either a YANG revision date or a revision label";
    }
 
-   extension nbc-changes {
+   extension non-backwards-compatible-changes {
      description
        "This statement is used to indicate YANG module revisions that
         contain non-backwards-compatible changes.
 
         The statement MUST only be a substatement of the 'revision'
         statement.
-        Zero or one 'nbc-changes' statement per parent statement is
-        allowed.
+        Zero or one 'non-backwards-compatible-changes' statement per parent
+        statement is allowed.
         The statement MUST NOT have any substatements.
 
         If a revision of a YANG module contains changes, relative to
         the preceding revision in the revision history, that do not
         conform to the module update rules defined in RFC-XXX, then
-        the 'nbc-changes' statement MUST be added as a substatement to
-        the revision statement.
+        the 'non-backwards-compatible-changes' statement MUST be added as a
+        substatement to the revision statement.
 
         Conversely, if a revision of a YANG module only contains
         changes, relative to the preceding revision in the revision
         history, that are classified as 'backwards-compatible' then
-        the revision statement MUST NOT contain any 'nbc-changes'
+        the revision statement MUST NOT contain any 'non-backwards-compatible-changes'
         substatement.";
 
      reference
        "XXXX: Updated YANG Module Revision Handling;
-        Section 3.2, nbc-changes revision extension statement";
+        Section 3.2, non-backwards-compatible-changes revision extension statement";
    }
 
    extension revision-label {
@@ -869,6 +872,9 @@ module: ietf-yang-library-revisions
 
         This extension MUST be used if there is a revision-label
         statement in the module or submodule.
+
+        There MUST be at most one instance of this extension in a module
+        or submodule.
 
         The statement MUST NOT have any substatements.";
 
@@ -1151,14 +1157,14 @@ module ietf-yang-library-revisions {
     enum name for two SAFI values was changed.</t>
 
     <t>In all cases, IANA MUST follow the versioning guidance specified in <xref
-    target="update_rules"/>, and MUST include a "rev:nbc-changes" substatement
+    target="update_rules"/>, and MUST include a "rev:non-backwards-compatible-changes" substatement
     to the latest revision statement whenever an IANA maintained module is
     updated in a non-backwards-compatible way, as described in <xref
     target="nbc_marker"/>.</t>
 
     <t>Note: For published IANA maintained YANG modules that contain
     non-backwards-compatible changes between revisions, a new revision should be
-    published with the "rev:nbc-changes" substatement retrospectively added to
+    published with the "rev:non-backwards-compatible-changes" substatement retrospectively added to
     any revisions containing non-backwards-compatible changes.</t>
 
     <t>Non normative examples of updates to enumeration types in IANA maintained
