@@ -84,8 +84,7 @@ Table of Contents
        3.1.2.  Backwards-compatibility rules for config false and
                output data . . . . . . . . . . . . . . . . . . . . .   7
        3.1.3.  Non-backwards-compatible changes  . . . . . . . . . .   8
-     3.2.  non-backwards-compatible-changes revision extension
-           statement . . . . . . . . . . . . . . . . . . . . . . . .   8
+     3.2.  non-backwards-compatible revision extension statement . .   8
      3.3.  Revision label  . . . . . . . . . . . . . . . . . . . . .   8
        3.3.1.  File names  . . . . . . . . . . . . . . . . . . . . .   9
        3.3.2.  Revision label scheme extension statement . . . . . .  10
@@ -106,6 +105,7 @@ Table of Contents
                module  . . . . . . . . . . . . . . . . . . . . . . .  19
      7.2.  Versioning Considerations for Clients . . . . . . . . . .  20
    8.  Module Versioning Extension YANG Modules  . . . . . . . . . .  21
+   9.  Contributors  . . . . . . . . . . . . . . . . . . . . . . . .  29
 
 
 
@@ -114,7 +114,6 @@ Wilton, et al.          Expires November 17, 2021               [Page 2]
 Internet-Draft    Updated YANG Module Revision Handling         May 2021
 
 
-   9.  Contributors  . . . . . . . . . . . . . . . . . . . . . . . .  29
    10. Security Considerations . . . . . . . . . . . . . . . . . . .  30
    11. IANA Considerations . . . . . . . . . . . . . . . . . . . . .  30
      11.1.  YANG Module Registrations  . . . . . . . . . . . . . . .  30
@@ -162,6 +161,7 @@ Internet-Draft    Updated YANG Module Revision Handling         May 2021
 
       Updates and augmentations to ietf-yang-library to include the
       revision label in the module descriptions, to report how
+      "deprecated" and "obsolete" nodes are handled by a server, and to
 
 
 
@@ -170,7 +170,6 @@ Wilton, et al.          Expires November 17, 2021               [Page 3]
 Internet-Draft    Updated YANG Module Revision Handling         May 2021
 
 
-      "deprecated" and "obsolete" nodes are handled by a server, and to
       clarify how module imports are resolved when multiple revisions
       could otherwise be chosen.
 
@@ -217,6 +216,7 @@ Internet-Draft    Updated YANG Module Revision Handling         May 2021
       identified with a revision date, with no implied ordering or
       backwards compatibility between different revisions of the same
       module.
+
 
 
 
@@ -272,8 +272,8 @@ Internet-Draft    Updated YANG Module Revision Handling         May 2021
    [RFC7950] section 11 requires that all updates to a YANG module are
    BC to the previous revision of the module.  This document introduces
    a method to indicate that an NBC change has occurred between module
-   revisions: this is done by using a new "non-backwards-compatible-
-   changes" YANG extension statement in the module revision history.
+   revisions: this is done by using a new "non-backwards-compatible"
+   YANG extension statement in the module revision history.
 
 
 
@@ -298,9 +298,9 @@ Internet-Draft    Updated YANG Module Revision Handling         May 2021
    A new module revision MAY contain NBC changes, i.e., the semantics of
    an existing definition MAY be changed in an NBC way without requiring
    a new definition with a new identifier.  A new module revision with
-   NBC changes MUST include the "rev:non-backwards-compatible-changes"
-   extension substatement to signal the potential for incompatibility to
-   existing module users and readers.
+   NBC changes MUST include the "rev:non-backwards-compatible" extension
+   substatement to signal the potential for incompatibility to existing
+   module users and readers.
 
    As per [RFC7950], all published revisions of a module are given a new
    unique revision date.  This applies even for module revisions
@@ -421,20 +421,20 @@ Internet-Draft    Updated YANG Module Revision Handling         May 2021
    Section 3.1.2 as being backwards-compatible are classified as "non-
    backwards-compatible" changes.
 
-3.2.  non-backwards-compatible-changes revision extension statement
+3.2.  non-backwards-compatible revision extension statement
 
-   The "rev:non-backwards-compatible-changes" extension statement is
-   used to indicate YANG module revisions that contain NBC changes.
+   The "rev:non-backwards-compatible" extension statement is used to
+   indicate YANG module revisions that contain NBC changes.
 
    If a revision of a YANG module contains changes, relative to the
    preceding revision in the revision history, that do not conform to
    the module update rules defined in Section 3.1.1 or Section 3.1.2,
-   then a "rev:non-backwards-compatible-changes" extension statement
-   MUST be added as a substatement to the "revision" statement.
+   then a "rev:non-backwards-compatible" extension statement MUST be
+   added as a substatement to the "revision" statement.
 
    Conversely, if a revision does not contain an "rev:non-backwards-
-   compatible-changes" extension substatement then all changes, relative
-   to the preceding revision in the revision history, MUST be backwards-
+   compatible" extension substatement then all changes, relative to the
+   preceding revision in the revision history, MUST be backwards-
    compatible.
 
 3.3.  Revision label
@@ -547,7 +547,7 @@ Internet-Draft    Updated YANG Module Revision Handling         May 2021
 3.4.  Examples for updating the YANG module revision history
 
    The following diagram, explanation, and module history illustrates
-   how the branched revision history, "non-backwards-compatible-changes"
+   how the branched revision history, "non-backwards-compatible"
    extension statement, and "revision-label" extension statement could
    be used:
 
@@ -637,14 +637,14 @@ Internet-Draft    Updated YANG Module Revision Handling         May 2021
 
          revision 2019-03-01 {
            rev:revision-label 3.0.0;
-           rev:non-backwards-compatible-changes;
+           rev:non-backwards-compatible;
            description
              "Add new functionality. Remove some deprecated nodes.";
          }
 
          revision 2019-02-01 {
            rev:revision-label 2.0.0;
-           rev:non-backwards-compatible-changes;
+           rev:non-backwards-compatible;
            description "Apply bugfix to pattern statement";
          }
 
@@ -698,7 +698,7 @@ Internet-Draft    Updated YANG Module Revision Handling         May 2021
 
          revision 2019-02-01 {
            rev:revision-label 2.0.0;
-           rev:non-backwards-compatible-changes;
+           rev:non-backwards-compatible;
            description "Apply bugfix to pattern statement";
          }
 
@@ -956,10 +956,10 @@ Internet-Draft    Updated YANG Module Revision Handling         May 2021
 
    If a server does not set the "deprecated-nodes-implemented" leaf to
    "true", then clients MUST NOT rely solely on the "rev:non-backwards-
-   compatible-changes" statements to determine whether two module
-   revisions are backwards-compatible, and MUST also consider whether
-   the status of any nodes has changed to "deprecated" and whether those
-   nodes are implemented by the server.
+   compatible" statements to determine whether two module revisions are
+   backwards-compatible, and MUST also consider whether the status of
+   any nodes has changed to "deprecated" and whether those nodes are
+   implemented by the server.
 
 6.  Versioning of YANG instance data
 
@@ -1000,8 +1000,8 @@ Internet-Draft    Updated YANG Module Revision Handling         May 2021
    impact on clients and YANG module authors SHOULD try to mitigate that
    impact.
 
-   A "rev:non-backwards-compatible-changes" statement MUST be added if
-   there are NBC changes relative to the previous revision.
+   A "rev:non-backwards-compatible" statement MUST be added if there are
+   NBC changes relative to the previous revision.
 
 
 
@@ -1257,27 +1257,27 @@ Internet-Draft    Updated YANG Module Revision Handling         May 2021
        "Represents either a YANG revision date or a revision label";
    }
 
-   extension non-backwards-compatible-changes {
+   extension non-backwards-compatible {
      description
        "This statement is used to indicate YANG module revisions that
         contain non-backwards-compatible changes.
 
         The statement MUST only be a substatement of the 'revision'
         statement.
-        Zero or one 'non-backwards-compatible-changes' statement per parent
+        Zero or one 'non-backwards-compatible' statement per parent
         statement is allowed.
         The statement MUST NOT have any substatements.
 
         If a revision of a YANG module contains changes, relative to
         the preceding revision in the revision history, that do not
         conform to the module update rules defined in RFC-XXX, then
-        the 'non-backwards-compatible-changes' statement MUST be added as a
+        the 'non-backwards-compatible' statement MUST be added as a
         substatement to the revision statement.
 
         Conversely, if a revision of a YANG module only contains
         changes, relative to the preceding revision in the revision
         history, that are classified as 'backwards-compatible' then
-        the revision statement MUST NOT contain any 'non-backwards-compatible-changes'
+        the revision statement MUST NOT contain any 'non-backwards-compatible'
         substatement.";
 
      reference
@@ -1290,7 +1290,7 @@ Wilton, et al.          Expires November 17, 2021              [Page 23]
 Internet-Draft    Updated YANG Module Revision Handling         May 2021
 
 
-        Section 3.2, non-backwards-compatible-changes revision extension statement";
+        Section 3.2, non-backwards-compatible revision extension statement";
    }
 
    extension revision-label {
@@ -1691,16 +1691,16 @@ Internet-Draft    Updated YANG Module Revision Handling         May 2021
    was changed.
 
    In all cases, IANA MUST follow the versioning guidance specified in
-   Section 3.1, and MUST include a "rev:non-backwards-compatible-
-   changes" substatement to the latest revision statement whenever an
-   IANA maintained module is updated in a non-backwards-compatible way,
-   as described in Section 3.2.
+   Section 3.1, and MUST include a "rev:non-backwards-compatible"
+   substatement to the latest revision statement whenever an IANA
+   maintained module is updated in a non-backwards-compatible way, as
+   described in Section 3.2.
 
    Note: For published IANA maintained YANG modules that contain non-
    backwards-compatible changes between revisions, a new revision should
-   be published with the "rev:non-backwards-compatible-changes"
-   substatement retrospectively added to any revisions containing non-
-   backwards-compatible changes.
+   be published with the "rev:non-backwards-compatible" substatement
+   retrospectively added to any revisions containing non-backwards-
+   compatible changes.
 
    Non normative examples of updates to enumeration types in IANA
    maintained modules that would be classified as non-backwards-
