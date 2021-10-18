@@ -4,7 +4,6 @@
 -->
 <!DOCTYPE rfc SYSTEM "rfc2629.dtd" [
 <!ENTITY RFC6020 SYSTEM "reference.RFC.6020.xml">
-<!ENTITY RFC7895 SYSTEM "reference.RFC.7895.xml">
 <!ENTITY RFC7950 SYSTEM "reference.RFC.7950.xml">
 <!ENTITY RFC8407 SYSTEM "reference.RFC.8407.xml">
 <!ENTITY OPENCONFIG-YANG-CATALOG SYSTEM "http://xml.resource.org/public/rfc/bibxml3/reference.I-D.openconfig-netmod-model-catalog.xml">
@@ -24,7 +23,7 @@
 <?rfc inline="yes"?>
 <?rfc compact="yes"?>
 <?rfc subcompact="no"?>
-<rfc updates="7950,8407,8525" category="std" ipr="trust200902" docName="draft-ietf-netmod-yang-module-versioning-03">
+<rfc updates="7950,8407,8525" category="std" ipr="trust200902" docName="draft-ietf-netmod-yang-module-versioning-04">
 <front>
 <title abbrev="Updated YANG Module Revision Handling">Updated YANG Module Revision Handling</title>
 
@@ -70,17 +69,16 @@
 <abstract>
   <t>This document specifies a new YANG module update procedure that can document when non-backwards-compatible changes
   have occurred during the evolution of a YANG module.  It extends the YANG import statement with an earliest revision
-  filter to better represent inter-module dependencies.  It provides help and guidelines for managing the lifecycle of
+  filter to better represent inter-module dependencies.  It provides guidelines for managing the lifecycle of
   YANG modules and individual schema nodes.  It provides a mechanism, via the revision-label YANG extension, to specify
-  a revision identifier for YANG modules and submodules.  This document updates RFC 7950, RFC 8407 and RFC 8525.</t>
+  a revision identifier for YANG modules and submodules.  This document updates RFC 7950, RFC 6020, RFC 8407 and RFC 8525.</t>
 </abstract>
 </front>
 <middle>
 <section anchor="intro" title="Introduction">
-  <t>This document defines a solution to the YANG module lifecycle problems described in <xref
-  target="I-D.ietf-netmod-yang-versioning-reqs"/>. Complementary documents provide a complete solution to the YANG
-  versioning requirements, with the overall relationship of the solution drafts described in <xref
-  target="I-D.ietf-netmod-yang-solutions"/>.</t>
+  <t>This document defines the foundational pieces of a solution to the YANG module lifecycle problems described in <xref
+  target="I-D.ietf-netmod-yang-versioning-reqs"/>. Complementary documents provide other parts of the solution, with the overall 
+  relationship of the solution drafts described in <xref target="I-D.ietf-netmod-yang-solutions"/>.</t>
 
   <t>Specifically, this document recognises a need (within standards organizations, vendors, and the industry) to
   sometimes allow YANG modules to evolve with non-backwards-compatible changes, which could cause breakage to clients
@@ -106,24 +104,26 @@
   <t>Open issues are tracked at <eref target="https://github.com/netmod-wg/yang-ver-dt/issues"/>.</t>
 
   <section anchor="changes" title="Updates to YANG RFCs">
-    <t>This document updates <xref target="RFC7950"/> section 11. <xref target="yang_revision_handling"/> describes modifications to
+    <t>This document updates <xref target="RFC7950"/> section 11 and <xref target="RFC6020"/> section 10.
+    <xref target="yang_revision_handling"/> describes modifications to
     YANG revision handling and update rules, and <xref target="import"/> describes a YANG extension statement to do import by derived
     revision.</t>
-    <t>This document updates <xref target="RFC7950"/> section 5.2. <xref target="file_names"/> describes the use of a revision
+    <t>This document updates <xref target="RFC7950"/> section 5.2 and <xref target="RFC6020"/> section 5.2.
+    <xref target="file_names"/> describes the use of a revision
     label in the name of a file containing a YANG module or submodule.</t>
-    <t>This document updates <xref target="RFC7950"/> section 5.6.5. <xref target="resolving_ambiguous_imports"/> defines how a client
+    <t>This document updates <xref target="RFC7950"/> section 5.6.5 and <xref target="RFC8525"/>. <xref target="resolving_ambiguous_imports"/> defines how a client
     of a YANG library datastore schema resolves ambiguous imports for modules which are not "import-only".</t>
     <t>This document updates <xref target="RFC8407"/> section 4.7. <xref target="guidelines"/> provides guidelines on managing the
     lifecycle of YANG modules that may contain non-backwards-compatible changes and a branched revision history.</t>
     <t>This document updates <xref target="RFC8525"/> with augmentations to include revision labels in the YANG library data and two
-    boolean leaves to indicate whether status deprecated and status obsolete schema nodes are implemented by the server.</t>
+    boolean leafs to indicate whether status deprecated and status obsolete schema nodes are implemented by the server.</t>
   </section>
 </section>
     <section anchor="terminology" title="Terminology and Conventions">
       <t>The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT
       RECOMMENDED", "MAY", and "OPTIONAL" in this document are to be interpreted as described in BCP 14 <xref
       target="RFC2119"/> <xref target="RFC8174"/> when, and only when, they appear in all capitals, as shown here.</t>
-      <t>In addition, this document uses the terminology:
+      <t>In addition, this document uses the following terminology:
       <list style="symbols">	
         <t>YANG module revision: An instance of a YANG module, uniquely identified with a revision date, with no implied
         ordering or backwards compatibility between different revisions of the same module.</t>
@@ -136,13 +136,13 @@
     </section>
 
 <section anchor="yang_revision_handling" title="Refinements to YANG revision handling">
-  <t><xref target="RFC7950"/> assumes, but does not explicitly state, that the revision history for a YANG module or submodule is
+  <t><xref target="RFC7950"/> and <xref target="RFC6020"/> assume, but do not explicitly state, that the revision history for a YANG module or submodule is
   strictly linear, i.e., it is prohibited to have two independent revisions of a YANG module or submodule that are both directly
   derived from the same parent revision.</t>
   
-  <t>This document clarifies <xref target="RFC7950"/> to explicitly allow non-linear development of YANG module and submodule
+  <t>This document clarifies <xref target="RFC7950"/> and <xref target="RFC6020"/> to explicitly allow non-linear development of YANG module and submodule
   revisions, so that they MAY have multiple revisions that directly derive from the same parent revision.  As per <xref
-  target="RFC7950"/>, YANG module and submodule revisions continue to be uniquely identified by their revision date, and hence
+  target="RFC7950"/> and <xref target="RFC6020"/>, YANG module and submodule revisions continue to be uniquely identified by their revision date, and hence
   all revisions of a given module or submodule MUST have unique revision dates.</t>
 
   <t>A corollary to the above is that the relationship between two module or submodule revisions cannot be determined by comparing
@@ -153,11 +153,11 @@
   module's "include" statements SHOULD use "revision-date"
   substatements to specify the exact revision date of each included submodule. When a module does not include its
   submodules by revision-date,  the revision of submodules used cannot be derived from the including module. Mechanisms 
-  such as YANG packages <xref target="I-D.ietf-netmod-yang-packages"/>, and YANG library <xref target="RFC7895"/>
+  such as YANG packages <xref target="I-D.ietf-netmod-yang-packages"/>, and YANG library
   <xref target="RFC8525"/>, MAY be used to specify the exact submodule revisions used when the submodule revision date
   is not constrained by the "include" statement.</t>
 
-  <t><xref target="RFC7950"/> section 11 requires that all updates to a YANG module are BC to the previous revision of
+  <t><xref target="RFC7950"/> section 11 and <xref target="RFC6020"/> section 10 require that all updates to a YANG module are BC to the previous revision of
   the module.  This document introduces a method to indicate that an NBC change has occurred between module revisions:
   this is done by using a new "non-backwards-compatible" YANG extension statement in the module revision history.</t>
 
@@ -165,7 +165,7 @@
   for example, if a module or submodule has a branched history and identical changes are applied in multiple branches.</t>
 
   <section title="Updating a YANG module with a new revision" anchor="update_rules">
-    <t>This section updates <xref target="RFC7950"/> section 11 to refine the rules for permissible changes when a new
+    <t>This section updates <xref target="RFC7950"/> section 11 and <xref target="RFC6020"/> section 10 to refine the rules for permissible changes when a new
     YANG module revision is created.</t>
     <t>Where pragmatic, updates to YANG modules SHOULD be backwards-compatible, following the definition in <xref
     target="bc_update_rules"/>.</t>
@@ -174,26 +174,26 @@
     requiring a new data-node definition with a new identifier. A YANG extension,
     defined in <xref target="nbc_marker"/>, is used to signal the potential
     for incompatibility to existing module users and readers.</t>
-    <t>As per <xref target="RFC7950"/>, all published revisions of a module are given a new unique revision date.  This applies even for module revisions containing (in the module or included submodules) only changes to any whitespace, formatting, comments or line endings (e.g., DOS vs UNIX).</t>
+    <t>As per <xref target="RFC7950"/> and <xref target="RFC6020"/>, all published revisions of a module are given a new unique revision date.  This applies even for module revisions containing (in the module or included submodules) only changes to any whitespace, formatting, comments or line endings (e.g., DOS vs UNIX).</t>
 
     <section anchor="bc_update_rules" title="Backwards-compatible rules">
       <t>A change between two module revisions is defined as being "backwards-compatible" if the change conforms to
-      the module update rules specified in <xref target="RFC7950"/> section 11, updated by the following rules:
+      the module update rules specified in <xref target="RFC7950"/> section 11 and <xref target="RFC6020"/> section 10, updated by the following rules:
       <list style="symbols">
         <t>A "status" "deprecated" statement MAY be added, or changed from "current" to "deprecated", but adding or
         changing "status" to "obsolete" is not a backwards-compatible change.</t>
         <t>YANG schema nodes with a "status" "obsolete" substatement MAY be removed from published modules, and are classified as backwards-compatible
-        changes.  In some circumstances it may be helpful to retain the obsolete definitions to ensure that their
-        identifiers are not reused with a different meaning.</t>
+        changes.  In some circumstances it may be helpful to retain the obsolete definitions since their identifiers may still be referenced by other modules and
+        to ensure that their identifiers are not reused with a different meaning.</t>
         <t>In statements that have any data definition statements as substatements, those data definition substatements
         MAY be reordered, as long as they do not change the ordering of any "input" or "output" data definition
         substatements of "rpc" or "action" statements.  If new data
         definition statements are added, they can be added anywhere in the sequence of existing substatements.</t>
-        <t>Any changes (including whitespace or formatting changes) that do not change the semantic meaning of the 
-        module are backwards compatible.</t>
         <t>A statement that is defined using the YANG "extension" statement MAY be added, removed, or changed,
         if it does not change the semantics of the module.  Extension statement definitions SHOULD specify whether
         adding, removing, or changing statements defined by that extension are backwards-compatible or non-backwards-compatible.</t>
+        <t>Any changes (including whitespace or formatting changes) that do not change the semantic meaning of the 
+        module are backwards compatible.</t>
       </list></t>
     </section>
     <section anchor="nbc_update_rules" title="Non-backwards-compatible changes">
@@ -227,9 +227,9 @@
     <t>Each revision entry in a module or submodule MAY have a revision label associated with it, providing an
     alternative alias to identify a particular revision of a module or submodule.  The revision label could be used to
     provide an additional versioning identifier associated with the revision.</t>
-    <t>YANG Semver <xref target="I-D.ietf-netmod-yang-semver"/> defines a 
-    versioning scheme based on Semver 2.0.0 <xref target="semver"/> that can
-    be used as a revision label.</t>
+    <t>A revision label scheme is a set of rules describing how a particular type of revision-label operates for versioning YANG modules and submodules.
+    For example, YANG Semver <xref target="I-D.ietf-netmod-yang-semver"/> defines a revision label scheme based on Semver 2.0.0 <xref target="semver"/>.
+    Other documents may define other YANG revision label schemes.</t>
     <t>Submodules MAY use a revision label scheme. When they use a revision
     label scheme, submodules MAY use a revision label scheme that is different from
     the one used in the including module.</t>
@@ -242,13 +242,13 @@
       instead of the revision date in a "rev:revision-or-derived" extension 
       statement argument.
     </t>
-      <t>A specific revision-label identifies a specific revision (variant) of the 
+      <t>A specific revision-label identifies a specific revision of the 
       module. If two YANG modules contain the same module name and the same 
       revision-label (and hence also the same revision-date) in their latest revision statement,
       then the file contents of the two modules, including the revision history, MUST be identical.</t>
       <section anchor="file_names" title="File names">
-      <t>This section updates <xref target="RFC7950"/> section 5.2.</t>
-      <t>If a revision has an associated revision label, then the revision-label may be used 
+      <t>This section updates <xref target="RFC7950"/> section 5.2 and <xref target="RFC6020"/> section 5.2.</t>
+      <t>If a revision has an associated revision label, then the revision-label MAY be used 
       instead of the revision date in the filename of a YANG file,
       where it takes the form:
       <figure align="center" anchor="filename" suppress-title="true">
@@ -392,7 +392,7 @@
   </section>
 </section>
 <section title="Import by derived revision" anchor="import">
-  <t>RFC 7950 allows YANG module "import" statements to optionally require the imported module to have a particular
+  <t><xref target="RFC7950"/> and <xref target="RFC6020"/> allow YANG module "import" statements to optionally require the imported module to have a particular
   revision date.  In practice, importing a module with an exact revision date is often too restrictive because it
   requires the importing module to be updated whenever any change to the imported module occurs.  The alternative choice
   of using an import statement without any revision date statement is also not ideal because the importing module may
@@ -417,12 +417,11 @@
     <t>The "revision-or-derived" extension statement MAY be specified multiple times, allowing the import to use any
     module revision that satisfies at least one of the "revision-or-derived" extension statements.</t>
     <t>The "revision-or-derived" extension statement does not guarantee that all module revisions that satisfy an import
-    statement are necessarily compatible, it only gives an indication that the revisions are more likely to be
+    statement are necessarily compatible; it only gives an indication that the revisions are more likely to be
     compatible.  Hence, NBC changes to an imported module may also require new revisions of any
     importing modules, updated to accommodation those changes, along with updated import "revision-or-derived" extension
     statements to depend on the updated imported module revision.</t>
     <t>Adding, modifying or removing a "revision-or-derived" extension statement is considered to be a BC change.</t>
-    <t>Adding, modifying or removing a "revision-date" extension statement is considered to be a BC change.</t>
   </list>
   </t>
 
@@ -505,13 +504,13 @@ import example-module {
 
 
 <section title="Updates to ietf-yang-library" anchor="ietf_yang_library_updates">
-    <t>This document updates YANG library <xref target="RFC7950"/> to clarify how ambiguous
-    module imports are resolved.  It also defines the YANG module, ietf-yang-library-revisions that augments YANG library <xref target="RFC8525"/> with new
-    revision-label related meta-data.</t>
+    <t>This document updates YANG 1.1 <xref target="RFC7950"/> and YANG library <xref target="RFC8525"/> to clarify how ambiguous
+    module imports are resolved.  It also defines the YANG module, ietf-yang-library-revisions, that augments YANG library <xref target="RFC8525"/> with
+    revision labels and two leafs to indicate how a server implements deprecated and obsolete schema nodes.</t>
 
     <section anchor="resolving_ambiguous_imports" title="Resolving ambiguous module imports">
       <t>A YANG datastore schema, defined in <xref target="RFC8525"/>, can specify multiple revisions of a YANG module
-      in the schema using the "import-only" list, with the requirement from <xref target="RFC7950"/> that only a single
+      in the schema using the "import-only" list, with the requirement from <xref target="RFC7950"/> section 5.6.5 that only a single
       revision of a YANG module may be implemented.</t>
       <t>If a YANG module import statement does not specify a specific revision within the datastore schema then it
       could be ambiguous as to which module revision the import statement should resolve to.  Hence, a datastore schema
@@ -549,22 +548,22 @@ module: ietf-yang-library-revisions
             </figure>
 
       <section title="Advertising revision-label">
-        <t>The ietf-yang-library-revisions YANG module augments the "module" list in ietf-yang-library with a "revision-label"
-        leaf to optionally declare the revision label associated wth the particular revision of each module.</t>
+        <t>The ietf-yang-library-revisions YANG module augments the "module" and "submodule" lists in ietf-yang-library with a "revision-label"
+        leafs to optionally declare the revision label associated with each module and submodule.</t>
       </section>
       <section title="Reporting how deprecated and obsolete nodes are handled">
-        <t>The ietf-yang-library-revisions YANG module augments YANG library with two leaves to allow a server to report how it
-        handles status "deprecated" and status "obsolete" nodes.  The leaves are:
+        <t>The ietf-yang-library-revisions YANG module augments YANG library with two boolean leafs to allow a server to report how it
+        Implements status "deprecated" and status "obsolete" schema nodes.  The leafs are:
           <list style="hanging">
             <t hangText="deprecated-nodes-implemented:">If set to "true", this leaf indicates that all schema nodes with a
-            status "deprecated" child statement are implemented equivalently as if they had status "current", or
+            status "deprecated" are implemented equivalently as if they had status "current";
             otherwise deviations MUST be used to explicitly remove "deprecated" nodes from the schema.  If this leaf is
             set to "false" or absent, then the behavior is unspecified.</t>
             <t hangText="obsolete-nodes-absent:">If set to "true", this leaf indicates that the server does not implement any
-            status "obsolete" nodes.  If this leaf is set to "false" or absent, then the behaviour is unspecified.</t>
+            status "obsolete" schema nodes.  If this leaf is set to "false" or absent, then the behaviour is unspecified.</t>
           </list>
 	</t>
-	<t>Servers SHOULD set both the "deprecated-nodes-implemented" and "obsolete-nodes-absent" leaves to "true".</t>
+	<t>Servers SHOULD set both the "deprecated-nodes-implemented" and "obsolete-nodes-absent" leafs to "true".</t>
 	<t>If a server does not set the "deprecated-nodes-implemented" leaf to "true", then clients MUST NOT rely solely on the
 	"rev:non-backwards-compatible" statements to determine whether two module revisions are backwards-compatible, and MUST also
 	consider whether the status of any nodes has changed to "deprecated" and whether those nodes are implemented by
@@ -591,21 +590,18 @@ module: ietf-yang-library-revisions
 
   <section anchor="guidelines_authors" title="Guidelines for YANG module authors">
       <t>All IETF YANG modules MUST include revision-label statements for all newly published YANG modules, and all newly published revisions of existing YANG modules.  The revision-label MUST take the form of a YANG semantic version number <xref target="I-D.ietf-netmod-yang-semver"/>.</t> 
-      <t>NBC changes to YANG modules may cause problems to clients, who are consumers of YANG models, and hence YANG module authors are
-         RECOMMENDED to minimize NBC changes and keep changes BC whenever possible.</t>
+      <t>NBC changes to YANG modules may cause problems to clients, who are consumers of YANG models, and hence YANG module authors SHOULD minimize NBC changes and keep changes BC whenever possible.</t>
       <t>When NBC changes are introduced, consideration should be given to the impact on clients and YANG module authors SHOULD 
       try to mitigate that impact.</t>
       <t>A "rev:non-backwards-compatible" statement MUST be added if there are NBC changes relative to the previous revision.</t>
       <t>Removing old revision statements from a module's revision history could break import by revision, and hence it is RECOMMENDED to retain them.
-         If all depencencies have been updated to not import specific revisions of a module, then the corresponding revision statements can be removed from that module.
+         If all dependencies have been updated to not import specific revisions of a module, then the corresponding revision statements can be removed from that module.
          An alternative solution, if the revision section is too long, would be to remove, or curtail, the older description statements associated with the previous revisions.</t>
-      <t>The "rev:revision-or-derived" extension should be used in YANG module imports to indicate revision dependencies
+      <t>The "rev:revision-or-derived" extension SHOULD be used in YANG module imports to indicate revision dependencies
       between modules in preference to the "revision-date" statement, which causes overly strict import dependencies and
       SHOULD NOT be used.</t>
       <t>A module that includes submodules SHOULD use the "revision-date" statement to include specific submodule
-      revisions.  The revision of the including module MUST be updated when any included submodule has changed. The
-      revision-label substatement used in the new module revision MUST indicate the nature of the change, i.e. NBC or BC,
-      to the module's schema tree.</t>
+      revisions.  The revision of the including module MUST be updated when any included submodule has changed.</t>
       <t>In some cases a module or submodule revision that is not strictly NBC by the definition in <xref target="nbc_update_rules"/> of this specification may include the "non-backwards-compatible" statement. Here is an example when adding the statement may be desirable:
       <list style="symbols">
         <t>A "config false" leaf had its value space expanded (for example, a range was increased, or additional enum values were added) and the author or server implementor feels there is a significant compatibility impact for clients and users of the module or submodule</t>
@@ -618,7 +614,7 @@ module: ietf-yang-library-revisions
        way. Here are the different ways in which this can be done:
           <list style="symbols">
              <t>NBC changes can be sometimes be done incrementally using the "deprecated" status to provide clients time to adapt to NBC changes.</t>
-             <t>NBC changes are done at once, i.e. without using "status" statements. Depending on the change, this may have a big impact on clients.</t>
+             <t>NBC changes are done at once, i.e. without using "status" statements. Depending on the change, this may have a big impact on clients and is NOT RECOMMENDED.</t>
              <t>If the server can support multiple revisions of the YANG module or of YANG packages(as specified in <xref target="I-D.ietf-netmod-yang-packages"/>), and allows the client to select the revision (as per <xref target="I-D.ietf-netmod-yang-ver-selection"/>), then NBC changes MAY be done without using "status" statements. Clients would be required to select the revision which they support and the NBC change would have no impact on them.</t>
           </list>
        </t>
@@ -769,7 +765,7 @@ module ietf-yang-revisions {
       "Represents either a YANG revision date or a revision label";
   }
 
-  extension nbc-changes {
+  extension non-backwards-compatible {
     description
       "This statement is used to indicate YANG module revisions that
       contain non-backwards-compatible changes.
@@ -781,9 +777,9 @@ module ietf-yang-revisions {
 
       If a revision of a YANG module contains changes, relative to
       the preceding revision in the revision history, that do not
-      conform to the module update rules defined in RFC-XXX, then
-      the 'non-backwards-compatible' statement MUST be added as a
-      substatement to the revision statement.
+      conform to the backwards compatible module update rules defined 
+      in RFC-XXX, then the 'non-backwards-compatible' statement MUST 
+      be added as a substatement to the revision statement.
 
       Conversely, if a revision does not contain a
       'non-backwards-compatible' statement then all changes,
@@ -811,11 +807,11 @@ module ietf-yang-revisions {
     description
       "The revision label can be used to provide an additional
       versioning identifier associated with a module or submodule
-      revision.  E.g., one option for a versioning scheme that
+      revision.  One such scheme that
       could be used is [XXXX: ietf-netmod-yang-semver].
 
       The format of the revision-label argument MUST conform to the
-      pattern defined for the revision-label typedef.
+      pattern defined for the revision-label typedef in this module.
 
       The statement MUST only be a substatement of the revision
       statement.  Zero or one revision-label statements per parent
@@ -1002,12 +998,12 @@ module ietf-yang-library-revisions {
   
   augment "/yanglib:yang-library/yanglib:module-set/yanglib:module" {
     description
-      "Augmentation modules with a revision label";
+      "Add a revision label to module information";
     leaf revision-label {
       type rev:revision-label;
       description
         "The revision label associated with this module revision.
-         The label MUST match the rev:label value in the specific
+         The label MUST match the rev:revision-label value in the specific
          revision of the module loaded in this module-set.";
 
       reference
@@ -1019,12 +1015,12 @@ module ietf-yang-library-revisions {
   augment "/yanglib:yang-library/yanglib:module-set/yanglib:module/"
           + "yanglib:submodule" {
     description
-      "Augment submodule information with a revision label";
+      "Add a revision label to submodule information";
     leaf revision-label {
       type rev:revision-label;
       description
         "The revision label associated with this submodule revision.
-         The label MUST match the rev:label value in the specific
+         The label MUST match the rev:revision-label value in the specific
          revision of the submodule included by the module loaded in
          this module-set.";
 
@@ -1037,7 +1033,7 @@ module ietf-yang-library-revisions {
   augment "/yanglib:yang-library/yanglib:module-set/" 
           + "yanglib:import-only-module/yanglib:submodule" {
     description
-      "Augment submodule information with a revision label";
+      "Add a revision label to submodule information";
     leaf revision-label {
       type rev:revision-label;
       description
@@ -1062,9 +1058,9 @@ module ietf-yang-library-revisions {
       type boolean;
       description
         "If set to true, this leaf indicates that all schema nodes with
-         a status 'deprecated' child statement are implemented
-         equivalently as if they had status 'current', or otherwise
-         deviations MUST be used to explicitly remove 'deprecated'
+         a status 'deprecated' are implemented
+         equivalently as if they had status 'current'; otherwise
+         deviations MUST be used to explicitly remove deprecated
          nodes from the schema.  If this leaf is absent or set to false,
          then the behavior is unspecified.";
 
@@ -1078,7 +1074,7 @@ module ietf-yang-library-revisions {
       type boolean;
       description
         "If set to true, this leaf indicates that the server does not
-         implement any status 'obsolete' nodes.  If this leaf is
+         implement any status 'obsolete' schema nodes.  If this leaf is
          absent or set to false, then the behaviour is unspecified.";
 
       reference
@@ -1116,7 +1112,8 @@ module ietf-yang-library-revisions {
       </t>
 
    <t>The initial revision of this document was refactored and built
-   upon <xref target="I-D.clacla-netmod-yang-model-update"/>.</t>
+   upon <xref target="I-D.clacla-netmod-yang-model-update"/>. We would 
+   like to thanks Kevin D'Souza and Benoit Claise for their initial work in this problem space</t>
    <t>Discussons on the use of Semver for YANG versioning has been held
    with authors of the OpenConfig YANG models.  We would like to thank both
    Anees Shaikh and Rob Shakir for their input into this problem
@@ -1128,7 +1125,8 @@ module ietf-yang-library-revisions {
 
 <section anchor="security" title="Security Considerations">
   <t>The document does not define any new protocol or data model.  There
-  are no security considerations beyond those specified in <xref target="RFC7950"/>.</t>
+  are no security considerations beyond those specified in <xref target="RFC7950"/>
+  and <xref target="RFC6020"/>.</t>
 </section>
 <section anchor="iana" title="IANA Considerations">
   <section anchor="yang-module-registrations" title="YANG Module Registrations">
@@ -1236,7 +1234,6 @@ module ietf-yang-library-revisions {
    <?rfc include='reference.RFC.6020'?>
    <?rfc include='reference.RFC.8174'?>
    <?rfc include='reference.RFC.7950'?>
-   <?rfc include='reference.RFC.7895'?>
    <?rfc include='reference.RFC.8407'?>
    <?rfc include='reference.RFC.8525'?>
    <?ref include='reference.I-D.ietf-netmod-yang-semver'?>
@@ -1449,19 +1446,6 @@ module ietf-yang-library-revisions {
          </section>
 
   </section>
-    <section title="Changes between revisions">
-      <t>   Note to RFC Editor (To be removed by RFC Editor)</t>
-      <t>v00 - v01
-        <list style="symbols">
-          <t>Removed status-description</t>
-          <t>Allowed both revision-date and revision-label in the filename.</t>
-          <t>New extension revision-label-scheme</t>
-          <t>To include submodules, inclusion by revision-date changed from MUST to SHOULD</t>
-          <t>Submodules can use revision label scheme and it can be same or different as the including module's scheme</t>
-          <t>Addressed various comments provided at WG adoption on rev-00</t>
-        </list>
-      </t>
-    </section>
 
 </back>
 </rfc>
