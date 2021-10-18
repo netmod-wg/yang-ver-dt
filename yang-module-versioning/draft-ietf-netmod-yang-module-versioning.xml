@@ -24,7 +24,7 @@
 <?rfc inline="yes"?>
 <?rfc compact="yes"?>
 <?rfc subcompact="no"?>
-<rfc updates="7950,8407,8525" category="std" ipr="trust200902" docName="draft-ietf-netmod-yang-module-versioning-03">
+<rfc updates="7950,8407,8525" category="std" ipr="trust200902" docName="draft-ietf-netmod-yang-module-versioning-04">
 <front>
 <title abbrev="Updated YANG Module Revision Handling">Updated YANG Module Revision Handling</title>
 
@@ -613,22 +613,21 @@ module: ietf-yang-library-revisions
       </t>
 
       
-       <section title="Making non-backwards-compatible changes to a YANG module">
+       <section anchor="guidelines_making_changes" title="Making non-backwards-compatible changes to a YANG module">
        <t>There are various valid situations where a YANG module has to be modified in an NBC
        way. Here are the different ways in which this can be done:
           <list style="symbols">
              <t>NBC changes can be sometimes be done incrementally using the "deprecated" status to provide clients time to adapt to NBC changes.</t>
              <t>NBC changes are done at once, i.e. without using "status" statements. Depending on the change, this may have a big impact on clients.</t>
-             <t>If the server can support multiple revisions of the YANG module or of YANG packages(as specified in <xref target="I-D.ietf-netmod-yang-packages"/>), and allows the client to select the revision (as per <xref target="I-D.ietf-netmod-yang-ver-selection"/>), then NBC changes MAY be done without using "status" statements. Clients would be required to select the revision which they support and the NBC change would have no impact on them.</t>
+             <t>If the server can support multiple revisions of the YANG module or of YANG packages (as specified in <xref target="I-D.ietf-netmod-yang-packages"/>), and allows the client to select the revision (as per <xref target="I-D.ietf-netmod-yang-ver-selection"/>), then NBC changes MAY be done without using "status" statements. Clients would be required to select the revision which they support and the NBC change would have no impact on them.</t>
           </list>
        </t>
        <t>Here are some guidelines on how non-backwards-compatible changes can be made incrementally, with the assumption that deprecated nodes are implemented by the server, and obsolete nodes are not:
           <list style ="numbers">
              <t>The changes should be made gradually, e.g., a data node's status SHOULD NOT be changed directly from
              "current" to "obsolete" (see Section 4.7 of <xref target="RFC8407"/>), instead the status SHOULD first be
-             marked "deprecated" and then when support is removed its status MUST be changed to "obsolete". Instead of
-             using the "obsolete" status, the data node MAY be removed from the model but this has the risk of breaking
-             modules which import the modified module.</t>
+             marked "deprecated". At some point in the future, when support is removed for the data node, there are two options. The first, and preferred, option is to keep the data node definition in the model and change the status to “obsolete”. The second option is to simply remove the data node from the model, but this has the risk of breaking
+             modules which import the modified module, and the removed identifier may be accidently reused in a future revision.</t>
              <t>For deprecated data nodes the "description" statement SHOULD also indicate until when support for the node
              is guaranteed (if known). If there is a replacement data node, rpc, action or notification for the deprecated node,
              this SHOULD be stated in the "description". The reason for deprecating the node can also be included in the
@@ -735,6 +734,7 @@ module ietf-yang-revisions {
   // remove this note.
 
   revision 2021-06-30 {
+    rev:revision-label 1.0.0-draft-ietf-netmod-yang-module-versioning-04;
     description
       "Initial version.";
     reference
@@ -923,8 +923,8 @@ module ietf-yang-revisions {
 </figure>
 <figure>
   <preamble>YANG module with augmentations to YANG Library to revision labels</preamble>
-      <artwork name="ietf-yang-library-revisions@2021-06-30.yang"><![CDATA[
-<CODE BEGINS> file "ietf-yang-library-revisions@2021-06-30.yang"
+      <artwork name="ietf-yang-library-revisions@2021-10-15.yang"><![CDATA[
+<CODE BEGINS> file "ietf-yang-library-revisions@2021-10-15.yang"
 module ietf-yang-library-revisions {
   yang-version 1.1;
   namespace
@@ -939,7 +939,7 @@ module ietf-yang-library-revisions {
   
   import ietf-yang-library {
     prefix yanglib;
-    reference "RFC 8525: YANG Libary";
+    reference "RFC 8525: YANG Library";
   }
 
   organization
@@ -992,17 +992,19 @@ module ietf-yang-library-revisions {
   // actual RFC number and remove this note.
   // RFC Ed.: please replace revision-label version with 1.0.0 and
   // remove this note.
-  revision 2021-06-30 {
-    rev:revision-label 0.2.0;
+  revision 2021-10-15 {
+    rev:revision-label 1.0.0-draft-ietf-netmod-yang-module-versioning-04;
     description
       "Initial revision";
     reference
       "XXXX: Updated YANG Module Revision Handling";
   }
   
+  // library 1.0 modules-state is not augmented with revision-label
+  
   augment "/yanglib:yang-library/yanglib:module-set/yanglib:module" {
     description
-      "Augmentation modules with a revision label";
+      "Add a revision label to module information";
     leaf revision-label {
       type rev:revision-label;
       description
@@ -1019,7 +1021,7 @@ module ietf-yang-library-revisions {
   augment "/yanglib:yang-library/yanglib:module-set/yanglib:module/"
           + "yanglib:submodule" {
     description
-      "Augment submodule information with a revision label";
+      "Add a revision label to submodule information";
     leaf revision-label {
       type rev:revision-label;
       description
@@ -1035,9 +1037,26 @@ module ietf-yang-library-revisions {
   }
 
   augment "/yanglib:yang-library/yanglib:module-set/" 
+          + "yanglib:import-only-module" {
+    description
+      "Add a revision label to module information";
+    leaf revision-label {
+      type rev:revision-label;
+      description
+        "The revision label associated with this module revision.
+         The label MUST match the rev:label value in the specific
+         revision of the module included in this module-set.";
+
+      reference
+        "XXXX: Updated YANG Module Revision Handling;
+         Section 5.2.1, Advertising revision-label";
+    }
+  }
+
+  augment "/yanglib:yang-library/yanglib:module-set/" 
           + "yanglib:import-only-module/yanglib:submodule" {
     description
-      "Augment submodule information with a revision label";
+      "Add a revision label to submodule information";
     leaf revision-label {
       type rev:revision-label;
       description
@@ -1101,6 +1120,7 @@ module ietf-yang-library-revisions {
         <list style="symbols">
           <t>Balazs Lengyel</t>
           <t>Benoit Claise</t>
+          <t>Bo Wu</t>
           <t>Ebben Aries</t>
           <t>Jan Lindblad</t>
           <t>Jason Sterne</t>
@@ -1111,7 +1131,6 @@ module ietf-yang-library-revisions {
           <t>Qin Wu</t>
           <t>Reshad Rahman</t>
           <t>Rob Wilton</t>
-          <t>Bo Wu</t>
         </list>
       </t>
 
@@ -1315,87 +1334,65 @@ module ietf-yang-library-revisions {
     </list></t>
 </section>
 <section anchor="example_guidelines" title="Examples of applying the NBC change guidelines">
-  <t>The following sections give guidance for how some of these NBC changes could be made to a YANG module. The examples
-  are all for "config true" nodes.</t>    
+  <t>The following sections give steps that could be taken for making NBC changes to a YANG module or submodule using the incremental approach described in section <xref target="guidelines_making_changes"/>.</t>   
+  <t>The examples are all for "config true" nodes.</t>
+  <t>Alternatively, the NBC changes MAY be done non-incrementally and without using "status" statements if the server can support multiple revisions of the YANG module or of YANG packages. Clients would be required to select the revision which they support and the NBC change would have no impact on them.</t>
     <section anchor="remove_node" title="Removing a data node">
             <t>Removing a leaf or container from the data tree, e.g., because support for the corresponding feature is
             being removed:
             <list style="numbers">
-               <t>The node's status is changed to "deprecated" and it is supported for at least one
-               year. This is a BC change.</t>
-               <t>When the node is not available anymore, its status is changed to "obsolete" and the
-               "description" updated, this is an NBC change.</t>
+               <t>The schema node's status is changed to "deprecated" and the node is supported for some period of time (e.g. one year). This is a BC change.</t>
+               <t>When the schema node is not supported anymore, its status is changed to "obsolete" and the
+               "description" updated. This is an NBC change.</t>
             </list>
-            </t>
-            <t>If the server can support NBC revisions of the YANG module simultaneously using version selection <xref target="I-D.ietf-netmod-yang-ver-selection"/>,
-            then the changes can be done immediately:
-               <list style="numbers">
-                  <t>The new revision of the YANG module has the node's status changed to "obsolete" and the
-               "description" updated, this is an NBC change.</t>
-                  <t>Clients which require the data node select the YANG package containing the schema version they use.</t>
-               </list>
             </t>
          </section>
 
          <section anchor="type_change" title="Changing the type of a leaf node">            
-            <t>Changing the type of a leaf-node. e.g., consider a "vpn-id" node of type integer being changed to a
-            string:
+            <t>Changing the type of a leaf node. e.g., a "vpn-id" node of type integer being changed to a string:
             <list style="numbers">
-               <t>The status of node "vpn-id" is changed to "deprecated" and the node should be available for at
-               least one year. This is a BC change.</t>
-               <t>A new node, e.g., "vpn-name", of type string is added to the same location as the existing node
+               <t>The status of schema node "vpn-id" is changed to "deprecated" and the node is supported for some period of time (e.g. one year). This is a BC change. The description is updated to indicate that “vpn-name” is replacing this node.</t>
+               <t>A new schema node, e.g., "vpn-name", of type string is added to the same location as the existing node
                "vpn-id". This new node has status "current" and its description explains that it is replacing node
                "vpn-id".</t>
-               <t>During the period of time when both nodes are available, how the server behaves when either node is
-               set is outside the scope of this document and will vary on a case by case basis. Here are some options:
+               <t>During the period of time when both schema nodes are supported, the interactions between the two nodes is outside the scope of this document and will vary on a case by case basis. Here are some options:
                <list style="numbers">
                   <t>A server may prevent the new node from being set if the old node is already set (and
-                  vice-versa). The new node may have a when statement to achieve this. The old node must not have a when
+                  vice-versa). A "choice" construction could be used, or the new node may have a "when" statement to achieve this. The old node must not have a "when"
                   statement since this would be an NBC change, but the server could reject the old
                   node from being set if the new node is already set.</t>
                   <t>If the new node is set and a client does a get or get-config operation on the old node, the server
                   could map the value. For example, if the new node "vpn-name" has value "123" then the server could return
                   integer value 123 for the old node "vpn-id". However, if the value can not be mapped then the configuration
-                  would be incomplete, this is outside the scope of this document.</t>
+                  would be incomplete. The behavior in this case is outside the scope of this document.</t>
                </list>
                </t>
-               <t>When node "vpn-id" is not available anymore, its status is changed to "obsolete" and the
+               <t>When the schema node "vpn-id" is not supported anymore, its status is changed to "obsolete" and the
                "description" is updated. This is an NBC change.</t>
             </list>
-            </t>
-            <t>If the server can support NBC revisions of the YANG module simultaneously using version selection <xref target="I-D.ietf-netmod-yang-ver-selection"/>,
-            then the changes can be done immediately:
-               <list style="numbers">
-                  <t>In the new revision of the YANG module, the status of node "vpn-id" is changed to "obsolete".  This is an NBC change.</t>
-                  <t>New node "vpn-name" is added to the same location as described above.</t>
-                  <t>Clients which require the data node select the YANG package containing the schema version they use</t>
-                  <t>A server should not map between the nodes "vpn-id" and "vpn-name", i.e. if a client creates a data instance with "vpn-name" then that data instance should not be visible to a client using a module revision which has "vpn-id" (and vice-versa).</t>
-               </list>
             </t>
          </section>
          
          <section anchor="range_reduction" title="Reducing the range of a leaf node">
-            <t>Reducing the range of values of a leaf-node, e.g., consider a "vpn-id" node of type integer being changed from type uint32 to type uint16:
+            <t>Reducing the range of values of a leaf-node, e.g., consider a "vpn-id" schema node of type uint32 being changed from range 1..5000 to range 1..2000:
             <list style="numbers">
-               <t>If all values which are being removed were never supported, e.g., if a vpn-id of 65536 or higher was never accepted, this is a BC change for the functionality (no functionality change).  Even if it is an NBC change for the YANG model, there should be no impact for clients using that YANG model. </t>
-               <t>If one or more values being removed was previously supported, e.g., if a vpn-id of 65536 was accepted previously, this is an NBC change for the YANG model. Clients using the old YANG model will be impacted, so a change of this nature should be done carefully, e.g., by using the steps described in <xref
+               <t>If all values which are being removed were never supported, e.g., if a vpn-id of 2001 or higher was never accepted, this is a BC change for the functionality (no functionality change).  Even if it is an NBC change for the YANG model, there should be no impact for clients using that YANG model. </t>
+               <t>If one or more values being removed was previously supported, e.g., if a vpn-id of 3333 was accepted previously, this is an NBC change for the YANG model. Clients using the old YANG model will be impacted, so a change of this nature should be done carefully, e.g., by using the steps described in <xref
   target="type_change"/></t>
             </list>
             </t>
          </section>
 
          <section anchor="key_change" title="Changing the key of a list">
-            <t>Changing the key of  a list has a big impact to the client. For example, consider a "sessions" list which has a key "interface" and there is a need to change the key to "dest-address", such a change can be done in steps:
+            <t>Changing the key of  a list has a big impact to the client. For example, consider a "sessions" list which has a key "interface" and there is a need to change the key to "dest-address". Such a change can be done in steps:
             <list style="numbers">
-               <t>The status of list "sessions" is changed to "deprecated" and the list should be available for at
-               least one year. This is a BC change.</t>
-               <t>A new list is created in the same location with the same data but with "dest-address" as key. Finding an appropriate name for the new list can be tricky especially if the name of the existing list was perfect. In this case the new list is called "sessions-address", has status "current" and its description should explain that it is replacing list "session".</t>
-               <t>During the period of time when both lists are available, how the server behaves when either list is
-               set is outside the scope of this document and will vary on a case by case basis. Here are some options:
+               <t>The status of list "sessions" is changed to "deprecated" and the list is supported for some period of time (e.g. one year). This is a BC change. The description is updated to indicate the new list that is replacing this list.</t> 
+               <t>A new list is created in the same location with the same descendant schema nodes but with "dest-address" as key. Finding an appropriate name for the new list can be difficult. In this case the new list is called "sessions-address", has status "current" and its description should explain that it is replacing list "session".</t>
+               <t>During the period of time when both lists are supported, the interactions between the two lists is outside the scope of this document and will vary on a case by case basis. Here are some options:
                <list style="numbers">
-                  <t>A server could prevent the new list from being set if the old list already has entries (and
+                  <t>A server could prevent entries in the new list from being created if the old list already has entries (and
                   vice-versa).</t>
-                  <t>If the new list is set and a client does a get or get-config operation on the old list, the server
+                  <t>If the new list has entries created and a client does a get or get-config operation on the old list, the server
                   could map the entries. However, if the new list has entries which would lead to duplicate keys in the old list, the mapping can not be done.</t>
                </list>
                </t>
@@ -1413,18 +1410,16 @@ module ietf-yang-library-revisions {
          </section>
 
          <section anchor="rename_node" title="Renaming a node">
-            <t>A leaf-node or a container may be renamed, either due to a spelling error in the previous name or because of a better name. For example a node "ip-adress" could be renamed to "ip-address":
+            <t>A leaf or container schema node may be renamed, either due to a spelling error in the previous name or because of a better name. For example a node "ip-adress" could be renamed to "ip-address":
             <list style="numbers">
-               <t>The status of the existing node "ip-adress" is changed to "deprecated" and the node should be available for at
-               least one year. This is a BC change.</t>
-               <t>The new node "ip-address" is added to the same location as the existing node
+               <t>The status of the existing node "ip-adress" is changed to "deprecated" and is supported for some period of time (e.g. one year). This is a BC change. The description is updated to indicate the node that is replacing this node.</t>  
+               <t>The new schema node "ip-address" is added to the same location as the existing node
                "ip-adress". This new node has status "current" and its description should explain that it is replacing node
                "ip-adress".</t>
-               <t>During the period of time when both nodes are available, how the server behaves when either node is
-               set is outside the scope of this document and will vary on a case by case basis. Here are some options:
+               <t>During the period of time when both nodes are available, the interactions between the two nodes is outside the scope of this document and will vary on a case by case basis. Here are some options:
                <list style="numbers">
-                  <t>A server could prevent the new node from being set if the old node is already set (and
-                  vice-versa). The new node could have a when statement to achieve this. The old node must not have a when
+                  <t>A server may prevent the new node from being set if the old node is already set (and
+                  vice-versa). A "choice" construction could be used, or the new node may have a "when" statement to achieve this. The old node must not have a "when"
                   statement since this would be an NBC change, but the server could reject the old
                   node from being set if the new node is already set.</t>
                   <t>If the new node is set and a client does a get or get-config operation on the old node, the server
@@ -1436,16 +1431,6 @@ module ietf-yang-library-revisions {
                "description" is updated. This is an NBC change.</t>
             </list>
            </t>
-            <t>If the server can support NBC revisions of the YANG module simultaneously using version selection <xref target="I-D.ietf-netmod-yang-ver-selection"/>,
-            then the changes can be done immediately:
-               <list style="numbers">
-                  <t>The new revision of the YANG module has the node with the new name replacing the node with the old name, this is an NBC change.</t>
-                  <t>Clients which require the previous node name select the older module revision</t>
-               </list>
-            </t>
-         </section>
-
-         <section anchor="default_change" title="Changing a default value">
          </section>
 
   </section>
