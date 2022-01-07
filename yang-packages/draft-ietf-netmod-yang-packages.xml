@@ -24,7 +24,7 @@
 <?rfc inline="yes"?>
 <?rfc compact="yes"?>
 <?rfc subcompact="no"?>
-<rfc category="std" docName="draft-ietf-netmod-yang-packages-01"
+<rfc category="std" docName="draft-ietf-netmod-yang-packages-02"
      ipr="trust200902">
   <front>
     <title abbrev="YANG Packages">YANG Packages</title>
@@ -403,8 +403,7 @@
                 change relative to the prior module revision.</t>
 
                 <t>Any change to any metadata associated with a package
-                definition that causes it to have a different checksum
-                value.</t>
+                definition.</t>
               </list></t>
           </section>
         </section>
@@ -493,36 +492,6 @@
           Choosing suitable minor versions within each major version number
           should generally be sufficient, particular if they can avoid
           non-backwards-compatible patch level changes.</t>
-        </section>
-
-        <section anchor="checksums" title="Package checksums">
-          <t>Each YANG package definition may have a checksum associated with
-          it to allow a client to validate that the package definition of the
-          server matches the expected package definition without downloading
-          the full package definition from the server.</t>
-
-          <t>The checksum for a package is calculated using the SHA-256 hash
-          (XXX, reference) of the full file contents of the YANG package
-          instance data file. This means that the checksum includes all
-          whitespace and formatting, encoding, and all meta-data fields
-          associated with the package and the instance data file).</t>
-
-          <t>The checksum for a module is calculated using the SHA-256 hash of
-          the YANG module file definition. This means that the checksum
-          includes all whitespace, formatting, and comments within the YANG
-          module.</t>
-
-          <t>Packages that are locally scoped to a server may not have an
-          offline instance data file available, and hence MAY not have a
-          checksum.</t>
-
-          <t>The package definition allows URLs and checksums to be specified
-          for all included packages, modules and submodules within the package
-          definition. Checksums SHOULD be included in package definitions to
-          validate the full integrity of the package.</t>
-
-          <t>On a server, package checksums SHOULD also be provided for the
-          top level packages associated with the datastore schema.</t>
         </section>
 
         <section anchor="rel_with_datastores"
@@ -770,31 +739,26 @@ module: ietf-yang-package-types
     |  +-- replaces-version*   pkg-version
     |  +-- nbc-modified?       boolean
     |  +-- location*           inet:uri
-    |  +-- checksum?           pkg-types:sha-256-hash
     +-- module* [name]
     |  +-- name                 yang:yang-identifier
     |  +-- revision?            rev:revision-date-or-label
     |  +-- replaces-revision*   rev:revision-date-or-label
     |  +-- namespace?           inet:uri
     |  +-- location*            inet:uri
-    |  +-- checksum?            pkg-types:sha-256-hash
     |  +-- submodule* [name]
     |     +-- name?       yang:yang-identifier
     |     +-- revision    yang:revision-identifier
     |     +-- location*   inet:uri
-    |     +-- checksum?   pkg-types:sha-256-hash
     +-- import-only-module* [name revision]
        +-- name?                yang:yang-identifier
        +-- revision?            rev:revision-date-or-label
        +-- replaces-revision*   rev:revision-date-or-label
        +-- namespace?           inet:uri
        +-- location*            inet:uri
-       +-- checksum?            pkg-types:sha-256-hash
        +-- submodule* [name]
           +-- name?       yang:yang-identifier
           +-- revision    yang:revision-identifier
           +-- location*   inet:uri
-          +-- checksum?   pkg-types:sha-256-hash
           
         ]]></artwork>
         </figure>
@@ -860,9 +824,9 @@ module: ietf-yang-package
       <section title="Package List">
         <t>A top level 'packages' container holds the list of all versions of
         all packages known to the server. Each list entry uses the common
-        package definition, but with the addition of package location and
-        checksum information that cannot be contained within a offline package
-        definition contained in an instance data file.</t>
+        package definition, but with the addition of package location that
+        cannot be contained within a offline package definition contained in
+        an instance data file.</t>
 
         <t>The '/packages/package' list MAY include multiple versions of a
         particular package. E.g. if the server is capable of allowing clients
@@ -882,12 +846,11 @@ module: ietf-yang-packages
   +--ro packages
      +--ro package* [name version]
         // Uses the yang-package-instance grouping defined in
-        // ietf-yang-package-types.yang, with location and checksum:
+        // ietf-yang-package-types.yang, with location:
         +--ro name                  pkg-name
         +--ro version               pkg-version
         ... remainder of yang-package-instance grouping ...
         +--ro location*             inet:uri
-        +--ro checksum?             pkg-types:sha-256-hash
           
         ]]></artwork>
         </figure>
@@ -929,7 +892,6 @@ module: ietf-yl-packages
     +--ro package* [name version]
        +--ro name        -> /pkgs:packages/package/name
        +--ro version     leafref
-       +--ro checksum?   leafref
           
         ]]></artwork>
       </figure>
@@ -938,8 +900,8 @@ module: ietf-yl-packages
     <section title="YANG packages as schema for YANG instance data document">
       <t>YANG package definitions can be used as the schema definition for
       YANG instance data files. When using a package schema, the name and
-      version of the package MUST be specified, a package checksum and/or URL
-      to the package definition MAY also be provided.</t>
+      version of the package MUST be specified, a package URL to the package
+      definition MAY also be provided.</t>
 
       <figure>
         <preamble>The "ietf-yang-inst-data-pkg" YANG module has the following
@@ -954,9 +916,7 @@ module: ietf-yang-inst-data-pkg
       +-- pkg-schema
         +-- name        pkg-name
         +-- version     pkg-version
-        +-- location*   inet:uri
-        +-- checksum?   pkg-types:sha-256-hash
-          
+        +-- location*   inet:uri         
         ]]></artwork>
       </figure>
     </section>
@@ -968,7 +928,7 @@ module: ietf-yang-inst-data-pkg
       <figure>
         <artwork><![CDATA[
           
-<CODE BEGINS> file "ietf-yang-package-types@2020-01-21.yang"
+<CODE BEGINS> file "ietf-yang-package-types@2021-10-25.yang"
 module ietf-yang-package-types {
   yang-version 1.1;
   namespace "urn:ietf:params:xml:ns:yang:ietf-yang-package-types";
@@ -1035,7 +995,7 @@ module ietf-yang-package-types {
   // and remove this note.
   // RFC Ed.: replace XXXX with actual RFC number and remove this
   // note.
-  revision 2020-01-21 {
+  revision 2021-10-25 {
     rev:revision-label 0.2.0;
     description
       "Initial revision";
@@ -1080,25 +1040,6 @@ module ietf-yang-package-types {
        as defiend by Section 12 or RFC 6020.";
     reference
       "RFC XXXX, YANG Packages.";
-  }
-
-  typedef sha-256-hash {
-    type string {
-      length "64";
-      pattern "[0-9a-fA-F]*";
-    }
-    description 
-      "A SHA-256 hash represented as a hexadecimal string.
-
-       Used as the checksum for modules, submodules and packages in a
-       YANG package definition.
-
-       For modules and submodules the SHA-256 hash is calculated on
-       the contents of the YANG file defining the module/submodule.
-
-       For packages the SHA-256 hash is calculated on the file
-       containing the YANG instance data document holding the package
-       definition";
   }
 
   
@@ -1301,12 +1242,6 @@ module ietf-yang-package-types {
            that uniquely identifies this package";
       }
 
-      leaf checksum {
-        type pkg-types:sha-256-hash;
-        description 
-          "The SHA-256 hash calculated on the textual package
-           definition, represented as a hexadecimal string.";
-      }
     }
     
     list module {
@@ -1364,12 +1299,6 @@ module ietf-yang-package-types {
            for retrieval of the schema for this entry.";
       }
       
-      leaf checksum {
-        type pkg-types:sha-256-hash;
-        description 
-          "The SHA-256 hash calculated on the textual module
-           definition, represented as a hexadecimal string.";
-      }
 
       list submodule {
         key "name";
@@ -1402,12 +1331,6 @@ module ietf-yang-package-types {
              available for retrieval of the schema for this entry.";
         }
 
-        leaf checksum {
-          type pkg-types:sha-256-hash;
-          description 
-            "The SHA-256 hash calculated on the textual submodule
-             definition, represented as a hexadecimal string.";
-        }
       }
     }
 
@@ -1462,12 +1385,6 @@ module ietf-yang-package-types {
            for retrieval of the schema for this entry.";
       }
 
-      leaf checksum {
-        type pkg-types:sha-256-hash;
-        description 
-          "The SHA-256 hash calculated on the textual submodule
-           definition, represented as a hexadecimal string.";
-      }
 
       list submodule {
         key "name";
@@ -1499,13 +1416,6 @@ module ietf-yang-package-types {
              This leaf will only be present if there is a URL
              available for retrieval of the schema for this entry.";
         }
-
-        leaf checksum {
-          type pkg-types:sha-256-hash;
-          description 
-            "The SHA-256 hash calculated on the textual submodule
-             definition, represented as a hexadecimal string.";
-        }
       }
     }
   }
@@ -1518,7 +1428,7 @@ module ietf-yang-package-types {
       <figure>
         <artwork><![CDATA[
           
-<CODE BEGINS> file "ietf-yang-package-instance@2020-01-21.yang"
+<CODE BEGINS> file "ietf-yang-package-instance@2021-10-25.yang"
 module ietf-yang-package-instance {
   yang-version 1.1;
   namespace "urn:ietf:params:xml:ns:yang:ietf-yang-package-instance";
@@ -1607,7 +1517,7 @@ module ietf-yang-package-instance {
       <figure>
         <artwork><![CDATA[
           
-<CODE BEGINS> file "ietf-yang-package@2020-01-21.yang"
+<CODE BEGINS> file "ietf-yang-package@2021-10-25.yang"
 module ietf-yang-packages {
   yang-version 1.1;
   namespace "urn:ietf:params:xml:ns:yang:ietf-yang-packages";
@@ -1667,7 +1577,7 @@ module ietf-yang-packages {
   // and remove this note.
   // RFC Ed.: replace XXXX with actual RFC number and remove this
   // note.
-  revision 2020-01-21 {
+  revision 2021-10-25 {
     rev:revision-label 0.2.0;
     description
       "Initial revision";
@@ -1703,16 +1613,6 @@ module ietf-yang-packages {
         "The version of the referenced package.";
     }
       
-    leaf checksum {
-      type leafref {
-        path '/pkgs:packages'
-          + '/pkgs:package[pkgs:name = current()/../name]'
-          + '[pkgs:version = current()/../version]/pkgs:checksum';
-      }
-
-      description
-        "The checksum of the referenced package.";
-    }
   }
 
   grouping yang-ds-pkg-ref {
@@ -1767,17 +1667,6 @@ module ietf-yang-packages {
            If multiple locations are provided, then the first
            location in the leaf-list MUST be the definitive location
            that uniquely identifies this package";
-      }
-      
-      leaf checksum {
-        type pkg-types:sha-256-hash;
-        description 
-          "The checksum of the package this schema relates to,
-           calculated on the 'YANG instance data file' package
-           definition available in the 'location' leaf list.
-
-           This leaf MAY be omitted if the referenced package is
-           locally scoped without an associated checksum.";
       }
     }
   }  
@@ -1880,7 +1769,7 @@ module ietf-yl-packages {
       <figure>
         <artwork><![CDATA[
           
-<CODE BEGINS> file "ietf-yang-inst-data-pkg@2020-01-21.yang"
+<CODE BEGINS> file "ietf-yang-inst-data-pkg@2021-10-25.yang"
 module ietf-yang-inst-data-pkg {
   yang-version 1.1;
   namespace "urn:ietf:params:xml:ns:yang:ietf-yang-inst-data-pkg";
@@ -1971,14 +1860,6 @@ module ietf-yang-inst-data-pkg {
       container pkg-schema {
         uses pkg-types:yang-pkg-identification-leafs;
 
-        leaf checksum {
-          type pkg-types:sha-256-hash;
-          description 
-            "The SHA-256 hash of the package, calculated on
-             the textual package definition, represented as a
-             hexadecimal string.";
-        }
-
         leaf-list location {
           type inet:uri;
           description
@@ -2028,9 +1909,7 @@ module ietf-yang-inst-data-pkg {
       to be defined in YANG instance data files, that are outside the security
       controls of the network management protocols. Hence, it is important to
       also consider controlling access to these package instance data files to
-      restrict access to sensitive information. SHA-256 checksums are used to
-      ensure the integrity of YANG package definitions, imported modules, and
-      sub-modules.</t>
+      restrict access to sensitive information.</t>
 
       <t>As per the YANG library security considerations, the module, revision
       and version information in YANG packages may help an attacker identify
@@ -2253,7 +2132,7 @@ module ietf-yang-inst-data-pkg {
 <CODE BEGINS> file "example-ietf-network-device-pkg.json"
 ========= NOTE: '\' line wrapping per BCP XX (RFC XXXX) ===========
 
- {
+{
   "ietf-yang-instance-data:instance-data-set": {
     "name": "example-ietf-network-device-pkg",
     "pkg-schema": {
@@ -2283,48 +2162,36 @@ module ietf-yang-inst-data-pkg {
             "revision": "2014-08-06",
             "location": [ "https://tiny.cc/ietf-yang/\
                                 iana-crypt-hash%402014-08-06.yang" ],
-            "checksum": "fa9fde408ddec2c16bf2c6b9e4c2f80b\
-                         813a2f9e48c127016f3fa96da346e02d"
           },
           {
             "name": "ietf-system",
             "revision": "2014-08-06",
             "location": [ "https://tiny.cc/ietf-yang/\
                                     ietf-system%402014-08-06.yang" ],
-            "checksum": "8a692ee2521b4ffe87a88303a61a1038\
-                         79ee26bff050c1b05a2027ae23205d3f"
           },
           {
             "name": "ietf-interfaces",
             "revision": "2018-02-20",
             "location": [ "https://tiny.cc/ietf-yang/\
                                 ietf-interfaces%402018-02-20.yang" ],
-            "checksum": "f6faea9938f0341ed48fda93dba9a69a\
-                         a32ee7142c463342efec3d38f4eb3621"
           },
           {
             "name": "ietf-netconf-acm",
             "revision": "2018-02-14",
             "location": [ "https://tiny.cc/ietf-yang/\
                                ietf-netconf-acm%402018-02-14.yang" ],
-            "checksum": "e03f91317f9538a89296e99df3ff0c40\
-                         03cdfea70bf517407643b3ec13c1ed25"
           },
           {
             "name": "ietf-key-chain",
             "revision": "2017-06-15",
             "location": [ "https://tiny.cc/ietf-yang/\
                                    ietf-key-chain@2017-06-15.yang" ],
-            "checksum": "6250705f59fc9ad786e8d74172ce90d5\
-                         8deec437982cbca7922af40b3ae8107c"
           },
           {
             "name": "ietf-ip",
             "revision": "2018-02-22",
             "location": [ "https://tiny.cc/ietf-yang/\
                                         ietf-ip%402018-02-22.yang" ],
-            "checksum": "b624c84a66c128ae69ab107a5179ca8e\
-                         20e693fb57dbe5cb56c3db2ebb18c894"
         }
         ],
         "import-only-module": [
@@ -2333,16 +2200,12 @@ module ietf-yang-inst-data-pkg {
             "revision": "2013-07-15",
             "location": [ "https://tiny.cc/ietf-yang/\
                                 ietf-yang-types%402013-07-15.yang" ],
-            "checksum": "a04cdcc875764a76e89b7a0200c6b9d8\
-                         00b10713978093acda7840c7c2907c3f"
           },
           {
             "name": "ietf-inet-types",
             "revision": "2013-07-15",
             "location": [ "https://tiny.cc/ietf-yang/\
                                 ietf-inet-types%402013-07-15.yang" ],
-            "checksum": "12d98b0143a5ca5095b36420f9ebc1ff\
-                         a61cfd2eaa850080244cadf01b86ddf9"
           }
         ]
       }
@@ -2400,7 +2263,6 @@ module ietf-yang-inst-data-pkg {
             "version": "1.1.2",
             "location": [ "http://example.org/yang/packages/\
                                   ietf-network-device@v1.1.2.json" ],
-            "checksum": ""
           }
         ],
         "module": [
@@ -2409,63 +2271,54 @@ module ietf-yang-inst-data-pkg {
             "revision": "2018-03-13",
             "location": [ "https://tiny.cc/ietf-yang/\
                                      ietf-routing@2018-03-13.yang" ],
-            "checksum": ""
           },
           {
             "name": "ietf-ipv4-unicast-routing",
             "revision": "2018-03-13",
             "location": [ "https://tiny.cc/ietf-yang/\
                         ietf-ipv4-unicast-routing@2018-03-13.yang" ],
-            "checksum": ""
           },
           {
             "name": "ietf-ipv6-unicast-routing",
             "revision": "2018-03-13",
             "location": [ "https://tiny.cc/ietf-yang/\
                         ietf-ipv6-unicast-routing@2018-03-13.yang" ],
-            "checksum": ""
           },
           {
             "name": "ietf-isis",
             "revision": "2018-12-11",
             "location": [ "https://tiny.cc/ietf-yang/\
                         " ],
-            "checksum": ""
           },
           {
             "name": "ietf-interfaces-common",
             "revision": "2018-07-02",
             "location": [ "https://tiny.cc/ietf-yang/\
                         " ],
-            "checksum": ""
           },
           {
             "name": "ietf-if-l3-vlan",
             "revision": "2017-10-30",
             "location": [ "https://tiny.cc/ietf-yang/\
                         " ],
-            "checksum": ""
           },
           {
             "name": "ietf-routing-policy",
             "revision": "2018-10-19",
             "location": [ "https://tiny.cc/ietf-yang/\
                         " ],
-            "checksum": ""
           },
           {
             "name": "ietf-bgp",
             "revision": "2018-05-09",
             "location": [ "https://tiny.cc/ietf-yang/\
                         " ],
-            "checksum": ""
           },
           {
             "name": "ietf-access-control-list",
             "revision": "2018-11-06",
             "location": [ "https://tiny.cc/ietf-yang/\
                         " ],
-            "checksum": ""
           }
         ],
         "import-only-module": [
@@ -2474,35 +2327,30 @@ module ietf-yang-inst-data-pkg {
             "revision": "2017-12-04",
             "location": [ "https://tiny.cc/ietf-yang/\
                         ietf-routing-types@2017-12-04.yang" ],
-            "checksum": ""
           },
           {
             "name": "iana-routing-types",
             "revision": "2017-12-04",
             "location": [ "https://tiny.cc/ietf-yang/\
                         iana-routing-types@2017-12-04.yang" ],
-            "checksum": ""
           },
           {
             "name": "ietf-bgp-types",
             "revision": "2018-05-09",
             "location": [ "https://tiny.cc/ietf-yang/\
                         " ],
-            "checksum": ""
           },
           {
             "name": "ietf-packet-fields",
             "revision": "2018-11-06",
             "location": [ "https://tiny.cc/ietf-yang/\
                         " ],
-            "checksum": ""
           },
           {
             "name": "ietf-ethertypes",
             "revision": "2018-11-06",
             "location": [ "https://tiny.cc/ietf-yang/\
                         " ],
-            "checksum": ""
           }
         ]
       }
@@ -2684,8 +2532,7 @@ module ietf-yang-inst-data-pkg {
 
             <t>Packages can be made available off the box, with a well defined
             unique name, avoiding the need for clients to download, and
-            construct/check the entire YANG schema for each device. Instead
-            they can rely on the named packages with secure checksums. YANG
+            construct/check the entire YANG schema for each device. YANG
             library's use of a 'content-id' is unique only to the device that
             generated them.</t>
 
