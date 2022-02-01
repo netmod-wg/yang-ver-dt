@@ -24,7 +24,7 @@
 <?rfc inline="yes"?>
 <?rfc compact="yes"?>
 <?rfc subcompact="no"?>
-<rfc category="std" docName="draft-ietf-netmod-yang-packages-02"
+<rfc category="std" docName="draft-ietf-netmod-yang-packages-03"
      ipr="trust200902">
   <front>
     <title abbrev="YANG Packages">YANG Packages</title>
@@ -73,11 +73,12 @@
     <date/>
 
     <abstract>
-      <t>This document defines YANG packages, a versioned organizational
-      structure holding a set of related YANG modules that collectively define
-      a YANG schema. It describes how packages: are represented on a server,
+      <t>This document defines YANG packages; a versioned organizational structure 
+      used to manage schema and conformance of YANG modules as a cohesive set 
+	  instead of individually.</t>
+      <t>It describes how packages: are represented on a server,
       can be defined in offline YANG instance data files, and can be used to
-      define the schema associated with YANG instance data files.</t>
+      define the content schema associated with YANG instance data files.</t>
     </abstract>
   </front>
 
@@ -103,19 +104,19 @@
       the YANG 1.1 Data Modeling Language <xref target="RFC7950"/>: <list
           style="symbols">
           <t>data node</t>
+          <t>schema node</t>
         </list></t>
 
       <t>In addition, this document defines the following terminology: <list
           style="symbols">
-          <t>YANG schema: A datastore schema, not bound to any particular
-          datastore.</t>
 
-          <t>YANG package: An organizational structure containing a collection
-          of YANG modules, normally defined in a YANG instance data file. A
-          YANG package defines a YANG schema by specifying a set of YANG
-          modules and their revisions, other packages and their revisions,
-          mandatory features, and deviations. YANG packages are defined in
+          <t>YANG package: a versioned organizational structure used to 
+          manage a set of YANG modules that collectively define a package 
+          schema. YANG packages are defined in
           <xref target="package"/>.</t>
+          
+          <t>package schema: The combined set of schema nodes defined by a 
+          YANG package. Package schema can be used to define datastore schema.</t>
 
           <t>backwards-compatible (BC) change: When used in the context of a
           YANG module, it follows the definition in Section 3.1.1 of <xref
@@ -141,11 +142,10 @@
       <t>This document defines and describes the YANG <xref target="RFC7950"/>
       constructs that are used to define and use YANG packages.</t>
 
-      <t>A YANG package is an organizational structure that groups a set of
-      YANG modules together into a consistent versioned definition. For
-      example, a YANG package could define the set of YANG modules required to
-      implement an L2VPN service on a network device. YANG packages can
-      themselves refer to, and reuse, other package definitions.</t>
+      <t>A YANG package is a versioned organizational structure used to manage
+      a set of YANG modules that collectively define a package schema. For
+      example, a YANG package could contain the set of YANG modules required to
+      implement an L2VPN service on a network device.</t>
 
       <t>Non-normative examples of YANG packages are provided in the
       appendices.</t>
@@ -176,8 +176,8 @@
       distinct areas. <xref target="I-D.ietf-netmod-yang-module-versioning"/>
       is focused on YANG versioning scoped to individual modules. The overall
       solution must also consider YANG versioning and conformance scoped to
-      YANG schema. YANG packages provide part of the solution for versioning
-      YANG schema.</t>
+      sets of modules. YANG packages provide part of the solution for versioning
+      sets of modules.</t>
     </section>
 
     <section anchor="objectives" title="Objectives">
@@ -190,7 +190,7 @@
           with a set of modifications (e.g. additional modules, deviations, or
           features).</t>
 
-          <t>To allow YANG schema to be specified in a concise way rather than
+          <t>To allow datastore schema to be specified in a concise way rather than
           having each server explicitly list all modules, revisions, and
           features. YANG package definitions can be defined in documents that
           are available offline, and accessible via a URL, rather than
@@ -227,9 +227,8 @@
       <t>This document specifies an approach to defining YANG packages that is
       different to either of the approaches described in the background.</t>
 
-      <t>A YANG package is a versioned organizational structure defining a set
-      of related YANG modules, packages, features, and deviations. A YANG
-      package collectively defines a YANG schema.</t>
+      <t>A YANG package is a versioned organizational structure used to manage
+      a set of YANG modules that collectively define a package schema.</t>
 
       <t>Each YANG package has a name that SHOULD end with the suffix "-pkg".
       Package names are normally expected to be globally unique, but in some
@@ -272,20 +271,20 @@
       <t>YANG package definitions are available from the server via
       augmentations to YANG Library <xref target="RFC8525"/>. Rather than
       client applications downloading the entire contents of YANG library to
-      confirm that the server schema is compatible with the client, they can
-      check, or download, a much shorter YANG package definition, and validate
-      that it conforms to the expected schema.</t>
+      confirm that the server's datastore schema are compatible with the client, 
+      they can simply check the names and versions of the packages advertised
+	  in YANG library to know what schema to expect in the server datastores.</t>
 
-      <t>YANG package definitions can also be used to define the schema
+      <t>YANG package definitions can also be used to define the content schema
       associated with YANG instance data files holding other, e.g., non
       packages related, instance data.</t>
 
       <section anchor="definition" title="Package definition rules">
         <t>Packages are defined using the following rules: <list
             style="numbers">
-            <t>A YANG package MAY represent a complete YANG schema or only
-            part of a YANG schema with some module import dependencies
-            missing, as described in <xref target="completeness"/>.</t>
+            <t>A YANG package MAY represent a referentially complete set of 
+            modules or MAY represent a set of modules with some module import 
+            dependencies missing, as described in <xref target="completeness"/>.</t>
 
             <t>Packages definitions are hierarchical. A package can include
             other packages. Only a single version of a package can be
@@ -330,8 +329,8 @@
 
         <section anchor="change_scope"
                  title="Updating a package with a new version">
-          <t>Package compatibility is fundamentally defined by how the YANG
-          schema between two package versions has changed.</t>
+          <t>Package compatibility is fundamentally defined by how the
+          package schema between two package versions has changed.</t>
 
           <t>When a package definition is updated, the version associated with
           the package MUST be updated appropriately, taking into consideration
@@ -524,7 +523,7 @@
               configuration datastore schema as well.</t>
             </list></t>
 
-          <t>Given that YANG packages represent a YANG schema, it follows that
+          <t>Given that YANG packages represent a schema, it follows that
           each datastore schema can be represented using packages. In
           addition, the schema for most datastores on a server are often
           closely related. Given that there are many ways that a datastore
@@ -632,7 +631,7 @@
 
         <t>However, YANG package definitions also include the list of
         submodules included by a module, primarily to provide a location of
-        where the submodule definition can be obtained from, allowing a YANG
+        where the submodule definition can be obtained from, allowing a
         schema to be fully constructed from a YANG package instance data file
         definition.</t>
       </section>
@@ -768,7 +767,7 @@ module: ietf-yang-package-types
     <section title="Package Instance Data Files">
       <t>YANG packages SHOULD be available offline from the server, defined as
       YANG instance data files <xref
-      target="I-D.ietf-netmod-yang-instance-file-format"/> using the YANG
+      target="I-D.ietf-netmod-yang-instance-file-format"/> using the 
       schema below to define the package data.</t>
 
       <t>The following rules apply to the format of the YANG package instance
@@ -898,8 +897,8 @@ module: ietf-yl-packages
     </section>
 
     <section title="YANG packages as schema for YANG instance data document">
-      <t>YANG package definitions can be used as the schema definition for
-      YANG instance data files. When using a package schema, the name and
+      <t>YANG package definitions can be used as the content schema definition for
+      YANG instance data files. When using a package-based content schema, the name and
       version of the package MUST be specified, a package URL to the package
       definition MAY also be provided.</t>
 
@@ -911,7 +910,7 @@ module: ietf-yl-packages
           
 module: ietf-yang-inst-data-pkg
 
-  augment-structure /yid:instance-data-set/yid:content-schema-spec:
+  augment-structure /yid:instance-data-set/yid:content-schema/yid:content-schema-spec:
     +--:(pkg-schema)
       +-- pkg-schema
         +-- name        pkg-name
@@ -1428,7 +1427,7 @@ module ietf-yang-package-types {
       <figure>
         <artwork><![CDATA[
           
-<CODE BEGINS> file "ietf-yang-package-instance@2021-10-25.yang"
+<CODE BEGINS> file "ietf-yang-package-instance#0.2.1-draft-ietf-netmod-yang-packages-03.yang"
 module ietf-yang-package-instance {
   yang-version 1.1;
   namespace "urn:ietf:params:xml:ns:yang:ietf-yang-package-instance";
@@ -1442,12 +1441,12 @@ module ietf-yang-package-instance {
   import ietf-yang-package-types {
     prefix pkg-types;
     rev:revision-or-derived 0.2.0;
-    reference "RFC XXX: YANG Schema Versioning.";
+    reference "RFC XXX: this RFC.";
   }
 
   import ietf-yang-structure-ext {
     prefix sx;
-    reference "RFC XXX: YANG Data Structure Extensions.";
+    reference "RFC 8791: YANG Data Structure Extensions.";
   }
 
   organization
@@ -1462,7 +1461,7 @@ module ietf-yang-package-instance {
 
   description
     "This module provides a definition of a YANG package, which is
-     used as the schema for an YANG instance data document specifying
+     used as the content schema for an YANG instance data document specifying
      a YANG package.
 
      Copyright (c) 2019 IETF Trust and the persons identified as
@@ -1488,8 +1487,8 @@ module ietf-yang-package-instance {
   // and remove this note.
   // RFC Ed.: replace XXXX with actual RFC number and remove this
   // note.
-  revision 2020-01-21 {
-    rev:revision-label 0.2.0;
+  revision 2022-01-20 {
+    rev:revision-label 0.2.1-draft-ietf-netmod-yang-packages-03;
     description
       "Initial revision";
     reference
@@ -1531,7 +1530,7 @@ module ietf-yang-packages {
   import ietf-yang-package-types {
     prefix pkg-types;
     rev:revision-or-derived 0.2.0;
-    reference "RFC XXX: YANG Packages.";
+    reference "RFC XXX: this RFC.";
   }
 
   import ietf-inet-types {
@@ -1769,7 +1768,7 @@ module ietf-yl-packages {
       <figure>
         <artwork><![CDATA[
           
-<CODE BEGINS> file "ietf-yang-inst-data-pkg@2021-10-25.yang"
+<CODE BEGINS> file "ietf-yang-inst-data-pkg#0.3.0-draft-ietf-netmod-yang-packages-03.yang"
 module ietf-yang-inst-data-pkg {
   yang-version 1.1;
   namespace "urn:ietf:params:xml:ns:yang:ietf-yang-inst-data-pkg";
@@ -1783,12 +1782,12 @@ module ietf-yang-inst-data-pkg {
   import ietf-yang-package-types {
     prefix pkg-types;
     rev:revision-or-derived 0.2.0;
-    reference "RFC XXX: YANG Schema Versioning.";
+    reference "RFC XXX: this RFC.";
   }
 
   import ietf-yang-structure-ext {
     prefix sx;
-    reference "RFC XXX: YANG Data Structure Extensions.";
+    reference "RFC 8791: YANG Data Structure Extensions.";
   }
 
   import ietf-yang-instance-data {
@@ -1813,7 +1812,7 @@ module ietf-yang-inst-data-pkg {
 
   description
     "The module augments ietf-yang-instance-data to allow package
-     definitions to be used to define schema in YANG instance data
+     definitions to be used to define content schema in YANG instance data
      documents.
 
      Copyright (c) 2019 IETF Trust and the persons identified as
@@ -1839,8 +1838,8 @@ module ietf-yang-inst-data-pkg {
   // and remove this note.
   // RFC Ed.: replace XXXX with actual RFC number and remove this
   // note.
-  revision 2020-01-21 {
-    rev:revision-label 0.2.0;
+  revision 2022-01-20 {
+    rev:revision-label 0.3.0-draft-ietf-netmod-yang-packages-03;
     description
       "Initial revision";
     reference
@@ -1852,7 +1851,7 @@ module ietf-yang-inst-data-pkg {
    */
 
   sx:augment-structure
-    "/yid:instance-data-set/yid:content-schema-spec" {
+    "/yid:instance-data-set/yid:content-schema/yid:content-schema-spec" {
     description
       "Add package reference to instance data set schema
        specification";
@@ -2058,6 +2057,8 @@ module ietf-yang-inst-data-pkg {
       <?rfc include="reference.RFC.8342"?>
 
       <?rfc include="reference.RFC.8525"?>
+      
+      <?rfc include="reference.RFC.8791"?>
 
       <?rfc include="reference.I-D.ietf-netmod-yang-versioning-reqs"?>
 
@@ -2135,8 +2136,11 @@ module ietf-yang-inst-data-pkg {
 {
   "ietf-yang-instance-data:instance-data-set": {
     "name": "example-ietf-network-device-pkg",
-    "pkg-schema": {
-       package: "ietf-yang-package-defn-pkg@0.1.0.json"
+    "content-schema": {
+      "pkg-schema": {
+         "name": "ietf-yang-package-defn-pkg",
+         "version": "0.1.0"
+      }
     },
     "description": "YANG package definition",
     "content-data": {
@@ -2245,7 +2249,12 @@ module ietf-yang-inst-data-pkg {
 {
   "ietf-yang-instance-data:instance-data-set": {
     "name": "example-ietf-routing-pkg",
-    "module": [ "ietf-yang-package@2019-09-11.yang" ],
+    "content-schema": {
+      "pkg-schema": {
+         "name": "ietf-yang-package-defn-pkg",
+         "version": "0.1.0"
+      }
+    },
     "description": "YANG package definition",
     "content-data": {
       "ietf-yang-package-instance:yang-package": {
@@ -2383,6 +2392,12 @@ module ietf-yang-inst-data-pkg {
 {
   "ietf-yang-instance-data:instance-data-set": {
     "name": "example-import-1-pkg",
+    "content-schema": {
+      "pkg-schema": {
+         "name": "ietf-yang-package-defn-pkg",
+         "version": "0.1.0"
+      }
+    },
     "description": "First imported example package",
     "content-data": {
       "ietf-yang-package-instance:yang-package": {
@@ -2418,6 +2433,12 @@ module ietf-yang-inst-data-pkg {
 {
   "ietf-yang-instance-data:instance-data-set": {
     "name": "example-import-2-pkg",
+    "content-schema": {
+      "pkg-schema": {
+         "name": "ietf-yang-package-defn-pkg",
+         "version": "0.1.0"
+      }
+    },
     "description": "Second imported example package",
     "content-data": {
       "ietf-yang-package:yang-package": {
@@ -2453,6 +2474,12 @@ module ietf-yang-inst-data-pkg {
 {
   "ietf-yang-instance-data:instance-data-set": {
     "name": "example-3-pkg",
+    "content-schema": {
+      "pkg-schema": {
+         "name": "ietf-yang-package-defn-pkg",
+         "version": "0.1.0"
+      }
+    },
     "description": "Importing example package",
     "content-data": {
       "ietf-yang-package:yang-package": {
@@ -2516,7 +2543,7 @@ module ietf-yang-inst-data-pkg {
         module tags definitions (i.e. a separate module tag must be defined
         for each package version).</t>
 
-        <t>Module tags cannot support the hierachical scheme to construct YANG
+        <t>Module tags cannot support the hierachical scheme to construct
         schema that is proposed in this draft.</t>
       </section>
 
@@ -2532,7 +2559,7 @@ module ietf-yang-inst-data-pkg {
 
             <t>Packages can be made available off the box, with a well defined
             unique name, avoiding the need for clients to download, and
-            construct/check the entire YANG schema for each device. YANG
+            construct/check the entire schema for each datastore. YANG
             library's use of a 'content-id' is unique only to the device that
             generated them.</t>
 
