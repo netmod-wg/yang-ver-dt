@@ -412,13 +412,6 @@ Internet-Draft                YANG Packages                February 2022
    package MUST be updated appropriately, taking into consideration the
    scope of the changes as defined by the rules below.
 
-   A package definition SHOULD define the previous version of the
-   package in the 'previous-version' leaf unless it is the initial
-   version of the package.  If the 'previous-version' leaf is provided
-   then the package definition MUST set the 'nbc-changes' leaf if the
-   new version is non-backwards-compatible with respect to the package
-   version defined in the 'previous-version' leaf.
-
 5.2.1.1.  Non-Backwards-compatible changes
 
    The following changes classify as non-backwards-compatible changes to
@@ -492,7 +485,7 @@ Internet-Draft                YANG Packages                February 2022
    YANG Semantic Versioning [I-D.ietf-netmod-yang-semver] MAY be used as
    an appropriate type of revision-label for the package version leaf.
 
-   If the format of the leaf matches the 'yangver:version' type
+   If the format of the leaf matches the 'ysver:version' type
    specified in ietf-yang-semver.yang, then the package version leaf
    MUST be interpreted as a YANG semantic version number.
 
@@ -516,16 +509,6 @@ Internet-Draft                YANG Packages                February 2022
    the package (included packages or modules) can be used to help
    determine the scope of changes being made.
 
-5.2.3.  Revision history
-
-   YANG packages do not contain a revision history.  This is because
-   packages may have many revisions and a long revision history would
-   bloat the package definition.  By recursively examining the
-   'previous-version' leaf of a package definition, a full revision
-   history (including where non-backwards-compatible changes have
-   occurred) can be dynamically constructed, if all package versions are
-   available.
-
 5.3.  Package conformance
 
    YANG packages allows for conformance to be checked at a package level
@@ -543,9 +526,7 @@ Internet-Draft                YANG Packages                February 2022
 
    Package definitions MAY modify the schema for directly or
    hierarchically included packages through the use of different module
-   revisions or module deviations.  If the schema of any included
-   package is modified in a non-backwards-compatible way then it MUST be
-   indicated by setting the 'nbc-modified' leaf to true.
+   revisions or module deviations.
 
 5.3.1.  Use of YANG semantic versioning
 
@@ -858,15 +839,12 @@ Internet-Draft                YANG Packages                February 2022
        +-- reference?            string
        +-- complete?             boolean
        +-- local?                boolean
-       +-- previous-version?     pkg-version
-       +-- nbc-changes?          boolean
        +-- tag*                  tags:tag
        +-- mandatory-feature*    scoped-feature
        +-- included-package* [name version]
        |  +-- name                pkg-name
        |  +-- version             pkg-version
        |  +-- replaces-version*   pkg-version
-       |  +-- nbc-modified?       boolean
        |  +-- location*           inet:uri
        +-- module* [name]
        |  +-- name                 yang:yang-identifier
@@ -1085,7 +1063,7 @@ module: ietf-yang-inst-data-pkg
    sections.
 
 
-   <CODE BEGINS> file "ietf-yang-package-types@2021-10-25.yang"
+   <CODE BEGINS> file "ietf-yang-package-types#0.3.0-draft-ietf-netmod-yang-packages-03.yang"
    module ietf-yang-package-types {
      yang-version 1.1;
      namespace "urn:ietf:params:xml:ns:yang:ietf-yang-package-types";
@@ -1159,8 +1137,8 @@ Internet-Draft                YANG Packages                February 2022
      // and remove this note.
      // RFC Ed.: replace XXXX with actual RFC number and remove this
      // note.
-     revision 2021-10-25 {
-       rev:revision-label 0.2.0;
+     revision 2022-02-08 {
+       rev:revision-label 0.3.0-draft-ietf-netmod-yang-packages-03;
        description
          "Initial revision";
        reference
@@ -1322,22 +1300,6 @@ Internet-Draft                YANG Packages                February 2022
             software packages, or hot fixes.";
        }
 
-       leaf previous-version {
-         type pkg-version;
-         description
-           "The previous package version that this version has been
-            derived from.  This leaf allows a full version history graph
-            to be constructed if required.";
-       }
-
-       leaf nbc-changes {
-         type boolean;
-         default false;
-         description
-           "Indicates whether the defined package version contains
-            non-backwards-compatible changes relative to the package
-            version defined in the 'previous-version' leaf.";
-       }
 
 
 
@@ -1384,16 +1346,11 @@ Internet-Draft                YANG Packages                February 2022
             versions by explicitly specifying which package version is
             used.
 
-            If included packages implement different revisions or
-            versions of the same module, then an explicit entry in the
+            If included packages implement different revisions 
+            of the same module, then an explicit entry in the
             module list MUST be provided to select the specific module
-            version 'implemented' by this package definition.
+            revision 'implemented' by this package definition.
 
-            If the schema for any packages that are included, either
-            directly or indirectly via another package include, are
-            changed in any non-backwards-compatible way then they MUST
-            be explicitly listed in the included-packages list with the
-            'nbc-modified' leaf set to true.
 
 
 
@@ -1403,7 +1360,7 @@ Internet-Draft                YANG Packages                February 2022
 
 
             For import-only modules, the 'replaces-revision' leaf-list
-            can be used to select the specific module versions used by
+            can be used to select the specific module revisions used by
             this package.";
          reference
            "XXX";
@@ -1414,20 +1371,7 @@ Internet-Draft                YANG Packages                February 2022
            type pkg-version;
            description
              "Gives the version of an included package version that
-              is replaced by this included package revision.";
-         }
-
-         leaf nbc-modified {
-           type boolean;
-           default false;
-           description
-             "Set to true if any data nodes in this package are modified
-              in a non backwards compatible way, either through the use
-              of deviations, or because one of the modules has been
-              replaced by an incompatible revision.  This could also
-              occur if a module's revision was replaced by an earlier
-              revision that had the effect of removing some data
-              nodes.";
+              is replaced by this included package version.";
          }
 
          leaf-list location {
@@ -1661,7 +1605,7 @@ Internet-Draft                YANG Packages                February 2022
 
 
 
-<CODE BEGINS> file "ietf-yang-package-instance#0.2.1-draft-ietf-netmod-yang-packages-03.yang"
+<CODE BEGINS> file "ietf-yang-package-instance#0.3.0-draft-ietf-netmod-yang-packages-03.yang"
 module ietf-yang-package-instance {
   yang-version 1.1;
   namespace "urn:ietf:params:xml:ns:yang:ietf-yang-package-instance";
@@ -1728,8 +1672,8 @@ Internet-Draft                YANG Packages                February 2022
   // and remove this note.
   // RFC Ed.: replace XXXX with actual RFC number and remove this
   // note.
-  revision 2022-01-20 {
-    rev:revision-label 0.2.1-draft-ietf-netmod-yang-packages-03;
+  revision 2022-02-21 {
+    rev:revision-label 0.3.0-draft-ietf-netmod-yang-packages-03;
     description
       "Initial revision";
     reference
@@ -1761,7 +1705,7 @@ Internet-Draft                YANG Packages                February 2022
 
 
 
-   <CODE BEGINS> file "ietf-yang-package@2021-10-25.yang"
+   <CODE BEGINS> file "ietf-yang-package#0.3.0-draft-ietf-netmod-yang-packages-03.yang"
    module ietf-yang-packages {
      yang-version 1.1;
      namespace "urn:ietf:params:xml:ns:yang:ietf-yang-packages";
@@ -1829,8 +1773,8 @@ Internet-Draft                YANG Packages                February 2022
      // and remove this note.
      // RFC Ed.: replace XXXX with actual RFC number and remove this
      // note.
-     revision 2021-10-25 {
-       rev:revision-label 0.2.0;
+     revision 2021-02-21 {
+       rev:revision-label 0.3.0-draft-ietf-netmod-yang-packages-03;
        description
          "Initial revision";
        reference
@@ -1941,7 +1885,7 @@ Internet-Draft                YANG Packages                February 2022
 
 
 
-   <CODE BEGINS> file "ietf-yl-package@2020-01-21.yang"
+   <CODE BEGINS> file "ietf-yl-package#0.3.0-draft-ietf-netmod-yang-packages-03.yang"
    module ietf-yl-packages {
      yang-version 1.1;
      namespace "urn:ietf:params:xml:ns:yang:ietf-yl-packages";
@@ -2009,8 +1953,8 @@ Internet-Draft                YANG Packages                February 2022
      // and remove this note.
      // RFC Ed.: replace XXXX with actual RFC number and remove this
      // note.
-     revision 2020-01-21 {
-       rev:revision-label 0.2.0;
+     revision 2022-02-21 {
+       rev:revision-label 0.3.0-draft-ietf-netmod-yang-packages-03;
        description
          "Initial revision";
 
@@ -2120,7 +2064,7 @@ Internet-Draft                YANG Packages                February 2022
   // and remove this note.
   // RFC Ed.: replace XXXX with actual RFC number and remove this
   // note.
-  revision 2022-01-20 {
+  revision 2022-02-21 {
     rev:revision-label 0.3.0-draft-ietf-netmod-yang-packages-03;
     description
       "Initial revision";
@@ -2206,7 +2150,7 @@ Internet-Draft                YANG Packages                February 2022
    files to restrict access to sensitive information.
 
    As per the YANG library security considerations, the module, revision
-   and version information in YANG packages may help an attacker
+   information in YANG packages may help an attacker
    identify the server capabilities and server implementations with
    known bugs since the set of YANG modules supported by a server may
    reveal the kind of device and the manufacturer of the device.  Server
@@ -2493,8 +2437,8 @@ A.1.  Example IETF Network Device YANG package
 
    As for all YANG packages, all import dependencies are fully resolved.
    Because this example uses YANG modules that have been standardized
-   before YANG semantic versioning, they modules are referenced by
-   revision date rather than version number.
+   before YANG semantic versioning, the modules are referenced by
+   revision date rather than revision number.
 
 
    <CODE BEGINS> file "example-ietf-network-device-pkg.json"
@@ -2774,14 +2718,14 @@ Internet-Draft                YANG Packages                February 2022
 A.3.  Package import conflict resolution example
 
    This section provides an example of how a package can resolve
-   conflicting module versions from imported packages.
+   conflicting module revisions from imported packages.
 
    In this example, YANG package 'example-3-pkg' imports both 'example-
    import-1' and 'example-import-2' packages.  However, the two imported
-   packages implement different versions of 'example-module-A' so the
+   packages implement different revisions of 'example-module-A' so the
    'example-3-pkg' package selects version '1.2.3' to resolve the
    conflict.  Similarly, for import-only modules, the 'example-3-pkg'
-   package does not require both versions of example-types-module-C to
+   package does not require both revisions of example-types-module-C to
    be imported, so it indicates that it only imports revision
    '2018-11-26' and not '2018-01-01'.
 
@@ -2813,11 +2757,11 @@ Internet-Draft                YANG Packages                February 2022
            "module": [
              {
                "name": "example-module-A",
-               "version": "1.0.0"
+               "revision": "1.0.0"
              },
              {
                "name": "example-module-B",
-               "version": "1.0.0"
+               "revision": "1.0.0"
              }
            ],
            "import-only-module": [
@@ -2862,11 +2806,11 @@ Internet-Draft                YANG Packages                February 2022
 
 
                "name": "example-module-A",
-               "version": "1.2.3"
+               "revision": "1.2.3"
              },
              {
                "name": "example-module-E",
-               "version": "1.1.0"
+               "revision": "1.1.0"
              }
            ],
            "import-only-module": [
@@ -2921,7 +2865,7 @@ Internet-Draft                YANG Packages                February 2022
            "module": [
              {
                "name": "example-module-A",
-               "version": "1.2.3"
+               "revision": "1.2.3"
              }
            ],
            "import-only-module": [
