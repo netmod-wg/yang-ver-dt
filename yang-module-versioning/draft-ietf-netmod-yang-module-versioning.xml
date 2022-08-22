@@ -23,7 +23,7 @@
 <?rfc inline="yes"?>
 <?rfc compact="yes"?>
 <?rfc subcompact="no"?>
-<rfc updates="6020,7950,8407,8525" category="std" ipr="trust200902" docName="draft-ietf-netmod-yang-module-versioning-06">
+<rfc updates="6020,7950,8407,8525" category="std" ipr="trust200902" docName="draft-ietf-netmod-yang-module-versioning-07">
 <front>
 <title abbrev="Updated YANG Module Revision Handling">Updated YANG Module Revision Handling</title>
 
@@ -76,20 +76,29 @@
 </front>
 <middle>
 <section anchor="intro" title="Introduction">
-  <t>This document defines the foundational pieces of a solution to the YANG module lifecycle problems described in <xref
-  target="I-D.ietf-netmod-yang-versioning-reqs"/>. Complementary documents provide other parts of the solution, with the overall 
-  relationship of the solution drafts described in <xref target="I-D.ietf-netmod-yang-solutions"/>.</t>
+    <t>The current YANG <xref target="RFC7950"/> module update rules require that updates
+    of YANG modules preserve strict backwards compatibility. This has
+    caused problems as described in 
+    <xref target="I-D.ietf-netmod-yang-versioning-reqs"/>.
+    This document recognizes the need to sometimes allow YANG modules
+    to evolve with non-backwards-compatible changes, which can cause
+    breakage to clients and importing YANG modules. Accepting that
+    non-backwards-compatible changes do sometimes occur, it is
+    important to have mechanisms to report when these changes occur,
+    and to manage their effect on clients and the broader YANG
+    ecosystem.
+    </t>
+    <t>This document defines a flexible versioning solution. Several other documents build on this solution with additional capabilities. <xref target="I-D.ietf-netmod-yang-schema-comparison"/> specifies an algorithm that can be used to compare two revisions of a YANG schema and provide granular information to allow module users to determine if they are impacted by changes between the revisions. The <xref target="I-D.ietf-netmod-yang-semver"/> document extends the module versioning work by introducing a revision label scheme based on semantic versioning. YANG packages <xref target="I-D.ietf-netmod-yang-packages"/> provides a mechanism to group sets of related YANG modules together in order to manage schema and conformance of YANG modules as a cohesive set instead of individually. Finally, <xref target="I-D.ietf-netmod-yang-ver-selection"/> provides a schema selection mechanism that allows a client to choose which schemas to use when interacting with a server from the available schema that are supported and advertised by the server. These other documents are mentioned here as informative references. Support of the other documents is not required in an implementation in order to take advantage of the mechanisms and functionality offered by this module versioning document.
+    </t>
 
-  <t>Specifically, this document recognises a need (within standards organizations, vendors, and the industry) to
-  sometimes allow YANG modules to evolve with non-backwards-compatible changes, which could cause breakage to clients
-  and importing YANG modules.  Accepting that non-backwards-compatible changes do sometimes occur, it is important to
-  have mechanisms to report where these changes occur, and to manage their effect on clients and the broader YANG
-  ecosystem.</t>
-  
-  <t>The document comprises five parts:
+  <t>The document comprises six parts:
   <list style="bullets">
     <t>Refinements to the YANG 1.1 module revision update procedure, supported by new extension statements to indicate
     when a revision contains non-backwards-compatible changes, and an optional revision label.</t>
+    <t>YANG extension statements are defined to allow annotation of individual
+    schema nodes with information to clarify the compatibility of changes
+    to those nodes in specific revisions of the module.
+    </t>
     <t>A YANG extension statement allowing YANG module imports to specify an earliest module revision that may satisfy the
     import dependency.</t>
     <t>Updates and augmentations to ietf-yang-library to include the revision label in the module and submodule descriptions, to
@@ -124,11 +133,11 @@
       RECOMMENDED", "MAY", and "OPTIONAL" in this document are to be interpreted as described in BCP 14 <xref
       target="RFC2119"/> <xref target="RFC8174"/> when, and only when, they appear in all capitals, as shown here.</t>
       <t>In addition, this document uses the following terminology:
-      <list style="symbols">	
+      <list style="symbols">    
         <t>YANG module revision: An instance of a YANG module, uniquely identified with a revision date, with no implied
         ordering or backwards compatibility between different revisions of the same module.</t>
-	<t>Backwards-compatible (BC) change: A backwards-compatible change between two YANG module revisions, as defined
-	in <xref target="bc_update_rules"/></t>
+    <t>Backwards-compatible (BC) change: A backwards-compatible change between two YANG module revisions, as defined
+    in <xref target="bc_update_rules"/></t>
         <t>Non-backwards-compatible (NBC) change: A non-backwards-compatible change between two YANG module revisions, as
         defined in <xref target="nbc_update_rules"/></t>
         </list>
@@ -172,7 +181,7 @@
     <t>A new module revision MAY contain NBC changes, e.g., the semantics of
     an existing data-node definition MAY be changed in an NBC manner without
     requiring a new data-node definition with a new identifier. A YANG extension,
-    defined in <xref target="nbc_marker"/>, is used to signal the potential
+    defined in <xref target="revision_nbc_marker"/>, is used to signal the potential
     for incompatibility to existing module users and readers.</t>
     <t>As per <xref target="RFC7950"/> and <xref target="RFC6020"/>, all published revisions of a module are given a new unique revision date.  This applies even for module revisions containing (in the module or included submodules) only changes to any whitespace, formatting, comments or line endings (e.g., DOS vs UNIX).</t>
 
@@ -202,12 +211,14 @@
     </section>
   </section>
   
-  <section anchor="nbc_marker" title="non-backwards-compatible revision extension statement">
+  <section anchor="revision_nbc_marker" title="Non-backwards-compatible revision extension statement">
     <t>The "rev:non-backwards-compatible" extension statement is used to indicate YANG module revisions that contain
     NBC changes.</t>
     <t>If a revision of a YANG module contains changes, relative to the preceding revision in the revision history,
     that do not conform to the module update rules defined in <xref target="bc_update_rules"/>, then a
     "rev:non-backwards-compatible" extension statement MUST be added as a substatement to the "revision" statement.</t>
+    <t>Adding, modifying or removing a "rev:non-backwards-compatible" extension
+      statement is considered to be a BC change.</t>
   </section>
   
   <section anchor="removing-revisions-history" title="Removing revisions from the revision history">
@@ -272,7 +283,8 @@ revision 2019-01-02 {
     alternative alias to identify a particular revision of a module or submodule.  The revision label could be used to
     provide an additional versioning identifier associated with the revision.</t>
     <t>A revision label scheme is a set of rules describing how a particular type of revision-label operates for versioning YANG modules and submodules.
-    For example, YANG Semver <xref target="I-D.ietf-netmod-yang-semver"/> defines a revision label scheme based on Semver 2.0.0 <xref target="semver"/>.
+    For example, YANG Semver <xref target="I-D.ietf-netmod-yang-semver"/> 
+	defines a revision label scheme based on Semver 2.0.0 <xref target="semver"/>.
     Other documents may define other YANG revision label schemes.</t>
     <t>Submodules MAY use a revision label scheme. When they use a revision
     label scheme, submodules MAY use a revision label scheme that is different from
@@ -434,6 +446,129 @@ revision 2019-01-02 {
       </artwork>
     </figure>
   </section>
+  
+  <section anchor="node-tags" title="Schema node compatibility extension statements">
+    <t>In addition to the revision extension statement in <xref target="revision_nbc_marker"/>, YANG extension statements are also available to indicate compatibility information
+    for individual schema nodes.
+    </t>
+    <t>For many YANG statements, programmatic tooling can determine whether
+    the changes between the statements constitutes a backwards-compatible
+    or non-backwards-compatible change.  However, for some statements, it
+    may be impractical for tooling to determine whether the changes
+    are backwards-compatible or not.  For example, in the general case,
+    tooling cannot determine whether the change in a YANG description
+    statement causes a change in the semantics of a YANG data node.  If
+    the change is to fix a typo or spelling mistake then the change can
+    be classified as an editorial backwards-compatible change.
+    Conversely, if the change modifies the behavioral specification of
+    the data node then the change would need to be classified as either a
+    non editorial backwards-compatible change or a non-backwards-
+    compatible change.  Hence, extension statements are defined to
+    annotate a YANG module with additional information to clarify the
+    scope of changes in cases that cannot be determined by algorithmic
+    comparison.
+    </t>
+    <t>Three extensions are defined for schema node compatibility information:
+    <list style="hanging">
+        <t hangText="node-non-backwards-compatible-change:">Indicates a specific schema
+        node had a non-backwards-compatible change at a particular module
+        or sub-module revision</t>
+        <t hangText="node-backwards-compatible-change:">Indicates a specific schema node
+        had a backwards-compatible change at a particular module or sub-module revision</t>
+        <t hangText="node-editorial-change:">Indicates a specific schema node
+        had an editorial change at a particular module or sub-module revision. 
+        The meaning of an editorial change is as per YANG Semver 
+		<xref target="I-D.ietf-netmod-yang-semver"/></t>
+    </list>
+    </t>
+    <t>When a compatibility scope extension is added to a schema node in a sub-module,
+    the revision indicated for the extension statement is that of the sub-module.
+    </t>
+    <t>Adding, modifying or removing any of the schema node compatibility extension
+      statements is considered to be a BC change.
+    </t>
+    <t>The following example illustrates the schema node compatibility extensions:
+      <figure>
+        <artwork>
+          container some-stuff {
+            leaf used-to-be-a-string {
+              rev:node-non-backwards-compatible-change "3.0.0";
+              type uint32;
+            }
+            leaf fixed-my-description-typo {
+              rev:node-editorial-change "1.4.1";
+              type string;
+              description "This description used to have a typo."
+            }
+            list sir-changed-a-lot {
+              rev:node-editorial-change "3.0.0";
+              rev:node-backwards-compatible-change "2.3.0";
+              rev:node-backwards-compatible-change "1.2.1_non_compatible";
+              description "a list of stuff";
+              ordered-by user;
+              key "foo";
+              leaf foo {
+                type string;
+              }
+              leaf thing {
+                type uint8;
+              }
+            }
+        </artwork>
+      </figure>
+    </t>
+    <t>Note that an individual schema node may have a backwards compatible change
+    in a revision that is non-backwards-compatible (e.g. some other node changed
+    in a non-backwards-compatible fashion in that particular revision).
+    </t>
+    <t>If changes are ported from one branch of YANG model revisions to another
+    branch, care must be taken with any schema node compatibilty extensions. 
+    A simple copy-n-paste should not be used. The extensions 
+    may incorrectly reference a revision that is not in the history of the 
+    new revision. Further, the annotations might not apply depending on what 
+    the history is like in that new branch (e.g., an NBC change
+    that is ported might not be an NBC change in the new branch).
+    Schema node compatiblity extensions should not be copied over to the new 
+    branch. Instead, the changes should be 
+    considered as completely new on the new branch, and any compatibility information
+    should be generated from scratch.
+    </t>
+    <t>TBD: Is the format right in the example above ? quotes and semi colon ?</t>
+    <t>TBD: Are we going to define when to add and not add these tags ? e.g.
+    optional anytime they are applicable, mandatory when a tool can't guess ?</t>
+    <t>
+    TBD: can the backwards-compatible-node tag be used in blatant contradiction to NBC rules ?  E.g. a range shrinks from 1..50 to 0..9. Is an author allowed to tag that leaf with the backwards-compatible-node tag ? Then what happens with the YANG Semver and the 
+    top level revision NBC tag ?
+    </t>
+    <t>
+    TBD: use the same non-backwards-compatible tag as the top level, but allow it to be applied to nodes ?
+    </t>
+    <t>
+    TBD: The scheme comparison draft limited the use of per-node tags to specific
+    YANG statements: description, must and when (and probably 'pattern' should
+    have been in that list). Are we going to limit their applicability ?
+    </t>
+    <t>
+    TBD: Change the name of the module level annotation from rev:non-backwards-compatible to
+    rev:non-backwards-compatible-revision (or rev:revision-non-backwards-compatible), to
+    distinguish more clearly from the per node annotation ?
+    </t>
+    <t>TBD: Allow the use of per node tags in pre-release versions ? If so, 
+    specify they must be removed when publishing a released version ? Otherwise 
+    we could end up with something like this in a module:
+    </t>
+    <t>
+    <artwork>
+        leaf foo {
+          rev:node-non-backwards-compatible-change 2.0.0-draft-user-netmod-
+   foo-05
+          rev:node-non-backwards-compatible-change 2.0.0-draft-user-netmod-
+   foo-02
+   </artwork>   
+   </t>
+    
+  </section>
+  
 </section>
 <section title="Import by derived revision" anchor="import">
   <t><xref target="RFC7950"/> and <xref target="RFC6020"/> allow YANG module "import" statements to optionally require the imported module to have a particular
@@ -606,12 +741,12 @@ module: ietf-yang-library-revisions
             <t hangText="obsolete-nodes-absent:">If set to "true", this leaf indicates that the server does not implement any
             status "obsolete" schema nodes.  If this leaf is set to "false" or absent, then the behaviour is unspecified.</t>
           </list>
-	</t>
-	<t>Servers SHOULD set both the "deprecated-nodes-implemented" and "obsolete-nodes-absent" leafs to "true".</t>
-	<t>If a server does not set the "deprecated-nodes-implemented" leaf to "true", then clients MUST NOT rely solely on the
-	"rev:non-backwards-compatible" statements to determine whether two module revisions are backwards-compatible, and MUST also
-	consider whether the status of any nodes has changed to "deprecated" and whether those nodes are implemented by
-	the server.</t>
+    </t>
+    <t>Servers SHOULD set both the "deprecated-nodes-implemented" and "obsolete-nodes-absent" leafs to "true".</t>
+    <t>If a server does not set the "deprecated-nodes-implemented" leaf to "true", then clients MUST NOT rely solely on the
+    "rev:non-backwards-compatible" statements to determine whether two module revisions are backwards-compatible, and MUST also
+    consider whether the status of any nodes has changed to "deprecated" and whether those nodes are implemented by
+    the server.</t>
       </section>
     </section>
   </section>
@@ -710,8 +845,8 @@ module: ietf-yang-library-revisions
     <figure>
       <preamble> YANG module with extension statements for annotating NBC changes, revision label, revision label scheme,
       and importing by revision.</preamble>
-      <artwork name="ietf-yang-revisions@2021-11-04.yang"><![CDATA[
-<CODE BEGINS> file "ietf-yang-revisions@2021-11-04.yang"
+      <artwork name="ietf-yang-revisions@2022-08-22.yang"><![CDATA[
+<CODE BEGINS> file "ietf-yang-revisions@2022-08-22.yang"
 module ietf-yang-revisions {
   yang-version 1.1;
   namespace "urn:ietf:params:xml:ns:yang:ietf-yang-revisions";
@@ -773,8 +908,8 @@ module ietf-yang-revisions {
   // RFC Ed.: replace XXXX (inc above) with actual RFC number and
   // remove this note.
 
-  revision 2021-11-04 {
-    rev:revision-label 1.0.0-draft-ietf-netmod-yang-module-versioning-05;
+  revision 2022-08-22 {
+    rev:revision-label 1.0.0-draft-ietf-netmod-yang-module-versioning-07;
     description
       "Initial version.";
     reference
@@ -957,6 +1092,40 @@ module ietf-yang-revisions {
         Section 3.3.1, Revision label scheme extension statement";
 
   }
+  
+  extension node-non-backwards-compatible-change {
+    argument revision-date-or-label;
+    description
+      "Identifies a revision (by revision-label, or revision date if
+       a revision-label is not available) where a
+       non-backwards-compatible change has occurred relative to the
+       previous revision listed in the revision history.
+ 
+       The format of the revision-label argument MUST conform to the
+       pattern defined for the ietf-yang-revisions
+       revision-date-or-label typedef.
+
+       The following YANG statements MAY have zero or more
+       'rev-ext:non-backwards-compatible' statements:
+           TBD
+           
+       TBD: define where these extension statements must go relative
+       to other substatements (e.g. before the type of a leaf, etc ?).
+           
+       Each YANG statement MUST only a have a single
+       node-non-backwards-compatible-change, node-backwards-compatible-change, 
+       or node-editorial-change extension statement for a particular revision-label, 
+       or corresponding revision-date. When a node has more than one of the 
+       xxx-change extension statements, they must be ordered from most recent 
+       to least recent.";
+
+    reference
+      "XXXX: Updated YANG Module Revision Handling;
+      Section 3.6, Schema node compatibility extension statements";
+  }
+  
+  // Todo: Add node-backwards-compatible-change and node-editorial-change extensions
+  
 }
 <CODE ENDS>
 ]]></artwork>
@@ -1257,7 +1426,7 @@ module ietf-yang-library-revisions {
     target="update_rules"/>, and MUST include a "rev:non-backwards-compatible" substatement
     to the latest revision statement whenever an IANA maintained module is
     updated in a non-backwards-compatible way, as described in <xref
-    target="nbc_marker"/>.</t>
+    target="revision_nbc_marker"/>.</t>
 
     <t>Note: For published IANA maintained YANG modules that contain
     non-backwards-compatible changes between revisions, a new revision should be
@@ -1310,6 +1479,7 @@ module ietf-yang-library-revisions {
    <?ref include='reference.I-D.ietf-netmod-yang-ver-selection'?>
    <?rfc include="reference.I-D.ietf-netmod-yang-solutions"?>
    <?ref include='reference.I-D.ietf-netmod-yang-versioning-reqs'?>
+   <?ref include='reference.I-D.ietf-netmod-yang-schema-comparison'?>
    <reference anchor="semver" target="https://www.semver.org">
       <front>
         <title>Semantic Versioning 2.0.0</title>
