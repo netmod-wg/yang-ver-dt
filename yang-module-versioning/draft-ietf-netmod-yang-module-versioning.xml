@@ -136,10 +136,12 @@
       <list style="symbols">    
         <t>YANG module revision: An instance of a YANG module, uniquely identified with a revision date, with no implied
         ordering or backwards compatibility between different revisions of the same module.</t>
-    <t>Backwards-compatible (BC) change: A backwards-compatible change between two YANG module revisions, as defined
-    in <xref target="bc_update_rules"/></t>
+        <t>Backwards-compatible (BC) change: A backwards-compatible change between two YANG module revisions, as defined
+        in <xref target="bc_update_rules"/></t>
         <t>Non-backwards-compatible (NBC) change: A non-backwards-compatible change between two YANG module revisions, as
         defined in <xref target="nbc_update_rules"/></t>
+		<t>Node compatibility statement: An extension statements (e.g. nbc-change-at)
+		that can be used to indicate the backwards compatibility of individual schema nodes and specific YANG statements.</t>
         </list>
       </t>
     </section>
@@ -201,6 +203,8 @@
         <t>A statement that is defined using the YANG "extension" statement MAY be added, removed, or changed,
         if it does not change the semantics of the module.  Extension statement definitions SHOULD specify whether
         adding, removing, or changing statements defined by that extension are backwards-compatible or non-backwards-compatible.</t>
+        <t>Any change made to the "revision-date" or "revision-or-derived" substatements
+        of an "import" statement, including adding new "revision-date" or "revision-or-derived" substatements, changing the argument of any "revision-date" or "revision-or-derived" substatetements, or removing any "revision-date" or "revision-or-dervied" substatements, are backwards compatible.</t>
         <t>Any changes (including whitespace or formatting changes) that do not change the semantic meaning of the 
         module are backwards compatible.</t>
       </list></t>
@@ -447,17 +451,16 @@ revision 2019-01-02 {
     </figure>
   </section>
   
-  <section anchor="node-tags" title="Schema node compatibility extension statements">
-    <t>In addition to the revision extension statement in <xref target="revision_nbc_marker"/>, YANG extension statements are also available to indicate compatibility information
-    for certain individual YANG statements.
+  <section anchor="node-tags" title="Node compatibility extension statements">
+    <t>In addition to the revision extension statement in <xref target="revision_nbc_marker"/>, YANG extension statements are also available to indicate compatibility information for schema nodes and certain individual YANG statements.
     </t>
     <t>For many YANG statements, programmatic tooling can determine whether
-    the changes between the statements constitutes a backwards-compatible
+    the changes to a statement between two module revisions constitutes a backwards-compatible
     or non-backwards-compatible change.  However, for some statements, it
     may be impractical for tooling to determine whether the changes
     are backwards-compatible or not.  For example, in the general case,
     tooling cannot determine whether the change in a YANG description
-    statement causes a change in the semantics of a YANG data node.  If
+    statement causes a change in the semantics of a YANG schema node.  If
     the change is to fix a typo or spelling mistake then the change can
     be classified as an editorial backwards-compatible change.
     Conversely, if the change modifies the behavioral specification of
@@ -468,7 +471,7 @@ revision 2019-01-02 {
     scope of changes in cases that cannot be determined by algorithmic
     comparison.
     </t>
-    <t>Three extensions are defined for YANG statement compatibility information:
+    <t>Three extensions are defined for schema node compatibility information:
     <list style="hanging">
         <t hangText="nbc-change-at:">Indicates a specific YANG statement
         had a non-backwards-compatible change at a particular module
@@ -481,13 +484,13 @@ revision 2019-01-02 {
         <xref target="I-D.ietf-netmod-yang-semver"/></t>
     </list>
     </t>
-    <t>When a compatibility scope extension is added to a YANG statement in a sub-module,
-    the revision indicated for the extension statement is that of the sub-module.
+    <t>When a node compatibility statement is added to a schema node in a sub-module,
+    the revision indicated for the compatibility statement is that of the sub-module.
     </t>
-    <t>Adding, modifying or removing any of the YANG statement compatibility extension
+    <t>Adding, modifying or removing any of the node compatibility
       statements is considered to be a BC change.
     </t>
-    <t>The following example illustrates the YANG statement compatibility extensions:
+    <t>The following example illustrates the node compatibility statements:
       <figure>
         <artwork>
           container some-stuff {
@@ -525,20 +528,20 @@ revision 2019-01-02 {
     in a non-backwards-compatible fashion in that particular revision).
     </t>
     <t>If changes are ported from one branch of YANG model revisions to another
-    branch, care must be taken with any YANG statement compatibilty extensions. 
-    A simple copy-n-paste should not be used. The extensions 
+    branch, care must be taken with any node compatibilty statements. 
+    A simple copy-n-paste should not be used. The node compatibilty statements 
     may incorrectly reference a revision that is not in the history of the 
-    new revision. Further, the annotations might not apply depending on what 
+    new revision. Further, the statements might not apply depending on what 
     the history is like in that new branch (e.g., an NBC change
     that is ported might not be an NBC change in the new branch).
-    YANG statement compatiblity extensions should not be copied over to the new 
+    Node compatiblity statements should not be copied over to the new 
     branch. Instead, the changes should be 
     considered as completely new on the new branch, and any compatibility information
     should be generated from scratch.
     </t>
-    <t>When a compatibility extension statement is present, that extension
+    <t>When a node compatibility  statement is present, that compatibilty
     statement is the authoritative classification of the backwards compatibility
-    of the change to the statement in the specifed revision. This allows a human
+    of the change to the schema node in the specifed revision. This allows a human
     author to explicitly communicate the compatibilty and potentially override
     the rules specified in this document. This is useful in a number of situations
     including:
@@ -546,27 +549,16 @@ revision 2019-01-02 {
       <t>When a tool may not be able to accurately determine the compatibilty of a change. For example, a change in a 'pattern' or 'must' statement can be difficult for a user or tool to determine if it is a compatible change.</t>
       <t>When a pattern, range or other statement is changed to more correctly define the server constraint. An example is correcting a pattern that incorrectly included 355.xxx.xxx.xxx as a possible IPv4 address to make it only accept up to 255.xxx.xxx.xxx.</t>
     </list> 
-    <t>Nothing about the compatibilty of a YANG statement can be inferred
-    from the absence of a compatibility extension statement.
+    <t>Nothing about the backwards compatibility of a schema node is implied by the absence of a node compatibility statement. Hence, the schema node definition must be compared between the two revisions to determine the backwards compatibility.
     </t>
-    <t>TBD: The absence of a compatibility extension statement can't be used
-    to infer whether a YANG statement is backwards compatible or non backwards
-    compatible with respect to a previous revision.
-    </t>
-    <t>TBD: The backwards compatibility of a YANG statement MUST NOT be inferred
-    from the absence of a compatibility extension statement.
-    </t>
-    <t>TBD: add another sentence ? -> The YANG statement must be compared between the two revisions to determine the backwards compatibility.
-    </t>
-    <t>If any nbc-change-at extension statements exist in any YANG statements of a module
-    or sub-module, then the module or sub-module MUST have non-backwards-compatible-revision
+    <t>If any nbc-change-at extension statements exists in a module or sub-module, then the module or sub-module MUST have non-backwards-compatible-revision
     substatements in each revision statement of the module or sub-module history where the 
-    revision matches the argument of any nbc-change-at statements. If any revision statements are removed, then all YANG statement compatibiilty extension statements that reference that revision MUST also be removed. Conversely, YANG statement compatibilty extension statements MUST NOT be removed unless the
+    revision matches the argument of any nbc-change-at statements. If any revision statements are removed, then all node compatibiilty statements that reference that revision MUST also be removed. Conversely, node compatibilty statements MUST NOT be removed unless the
     associated revision statement in the revision history is removed.
     </t>
-    <t>If a compatiblity extension is added to a 'grouping' statement,
+    <t>If a node compatiblity statement is added to a grouping,
     then all instances where the grouping is used in the module or
-    by an importing modules are also impacted by the compatibilty information. 
+    by an importing module are also impacted by the compatibilty information. 
     Similarly for a 'typedef', all 
     leafs and list-lists that use that typedef share the specified 
     compatibility classification. A non-backwards-compatible change 
@@ -574,35 +566,26 @@ revision 2019-01-02 {
     an importing module, does not cause the importing module to add a
     non-backwards-compatible-revision statement to the revision history.
     Non-backwards-compatible marking does not carry through import statements.
-    This approach avoids having to find and update N importing modules
-    when an imported module has a non-backwards-compatible change.
     </t>
-    <t>YAMG statement compatibility statements are not supported on 
+    <t>A node compatibility statement at a leaf or leaf-list context
+    takes precedence over a node compatibility statement in a typedef
+    used by the leaf or leaf-list. If multiple typedefs with 
+    compatibility statements are used by a leaf or leaf-list (e.g. a union), and there 
+    is no compatibility statement at the leaf or leaf-list context, then
+    the order of precedence used to classify the compatibility of the leaf
+    or leaf-list is as follows: nbc-change-at, bc-change-at and finally editorial-change-at. That is, the leaf or leaf-list takes the most impactful change 
+    classification of all the typedefs.</t>
+    <t>Node compatibility statements are not supported on YANG
     statements such as 'pattern' or 'range'. The compatibility statement
-    instead goes against the leaf or leaf-list.
+    instead goes against the leaf or leaf-list context.
     </t>
-    
-    
-    <t>TBD: what if the typedef says NBC but the leaf has a tag that says BC ?
+    <t>TBD: The phrase "YANG statement compatibilty statements are not supported
+    on statements such as 'pattern'" is a touch awkward. Should we call these
+    extensions 'schema node compatibility extension statements' instead ? Even
+    though they are supported on schema nodes *plus* 6 other statements (typedef, grouping, etc) ?
     </t>
     <t>TBD: Are we going to define when to add and not add these tags ? e.g.
-    optional anytime they are applicable, mandatory when a tool can't guess ?</t>
-    <t>
-    TBD: can the backwards-compatible-node tag be used in blatant contradiction to NBC rules ?  E.g. a range shrinks from 1..50 to 0..9. Is an author allowed to tag that leaf with the backwards-compatible-node tag ? Then what happens with the YANG Semver and the 
-    top level revision NBC tag ?
-    </t>
-    <t>
-    TBD: use the same non-backwards-compatible tag as the top level, but allow it to be applied to nodes ?
-    </t>
-    <t>
-    TBD: The scheme comparison draft limited the use of per-node tags to specific
-    YANG statements: description, must and when (and probably 'pattern' should
-    have been in that list). Are we going to limit their applicability ?
-    </t>
-    <t>
-    TBD: Change the name of the module level annotation from rev:non-backwards-compatible to
-    rev:non-backwards-compatible-revision to
-    distinguish more clearly from the per node annotation ?
+    optional anytime they are applicable, mandatory when a tool can't guess ?
     </t>
     <t>TBD: Allow the use of per node tags in pre-release versions ? If so, 
     specify they must be removed when publishing a released version ? Otherwise 
@@ -1162,6 +1145,7 @@ module ietf-yang-revisions {
 
        The following YANG statements MAY have zero or more nbc-change-at substatements:
            - all schema node statements (leaf, rpc, choice, etc)
+           - 'feature' statements
            - 'grouping' statements
            - 'identity' statements
            - 'must' statements
@@ -1179,10 +1163,11 @@ module ietf-yang-revisions {
        TBD: define where these extension statements must go relative
        to other substatements (e.g. before the type of a leaf, etc ?).
            
-       Each YANG statement MUST only a have a single xxx-change-at
-       extension statement for a particular revision. When a node has 
-       more than one of the xxx-change-at extension statements, 
-       they must be ordered from most recent to least recent.
+       Each YANG statement MUST only a have a single node compatibilty
+	   statement (one of nbc-change-at, bc-change-at or editorial-change-at)
+	   for a particular revision. When a node has 
+       more than one of the node compatibilty statements (for different
+	   revisions), they must be ordered from most recent to least recent.
        
        An nbc-change-at statement can have 0 or 1 'description' substatements.
        
