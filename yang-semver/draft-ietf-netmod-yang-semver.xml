@@ -1,9 +1,8 @@
 <?xml version='1.0' encoding='utf-8'?>
-<!DOCTYPE rfc SYSTEM "rfc2629-xhtml.ent">
-<rfc xmlns:xi="http://www.w3.org/2001/XInclude" updates="8407" category="std" ipr="trust200902" consensus="true" docName="draft-ietf-netmod-yang-semver-07" xml:lang="en" obsoletes="" submissionType="IETF" version="3">
+<rfc xmlns:xi="http://www.w3.org/2001/XInclude" updates="8407" category="std" ipr="trust200902" consensus="true" docName="draft-ietf-netmod-yang-semver-08" xml:lang="en" obsoletes="" submissionType="IETF" version="3">
   <front>
     <title abbrev="YANG Semver">YANG Semantic Versioning</title>
-    <seriesInfo name="Internet-Draft" value="draft-ietf-netmod-yang-semver-07"/>
+    <seriesInfo name="Internet-Draft" value="draft-ietf-netmod-yang-semver-08"/>
     <author initials="J." surname="Clarke" fullname="Joe Clarke" role="editor">
       <organization>Cisco Systems, Inc.</organization>
       <address>
@@ -100,6 +99,8 @@
       <xref target="I-D.ietf-netmod-yang-packages" format="default"/>
  are examples of YANG artifacts
         for the purposes of this document.</li>
+    <li>SemVer: A version string that corresponds to the rules defined in <xref target="SemVer" format="default"/>.  This specific camel-case notation is the one used
+    by the SemVer 2.0.0 website and used within this document to distinguish between YANG Semver.</li>
     <li>YANG Semver: A revision-label identifier that is consistent with the extended set of semantic versioning rules, based on <xref target="SemVer" format="default"/>
 ,
       defined within this document.</li>
@@ -111,6 +112,13 @@
   used with YANG artifacts, and describes the rules associated with changing an
   artifact's semantic version when its contents are
   updated.</t>
+  <section anchor="semver_diffs" numbered="true" toc="default">
+    <name>Relationship Between SemVer and YANG Semver</name>
+    <t><xref target="SemVer" format="default"/> is completely compatible with YANG Semver in that a SemVer semantic version number is legal according to the YANG Semver
+    rules (though the inverse is not necessarily true).  YANG Semver is a superset of the SemVer rules, and allow for limited branching within YANG artifacts.  If no branching occurs within a YANG artifact
+    (i.e., you do not use the compatibility modifiers described below), the YANG Semver
+    version label will appear as a SemVer version number.</t>
+  </section>
   <section anchor="version_pattern" numbered="true" toc="default">
     <name>YANG Semver Pattern</name>
     <t>YANG artifacts that employ semantic versioning as defined in this document MUST use a version string (e.g., in revision-label
@@ -124,7 +132,7 @@
     </ul>
     <t>Additionally, <xref target="SemVer" format="default"/>
  defines two specific types of metadata that may be appended to a semantic version string.
-      Pre-release metadata MAY be appended to a semver string after a trailing '-' character.  Build metadata
+      Pre-release metadata MAY be appended to a YANG Semver string after a trailing '-' character.  Build metadata
       MAY be appended after a trailing '+' character.  If both pre-release and build metadata are present, then build metadata MUST
       follow pre-release metadata.  While build metadata MUST be ignored when comparing YANG semantic versions, pre-release metadata MUST be used
       during module and submodule development as specified in <xref target="guidelines" format="default"/>
@@ -191,24 +199,28 @@
 <li>'Y' is the MINOR version.  Changes in the MINOR version number
        indicate changes that are backwards-compatible to versions with
        the same MAJOR version number, but a lower MINOR version number
-       and no PATCH "_compatible" or "_non_compatible" modifier.</li>
+       and no "_compatible" or "_non_compatible" modifier.</li>
+<li>'Z' is the PATCH version. Changes in the PATCH
+       version number can indicate an editorial change to the YANG artifact.
+       In conjunction with the '_COMPAT' modifier (see below) changes to 'Z'
+       may indicate a more substantive module change.
+       An editorial change is defined to be a change in the YANG artifact's
+   content that does not affect the semantic meaning or functionality provided by
+   the artifact in any way.  Some examples include correcting a spelling mistake in the 
+   description of a leaf within a YANG module or submodule, non-significant whitespace changes (e.g., 
+   realigning description statements or changing indentation), or changes to YANG comments.  
+   Note: restructuring how a module uses, or does not use, submodules
+   is treated as an editorial level change on the condition that there is no change in the
+   module's semantic behavior due to the restructuring.</li>
 <li>
-<t>'Z_COMPAT' is the PATCH version and modifier.  Changes in the PATCH
-       version number can indicate editorial, backwards-compatible, or
+<t>'_COMPAT' is an additional modifier, unique to YANG Semver (i.e., not valid in <xref target="SemVer" format="default"/>), that indicates backwards-compatible, or
        non-backwards-compatible changes relative to versions with the
        same MAJOR and MINOR version numbers, but lower PATCH version
        number, depending on what form modifier '_COMPAT' takes:
 </t>
 <ul spacing="normal">
   <li>If the modifier string is absent, the change represents an
-   editorial change.  An editorial change is defined to be a change in the YANG artifact's
-   content that does not affect the semantic meaning or functionality provided by
-   the artifact in any way.  Some examples include correcting a spelling mistake in the 
-   description of a leaf within a YANG module or submodule, non-significant whitespace changes (e.g., 
-   realigning description statements or changing indendation), or changes to YANG comments.  
-   Note: restructuring how a module uses, or does not use, submodules
-   is treated as an editorial level change on the condition that there is no change in the
-   module's semantic behavior due to the restructuring.</li>
+   editorial change.</li>
   <li>If, however, the modifier string is present, the meaning is described below:</li>
   <li>"_compatible" - the change represents a backwards-compatible change</li>
   <li>"_non_compatible" - the change represents a non-backwards-compatible change</li>
@@ -221,7 +233,7 @@ revision with the same X.Y version digits will also have a modifier. The modifie
 "_compatible" to "_non_compatible" in a descendant revision, but the 
 modifier MUST NOT change from "_non_compatible" to "_compatible" 
 and MUST NOT be removed. The persistence of the "_non_compatible" modifier 
-ensures that comparisions of revision labels do not give the false 
+ensures that comparisons of revision labels do not give the false 
 impression of compatibility between two potentially non-compatible 
 revisions. If "_non_compatible" was removed, for example between revisions 
 "3.3.2_non_compatible" and "3.3.3" (where "3.3.3" was simply an editorial 
@@ -406,71 +418,71 @@ modules by revision-or-derived.  See <xref target="import_semver" format="defaul
         based on the rules defined in this document.
 </t>
 <artwork name="" type="" align="left" alt=""><![CDATA[
-    module example-versioned-module {
-      yang-version 1.1;
-      namespace "urn:example:versioned:module";
-      prefix "exvermod";
-      rev:revision-label-scheme "ysver:yang-semver";
+  module example-versioned-module {
+    yang-version 1.1;
+    namespace "urn:example:versioned:module";
+    prefix "exvermod";
+    rev:revision-label-scheme "ysver:yang-semver";
 
-      import ietf-yang-revisions { prefix "rev"; }
-      import ietf-yang-semver { prefix "ysver"; }
+    import ietf-yang-revisions { prefix "rev"; }
+    import ietf-yang-semver { prefix "ysver"; }
 
-      description
-        "to be completed";
+    description
+      "to be completed";
 
-      revision 2017-08-30 {
-        description "Backport 'wibble' leaf";
-        rev:revision-label 1.2.2_non_compatible;
-      }
-
-      revision 2017-07-30 {
-        description "Rename 'baz' to 'bar'";
-        rev:revision-label 1.2.1_non_compatible;
-        rev:non-backwards-compatible;
-      }
-
-      revision 2017-04-20 {
-        description "Add new functionality, leaf 'baz'";
-        rev:revision-label 1.2.0;
-      }
-
-      revision 2017-04-03 {
-        description "Add new functionality, leaf 'foo'";
-        rev:revision-label 1.1.0;
-      }
-
-      revision 2017-02-07 {
-        description "First release version.";
-        rev:revision-label 1.0.0;
-      }
-
-      // Note: semver rules do not apply to 0.X.Y labels.
-      // The following pre-release revision statements would not
-      // appear in any final published version of a module. They
-      // are removed when the final version is published.
-      // During the pre-release phase of development, only a
-      // single one of these revision statements would appear
-
-      // revision 2017-01-30 {
-      //   description "NBC changes to initial revision";
-      //   rev:revision-label 0.2.0;
-      //   rev:non-backwards-compatible; // optional
-	  //                                 // (theoretically no 
-	  //                                 // 'previous released version')
-      // }
-
-      // revision 2017-01-26 {
-      //   description "Initial module version";
-      //   rev:revision-label 0.1.0;
-      // }
-
-      //YANG module definition starts here
+    revision 2017-08-30 {
+      description "Backport 'wibble' leaf";
+      rev:revision-label 1.2.2_non_compatible;
     }
+
+    revision 2017-07-30 {
+      description "Rename 'baz' to 'bar'";
+      rev:revision-label 1.2.1_non_compatible;
+      rev:non-backwards-compatible;
+    }
+
+    revision 2017-04-20 {
+      description "Add new functionality, leaf 'baz'";
+      rev:revision-label 1.2.0;
+    }
+
+    revision 2017-04-03 {
+      description "Add new functionality, leaf 'foo'";
+      rev:revision-label 1.1.0;
+    }
+
+    revision 2017-02-07 {
+      description "First release version.";
+      rev:revision-label 1.0.0;
+    }
+
+    // Note: YANG Semver rules do not apply to 0.X.Y labels.
+    // The following pre-release revision statements would not
+    // appear in any final published version of a module. They
+    // are removed when the final version is published.
+    // During the pre-release phase of development, only a
+    // single one of these revision statements would appear
+
+    // revision 2017-01-30 {
+    //   description "NBC changes to initial revision";
+    //   rev:revision-label 0.2.0;
+    //   rev:non-backwards-compatible; // optional
+    //                         // (theoretically no 
+    //                         // 'previous released version')
+    // }
+
+    // revision 2017-01-26 {
+    //   description "Initial module version";
+    //   rev:revision-label 0.1.0;
+    // }
+
+    //YANG module definition starts here
+  }
 ]]></artwork>
 </section>
 <section anchor="example_package" numbered="true" toc="default">
 <name>Example of Package Using YANG Semver</name>
-<t>Below is an example YANG package that uses the semver revision label based on
+<t>Below is an example YANG package that uses the YANG Semver revision label based on
       the rules defined in this document.
 </t>
 <artwork name="" type="" align="left" alt=""><![CDATA[
@@ -533,8 +545,7 @@ modules by revision-or-derived.  See <xref target="import_semver" format="defaul
 <t>When using pre-release notation, the format MUST include at least one alphabetic
     component and MUST end with a '.' or '-' and then one or more digits.  These alphanumeric components will
     be used when deciding pre-release precedence.  The following are examples of
-    valid pre-release versions
-
+    valid pre-release versions:
 </t>
 <ul empty="true" spacing="normal">
 <li>1.0.0-alpha.1</li>
@@ -543,14 +554,14 @@ modules by revision-or-derived.  See <xref target="import_semver" format="defaul
 <li>3.0.0-202007.rc.1</li>
 </ul>
 <t>When developing a new revision of an existing module or submodule using the YANG
-    semver revision-label scheme, the intended target semantic version MUST
+    Semver revision-label scheme, the intended target semantic version MUST
     be used along with pre-release notation.  For example, if a released
     module or submodule which has a current revision-label of 1.0.0 is being modified
     with the intent to make non-backwards-compatible changes, the first
     development MAJOR version component must be 2 with some pre-release
     notation such as -alpha.1, making the version 2.0.0-alpha.1.  That said,
     every publicly available release of a module or submodule MUST have a unique YANG
-    semver revision-label (where a publicly available release is one that
+    Semver revision-label (where a publicly available release is one that
     could be implemented by a vendor or consumed by an end user).
     Therefore, it may be prudent to include the
     year or year and month development began (e.g., 2.0.0-201907-alpha.1).
@@ -592,6 +603,8 @@ overall changes to the module or submodule.</t>
     When revising an existing IETF module or submodule, the revision-label MUST use the target (i.e., intended) MAJOR
     and MINOR version components with a 0 PATCH version component.  If the intended ratified release will be non-backward-compatible
     with the current ratified release, the MINOR version component MUST be 0.</t>
+<section anchor="ietf_module_development" numbered="true" toc="default">
+<name>Guidelines for IETF Module Development</name>
 <t>All IETF modules and submodules in development MUST use the whole document name as a pre-release version string,
         including the current document revision.  For
         example, if a module or submodule which is currently released at version 1.0.0 is being
@@ -602,6 +615,14 @@ overall changes to the module or submodule.</t>
       version for initial module or submodule development (where MINOR and PATCH can change), appending the
       draft name as a pre-release component helps to ensure uniqueness when there are perhaps
       multiple, parallel efforts creating the same module or submodule.</t>
+      <t>Some draft revisions may not include an update to the YANG modules or submodules contained in the draft.  In that case, those modules or submodules
+      that are not updated do not not require a change to their versions.  Updates to the YANG Semver version MUST only be done when the revision
+      of the module changes.</t>
+      <t>See <xref target="appendix_A" format="default"/>
+ for a detailed example of IETF pre-release versions.</t>
+</section>
+<section anchor="ietf_released_modules" numbered="true" toc="default">
+<name>Guidelines for Published IETF Modules</name>
 <t>For IETF YANG modules and submodules that have already been published, revision-labels MUST be
 retroactively applied to all existing revisions when the next new revision is created, starting at
 version "1.0.0" for the initial published revision, and then incrementing according to the YANG Semver version rules specified in <xref target="semver_update_rules" format="default"/>
@@ -610,14 +631,13 @@ For example, if a module or submodule started out in the pre-NMDA (<xref target=
 ) world, and then had NMDA support added without
 removing any legacy "state" branches -- and you are looking to add additional new features -- a sensible choice for the target YANG Semver would be 1.2.0 (since 1.0.0 would
 have been the initial, pre-NMDA release, and 1.1.0 would have been the NMDA revision).</t>
-<t>See <xref target="appendix_A" format="default"/>
- for a detailed example of IETF pre-release versions.</t>
+</section>
 </section>
 </section>
 <section anchor="yang_module" numbered="true" toc="default">
 <name>YANG Module</name>
 <t>This YANG module contains the typedef for the YANG semantic version and the identity to signal its use.</t>
-<sourcecode name="ietf-yang-semver@2021-11-04.yang" type="" markers="true"><![CDATA[
+<sourcecode name="ietf-yang-semver@2022-09-13.yang" type="" markers="true"><![CDATA[
 module ietf-yang-semver {
   yang-version 1.1;
   namespace "urn:ietf:params:xml:ns:yang:ietf-yang-semver";
@@ -650,12 +670,12 @@ module ietf-yang-semver {
     "This module provides type and grouping definitions for YANG
      packages.
 
-     Copyright (c) 2021 IETF Trust and the persons identified as
+     Copyright (c) 2022 IETF Trust and the persons identified as
      authors of the code.  All rights reserved.
 
      Redistribution and use in source and binary forms, with or
      without modification, is permitted pursuant to, and subject
-     to the license terms contained in, the Simplified BSD License
+     to the license terms contained in, the Revised BSD License
      set forth in Section 4.c of the IETF Trust's Legal Provisions
      Relating to IETF Documents
      (http://trustee.ietf.org/license-info).
@@ -669,8 +689,8 @@ module ietf-yang-semver {
   // note.
   // RFC Ed. update the rev:revision-label to "1.0.0".
 
-  revision 2021-11-04 {
-    rev:revision-label "1.0.0-draft-ietf-netmod-yang-semver-05";
+  revision 2022-09-13 {
+    rev:revision-label "1.0.0-draft-ietf-netmod-yang-semver-08";
     description
       "Initial revision";
     reference
@@ -684,10 +704,10 @@ module ietf-yang-semver {
   identity yang-semver {
     base rev:revision-label-scheme-base;
     description
-      "The revision-label scheme corresponds to the YANG Semver scheme
-       which is defined by the pattern in the 'version' typedef below.
-       The rules governing this revision-label scheme are defined in the
-       reference for this identity.";
+      "The revision-label scheme corresponds to the YANG Semver
+       scheme which is defined by the pattern in the 'version' 
+       typedef below. The rules governing this revision-label 
+       scheme are defined in the reference for this identity.";
     reference
       "RFC XXXX: YANG Semantic Versioning.";
   }
@@ -703,8 +723,8 @@ module ietf-yang-semver {
     }
     description
       "Represents a YANG semantic version.  The rules governing the
-       use of this revision label scheme are defined in the reference for
-       this typedef.";
+       use of this revision label scheme are defined in the 
+       reference for this typedef.";
     reference
       "RFC XXXX: YANG Semantic Versioning.";
   }
@@ -744,7 +764,7 @@ module ietf-yang-semver {
 <li>Registrant Contact: The IESG.</li>
 <li>XML: N/A, the requested URI is an XML namespace.</li>
 </ul>
-<t>The following YANG module is requested to be registred in the "IANA
+<t>The following YANG module is requested to be registered in the "IANA
   Module Names" <xref target="RFC6020"/>
 .  Following the format in RFC 6020,
   the following registrations are requested:</t>
@@ -869,15 +889,21 @@ module ietf-yang-semver {
 <t>At this point, the draft is ratified and becomes RFC12345 and the YANG module version becomes 1.0.0.</t>
 <t>A time later, the module needs to be revised to add additional capabilities.  Development will be done in a
     backwards-compatible way.  Two new individual drafts are proposed to go about adding the capabilities in
-    different ways: draft-jdoe-netmod-exmod-enhancements and draft-jadoe-netmod-exmod-changes.  These are initially
+    different ways: draft-jdoe-netmod-exmod-enhancements and draft-asmith-netmod-exmod-changes.  These are initially
     developed in parallel with the following versions.</t>
-<t keepWithNext="true">Parallel development for next module revision:</t>
+<t keepWithNext="true">Parallel development for next module revision (track 1):</t>
 <artwork name="" type="" align="left" alt=""><![CDATA[
-      1.1.0-draft-jdoe-netmod-exmod-enhancements-00 || 1.1.0-draft-jadoe-netmod-exmod-changes-00
-        |                                                |
-      1.1.0-draft-jdoe-netmod-exmod-enhancements-01 || 1.1.0-draft-jadoe-netmod-exmod-changes-01
+      1.1.0-draft-jdoe-netmod-exmod-enhancements-00
+        |
+      1.1.0-draft-jdoe-netmod-exmod-enhancements-01
 ]]></artwork>
-<t>At this point, the WG decides to merge some aspects of both and adopt the work in jadoe's draft
+<t keepWithNext="true">In parallel with (track 2):</t>
+<artwork name="" type="" align="left" alt=""><![CDATA[
+      1.1.0-draft-asmith-netmod-exmod-changes-00
+        |
+      1.1.0-draft-asmith-netmod-exmod-changes-01
+]]></artwork>
+<t>At this point, the WG decides to merge some aspects of both and adopt the work in asmith's draft
     as draft-ietf-netmod-exmod-changes.  A single version lineage continues.</t>
 <artwork name="" type="" align="left" alt=""><![CDATA[
       1.1.0-draft-ietf-netmod-exmod-changes-00
