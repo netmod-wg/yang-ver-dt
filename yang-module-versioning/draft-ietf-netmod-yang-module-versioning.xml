@@ -23,7 +23,7 @@
 <?rfc inline="yes"?>
 <?rfc compact="yes"?>
 <?rfc subcompact="no"?>
-<rfc updates="6020,7950,8407,8525" category="std" ipr="trust200902" docName="draft-ietf-netmod-yang-module-versioning-07">
+<rfc updates="6020,7950,8407,8525" category="std" ipr="trust200902" docName="draft-ietf-netmod-yang-module-versioning-08">
 <front>
 <title abbrev="Updated YANG Module Revision Handling">Updated YANG Module Revision Handling</title>
 
@@ -198,8 +198,8 @@
         <t>A statement that is defined using the YANG "extension" statement MAY be added, removed, or changed,
         if it does not change the semantics of the module.  Extension statement definitions SHOULD specify whether
         adding, removing, or changing statements defined by that extension are backwards-compatible or non-backwards-compatible.</t>
-        <t>Any change made to the "revision-date" or "revision-or-derived" substatements
-        of an "import" statement, including adding new "revision-date" or "revision-or-derived" substatements, changing the argument of any "revision-date" or "revision-or-derived" substatetements, or removing any "revision-date" or "revision-or-dervied" substatements, is classified 
+        <t>Any change made to the "revision-date" or "min-revision" substatements
+        of an "import" statement, including adding new "revision-date" or "min-revision" substatements, changing the argument of any "revision-date" or "min-revision" substatetements, or removing any "revision-date" or "revision-or-dervied" substatements, is classified 
         as backwards-compatible.</t>
         <t>Any changes (including whitespace or formatting changes) that do not change the semantic meaning of the 
         module are backwards-compatible.</t>
@@ -227,7 +227,7 @@
       revision history, or removing a revision that should no longer be used or imported. Removing revision
       statements is allowed, but can cause issues and SHOULD NOT be done without careful analysis of the 
       potential impact to users of the module or submodule. Doing so can lead to import breakages when import by 
-      revision-or-derived is used.  Moreover, truncating history may cause loss of visibility of when 
+      min-revision is used.  Moreover, truncating history may cause loss of visibility of when 
       non-backwards-compatible changes were introduced.</t>
       <t> An author MAY remove a contiguous sequence of entries from the
       end (i.e., oldest entries) of the revision history.  This is
@@ -295,7 +295,7 @@ revision 2019-01-02 {
     change in one submodule does not result in a new revision label in another submodule. A change in a module
     revision label does not necessarily mean a change to the revision label in all included submodules.</t>
     <t>If a revision has an associated revision label, then it may be used 
-      instead of the revision date in a "rev:revision-or-derived" extension 
+      instead of the revision date in a "rev:min-revision" extension 
       statement argument.
     </t>
       <t>A specific revision-label identifies a specific revision of the 
@@ -441,37 +441,26 @@ revision 2019-01-02 {
     </figure>
   </section>
 </section>
-<section title="Import by derived revision" anchor="import">
-  <t><xref target="RFC7950"/> and <xref target="RFC6020"/> allow YANG module "import" statements to optionally require the imported module to have a particular
-  revision date.  In practice, importing a module with an exact revision date is often too restrictive because it
-  requires the importing module to be updated whenever any change to the imported module occurs.  The alternative choice
-  of using an import statement without any revision date statement is also not ideal because the importing module may
-  not work with all possible revisions of the imported module.</t>
+<section title="Recommending a minimum revision for module imports" anchor="import">
+  <t><xref target="RFC7950"/> and <xref target="RFC6020"/> allow YANG module "import" statements to optionally require the imported module to have a specific
+  revision date.  In practice, importing a module with an exact revision date can be too restrictive because it
+  requires the importing module to be updated whenever any change to the imported module occurs, and hence section <xref target="guidelines_authors"/> suggests that authors do not restrict YANG module imports to exact revision dates.</t>
+  
+  <t>The recommended approach for defining the relationship between specific YANG modules revisions is that such relationships are specified outside of the YANG modules, e.g., via YANG library <xref target="RFC8525"/>, YANG packages <xref target="I-D.ietf-netmod-yang-packages"/>, a filesystem directory containing a set of consistent YANG module revisions, or a git repository label.</t>
 
-  <t>Instead, it is desirable for an importing module to specify a "minimum required revision" of a module that it is
-  compatible with, based on the assumption that later revisions derived from that "minimum required revision" are also
-  likely to be compatible.  Many possible changes to a YANG module do not break importing modules, even if the changes
-  themselves are not strictly backwards-compatible.  E.g., fixing an incorrect pattern statement or description for a
-  leaf would not break an import, changing the name of a leaf could break an import but frequently would not, but
-  removing a container would break imports if that container is augmented by another module.</t>
+  <t>In some cases, it can be helpful for a module author to provide guidance on a recommended minimum revision that is expected to satisfy an YANG import.  E.g., the module author may know of a dependency on a particular type or grouping that has been introduced in a particular imported YANG module revision.  Although there can be no guarantee that all derived future revisions from the particular imported module will necessarily also be compatible, older revisions of the particular imported module are very unlikely to be compatible.</t>
 
-  <t>The ietf-revisions module defines the "revision-or-derived" extension statement, a substatement to the YANG "import"
-  statement, to allow for a "minimum required revision" to be specified during import:
+  <t>This document introduces a new YANG extension statement to provide guidance to module implementors on a recommended minimum module revision of an imported module that is anticipated to be compatible.  This statement has been designed to be machine-readable so that tools can parse the minimum revision extension statement and generate warnings if appropriate, but this extension statement does not alter YANG module conformance of valid YANG module versions in any way.</t>
+
+  <t>The ietf-revisions module defines the "min-revision" extension statement, a substatement to the YANG "import"
+  statement, to allow for a "minimum recommended revision" to be documented:
   <list>
-    <t>The argument to the "revision-or-derived" extension statement is a revision date or a revision label.</t>
-    <t>A particular revision of an imported module satisfies an import's "revision-or-derived" extension statement if
+    <t>The argument to the "min-revision" extension statement is a revision date or a revision label.</t>
+    <t>A particular revision of an imported module adheres to an import's "min-revision" extension statement if
     the imported module's revision history contains a revision statement with a matching revision date or
-    revision label.</t>
-    <t>An "import" statement MUST NOT contain both a "revision-or-derived" extension statement and a "revision-date"
-    statement.</t>
-    <t>The "revision-or-derived" extension statement MAY be specified multiple times, allowing the import to use any
-    module revision that satisfies at least one of the "revision-or-derived" extension statements.</t>
-    <t>The "revision-or-derived" extension statement does not guarantee that all module revisions that satisfy an import
-    statement are necessarily compatible; it only gives an indication that the revisions are more likely to be
-    compatible.  Hence, NBC changes to an imported module may also require new revisions of any
-    importing modules, updated to accommodation those changes, along with updated import "revision-or-derived" extension
-    statements to depend on the updated imported module revision.</t>
-    <t>Adding, modifying or removing a "revision-or-derived" extension statement is considered to be a BC change.</t>
+    revision label.  Removing entries from a modules revision history may cause a particular revision to no longer satisfies an import's "min-revision" statement if the revision-date or label is no longer present in the module's revision history; further described in <xref target="removing-revisions-history"/> and <xref target="guidelines_authors"/>.</t>
+    <t>The "min-revision" extension statement MAY be specified multiple times, allowing a set of recommended minimum revisions to be documented.  Module implementors are recommended to pick a module revision that adheres to any of the "min-revision" statements.</t>
+    <t>Adding, modifying or removing a "min-revision" extension statement is a BC change.</t>
   </list>
   </t>
 
@@ -501,14 +490,14 @@ revision 2019-01-02 {
     </figure>
 
     <section toc="exclude" title="Example 1">
-    <t>This example selects module revisions that match, or are derived from the revision 2019-02-01.  E.g., this
+    <t>This example recommends module revisions for import that match, or are derived from the revision 2019-02-01.  E.g., this
     dependency might be used if there was a new container added in revision 2019-02-01 that is augmented by the
     importing module. It includes revisions/labels: 2019-02-01/2.0.0, 2019-03-01/3.0.0, 2019-04-01/2.1.0,
     2019-05-01/2.2.0 and 2019-06-01/3.1.0. </t>
     <figure>
       <artwork>
 import example-module {
-  rev:revision-or-derived 2019-02-01;
+  rev:min-revision 2019-02-01;
 }
       </artwork>
     </figure>
@@ -518,33 +507,33 @@ import example-module {
     <figure>
       <artwork>
 import example-module {
-  rev:revision-or-derived 2.0.0;
+  rev:min-revision 2.0.0;
 }
       </artwork>
     </figure>
     </section>
 
     <section toc="exclude" title="Example 2">
-    <t>This example selects module revisions that are derived from 2019-04-01 by using the revision label 2.1.0.  It
+    <t>This example recommends module revisions for import that are derived from 2019-04-01 by using the revision label 2.1.0.  It
     includes revisions/labels: 2019-04-01/2.1.0 and 2019-05-01/2.2.0.  Even though 2019-06-01/3.1.0 has a higher
-    revision label number than 2019-04-01/2.1.0 it is not a derived revision, and hence it is not a valid
+    revision label number than 2019-04-01/2.1.0 it is not a derived revision, and hence it is not a recommended
     revision for import.</t>
     <figure>
       <artwork>
 import example-module {
-  rev:revision-or-derived 2.1.0;
+  rev:min-revision 2.1.0;
 }
       </artwork>
     </figure>
     </section>
     <section toc="exclude" title="Example 3">
-    <t>This example selects revisions derived from either 2019-04-01 or 2019-06-01.  It includes revisions/labels:
+    <t>This example recommends module revisions for import that are derived from either 2019-04-01 or 2019-06-01.  It includes revisions/labels:
     2019-04-01/2.1.0, 2019-05-01/2.2.0, and 2019-06-01/3.1.0.</t>
     <figure>
       <artwork>
 import example-module {
-  rev:revision-or-derived 2019-04-01;
-  rev:revision-or-derived 2019-06-01;
+  rev:min-revision 2019-04-01;
+  rev:min-revision 2019-06-01;
 }
       </artwork>
     </figure>
@@ -647,7 +636,7 @@ module: ietf-yang-library-revisions
       <t>Removing old revision statements from a module's revision history could break import by revision, and hence it is RECOMMENDED to retain them.
          If all dependencies have been updated to not import specific revisions of a module, then the corresponding revision statements can be removed from that module.
          An alternative solution, if the revision section is too long, would be to remove, or curtail, the older description statements associated with the previous revisions.</t>
-      <t>The "rev:revision-or-derived" extension SHOULD be used in YANG module imports to indicate revision dependencies
+      <t>The "rev:min-revision" extension MAY be used in YANG module imports to indicate revision dependencies
       between modules in preference to the "revision-date" statement, which causes overly strict import dependencies and
       SHOULD NOT be used.</t>
       <t>A module that includes submodules SHOULD use the "revision-date" statement to include specific submodule
@@ -709,8 +698,8 @@ module: ietf-yang-library-revisions
     <figure>
       <preamble> YANG module with extension statements for annotating NBC changes, revision label, revision label scheme,
       and importing by revision.</preamble>
-      <artwork name="ietf-yang-revisions@2022-08-22.yang"><![CDATA[
-<CODE BEGINS> file "ietf-yang-revisions@2022-08-22.yang"
+      <artwork name="ietf-yang-revisions@2022-15-11.yang"><![CDATA[
+<CODE BEGINS> file "ietf-yang-revisions@2022-15-11.yang"
 module ietf-yang-revisions {
   yang-version 1.1;
   namespace "urn:ietf:params:xml:ns:yang:ietf-yang-revisions";
@@ -748,7 +737,7 @@ module ietf-yang-revisions {
     "This YANG 1.1 module contains definitions and extensions to
     support updated YANG revision handling.
 
-    Copyright (c) 2021 IETF Trust and the persons identified as
+    Copyright (c) 2022 IETF Trust and the persons identified as
     authors of the code.  All rights reserved.
 
     Redistribution and use in source and binary forms, with or
@@ -772,8 +761,8 @@ module ietf-yang-revisions {
   // RFC Ed.: replace XXXX (inc above) with actual RFC number and
   // remove this note.
 
-  revision 2022-10-10 {
-    rev:revision-label 1.0.0-draft-ietf-netmod-yang-module-versioning-07;
+  revision 2022-15-11 {
+    rev:revision-label 1.0.0-draft-ietf-netmod-yang-module-versioning-08;
     description
       "Initial version.";
     reference
@@ -903,10 +892,10 @@ module ietf-yang-revisions {
       Section 3.3.1, Revision label scheme extension statement";
   }
 
-  extension revision-or-derived {
+  extension min-revision {
     argument revision-date-or-label;
     description
-      "Restricts the revision of the module that may be imported to
+      "Recommends the revision of the module that may be imported to
       one that matches or is derived from the specified
       revision-date or revision-label.
 
@@ -914,36 +903,26 @@ module ietf-yang-revisions {
       'revision-date-or-label' defined type.
 
       The statement MUST only be a substatement of the import
-      statement.  Zero, one or more 'revision-or-derived' statements
+      statement.  Zero, one or more 'min-revision' statements
       per parent statement are allowed.  No substatements for this
       extension have been standardized.
 
       If specified multiple times, then any module revision that
-      satisfies at least one of the 'revision-or-derived' statements
-      is an acceptable revision for import.
+      satisfies at least one of the 'min-revision' statements
+      is an acceptable recommended revision for import.
 
-      An 'import' statement MUST NOT contain both a
-      'revision-or-derived' extension statement and a
-      'revision-date' statement.
-
-      A particular revision of an imported module satisfies an
-      import's 'revision-or-derived' extension statement if the
+      A particular revision of an imported module adheres to an
+      import's 'min-revision' extension statement if the
       imported module's revision history contains a revision
       statement with a matching revision date or revision label.
-
-      The 'revision-or-derived' extension statement does not
-      guarantee that all module revisions that satisfy an import
-      statement are necessarily compatible, it only gives an
-      indication that the revisions are more likely to be
-      compatible.
       
-      Adding, removing or updating a 'revision-or-derived'
+      Adding, removing or updating a 'min-revision'
       statement to an import is a backwards-compatible change.
       ";
 
     reference
       "XXXX: Updated YANG Module Revision Handling;
-      Section 4, Import by derived revision";
+      Section 4, Recommending a minimum revision for module imports";
   }
 
   identity revision-label-scheme-base {
