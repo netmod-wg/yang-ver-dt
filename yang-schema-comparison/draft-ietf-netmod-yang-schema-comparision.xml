@@ -90,6 +90,53 @@
             <li>XPath, must, when: don't normalize XPath expressions</li>
             <li>presence statements</li>
         </ul>
+		<section><name>Transparent vs non-transparent changes for Algorithm #1</name>
+		    <t>This section captures some thoughts on changes between two revisions of a YANG blob that may be 'transparent' wrt on-the-wire exchanges (NETCONF, etc) for a client using the old revision and a server using the new revision. By transparent we mean:</t>
+		    <ol>
+		        <li>For 'success cases', an 'old' client can't really tell that the YANG modules on the 'new' server have changed (as long as only 'old' clients are interacting with the server, e.g.. no 'new' client is setting configuration values in the expanded value space of the new server)</li>
+		    	<li>All protocol messages that would have been accepted before, are still accepted by the server (note this doesn't mean that all messages that were previously rejected are still rejected)</li>
+		    </ol>
+		    <t>The transparency of a YANG change depends on the protocol and encoding being used on-the-wire (NETCONF XML, RESTCONF JSON, etc). The tool has an 'encoding' input parameter.</t>
+		    <t>The following changes to the following properties are transparent to at least one type of common encoding:
+		    </t>
+		    <ol>
+		        <li>typedef name change</li>
+				<li>grouping name change (implictly transparent? i.e. not even checked by algorithm #1?)</li>
+                <li>moving elements from one grouping to another (as long as the ultimate schema path and namespace remains the same) (implictly transparent? i.e. not even checked by algorithm #1?)</li>
+                <li>Changing the name of a choice or case statement</li>
+                <li>adding a pre-existing leaf/leaf-list/subtree into a new choice statement
+                    <ul>
+                    <li>only if leaf was non-mandatory, or the leaf is mandatory and the choice is also mandatory</li>
+                    <li>need to be careful about defaults as well</li>
+                    <li>we have questions around this one (a new client could set the leaf in the new case... Does 7950 only work for a set of old clients? only for data going into the server?)</li>
+				    </ul>
+				</li>
+				<li>increasing the size of an int (uint8 -> uint16, but only sending a value less than 256).  For XML and JSON_IETF. TBD gRPC. TBD CBOR. CBOR encoder/decoder *may* make this transparent (at least just above the wire). JSON only encodes to 53 bits, then changes to string</li>
+                <li>changing the base type from X to a union of X and other members (and sending a value of type X). For XML and JSON_IETF.  Not for all gRPC encodings. Not CBOR (uses 'value' for bits/enum, but in a union uses the name of the bit/enum)</li>
+                <li>top level module metadata:
+				    <ul>
+					<li>yang-version</li>
+					<li>prefix  [TBD: any cases? identities somehow?]</li>
+					<li>import statements</li>
+					<li>organization</li>
+					<li>contact</li>
+					<li>description (can this have semantic meaning at the module level?) - yes, it could</li>
+					<li>revision?</li>
+				    </ul>
+			    </li>
+                <li>organization of elements across sub-modules</li>
+                <li>TBD: reordering elements (outside of 'input' and 'output' sections) - TBD for some gRPC encodings (depends on YANG->proto conversion). CBOR (SID numbers refer to previous versions, permanent assignment somehow. TBD how this can work for branching.). But maybe algorithm #1 won't check ordering at all? (even for input/output ?)</li>
+            </ol>
+			<t>The following changes are considered non-transparent (at least for XML, JSON IETF, gNMI and CBOR). Note that this list is not intended to be complete. It only highlights a subset of non-transparent changes of particular interest. Anything not in the 'transparent' list above, and is considered NBC in Module Versioning, is non-transparent:</t>
+            <ol>
+                <li>leaf, leaf-list, presence container descriptions (could change semantics, e.g. only odd numbers)</li>
+				<li>non-presence container and list descriptions</li>
+                <li>the presence statement (i.e the \presence' argument string)</li>
+                <li>removing a 'choice' structure and instead enforcing the same constraints via a 'must' statement (and vice-versa). Can't be done because of the edit-time auto-clearing behavior of 'choice' (other cases a cleared from the candidate when one case is configured)</li>
+                <li>error-app-tag or error-message changes (must sub statements) - like an error code on the API (clients/apps may parse these)</li>
+                <li>removing a default statement (even if the server continues to use the same default, the YANG doesn't know it)</li>
+			</ol>
+		</section>
       </section>
       <section>
         <name>error-tags, error messages, and other error statements</name>
