@@ -828,10 +828,14 @@ module ietf-yang-rev-annotations {
       <t keepWithNext="true"> YANG module with extension statements for annotating NBC changes, revision label, status description,
       and importing by version.</t>
       <sourcecode name="ietf-yang-diff@2023-05-22.yang" type="" markers="true"><![CDATA[
-module ietf-yang-rev-annotations {
+module ietf-yang-diff {
   yang-version 1.1;
   namespace "urn:ietf:params:xml:ns:yang:ietf-yang-diff";
   prefix diff;
+
+  import ietf-yang-types {
+    prefix yang;
+  }
 
   organization
     "IETF NETMOD (Network Modeling) Working Group";
@@ -878,67 +882,100 @@ module ietf-yang-rev-annotations {
       "XXXX: YANG Schema Comparison";
   }
 
-  extension meta-stmts {
-    argument meta-stmt;
-    description
-      "Any valid YANG meta statement according to RFC 7950 ABNF,
-       subsequent additions, or extensions."
-  }
-
-  extension body-stmts {
-    argument body-stmt;
-    description
-      "Any valid YANG body statement according to RFC 7950 ABNF,
-       subsequent additions, or extensions."
-  }
-
-  extension data-def-stmt {
-    argument yang-stmt;
-    description
-      "Any valid YANG data definition statement according to RFC 7950 ABNF,
-       subsequent additions, or extensions."
-  }
-
-  grouping meta-diff {
-    container old { meta-stmts meta-stmts; }
-    container new { meta-stmts meta-stmts; }
-  }
-
-  yang-data flat-diff {
-    uses meta-diff;
-
-    list yang-nodes-flat {
-      key path;
-      leaf path { type string; } // instance identifier
-
-      container old { data-def-stmt data-def-stmt; }
-      container new { data-def-stmt data-def-stmt; }
+  typedef diff-code {
+    type enumeration {
+      enum "removed-node";
+      enum "changed-type";
+      enum "decreased-ranged";
+      enum "increased-ranged";
+      // TODO
     }
   }
 
-  // Circular dependency in grouping, add as extension describing
-  // it instead?
-  grouping tree-nodes {
-    list children {
-      key name;
-      leaf name { type string; } // yang-identifier
+  // TODO Need to define a map between code, category, info,
+  description, and reason.
 
-      container old {
-        body-stmts body-stmts;
+  grouping diff-info {
+    container diff-info {
+      leaf code {
+        type diff-code;
+        description
+          "The code for the change.";
       }
-
-      container new {
-        body-stmts body-stmts;
+      leaf category {
+        type enumeration {
+          enum "placeholder";
+        }
+        description
+          "Category is refined in diff-info groupings.";
       }
-
-      uses tree-nodes;
+      leaf info {
+        type "string";
+        description
+          "Short informational string about the change.";
+      }
+      leaf description {
+        type "string";
+        description
+          "Longer description about the change.";
+      }
+      leaf reason {
+        type "string";
+        description
+          "Optional explanation why the analysis reached the conclusion
+           about this change.";
+      }
     }
   }
 
-  yang-data tree-diff {
-    uses meta-diff;
+  grouping flat-diff {
+    container flat-diff {
+      // Perhaps not necessary in on-wire/flat diff?
+      list meta-diff {
+        key statment;
+        uses on-wire-diff-info;
+      }
 
-    uses tree-nodes;
+      list yang-nodes-flat {
+        key path;
+        leaf path {
+          type yang:instance-identifier;
+        }
+        uses on-wire-diff-info;
+      }
+    }
+  }
+
+  grouping schema-diff-info {
+    uses diff-info {
+      refine "diff-info/category" {
+        type enumeration {
+          enum "non-backwards-compatible";
+          enum "potentially-non-backwards-compatible";
+          enum "backwards-compatible";
+        }
+        description
+          "The category for the change.";
+      }
+    }
+  }
+
+  // Was aiming at a recursive definition which is not allowed
+  grouping -data tree-diff {
+    container tree-diff {
+      list meta-diff
+        key statement;
+        uses schema-diff-info;
+      }
+
+      list nodes {
+        key name;
+        leaf name {
+          type yang-identifier;
+        }
+        uses schema-diff-info;
+      }
+    }
   }
 }
 ]]></sourcecode>
