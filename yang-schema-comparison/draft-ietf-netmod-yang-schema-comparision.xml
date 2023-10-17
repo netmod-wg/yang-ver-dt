@@ -882,21 +882,62 @@ module ietf-yang-diff {
       "XXXX: YANG Schema Comparison";
   }
 
-  typedef diff-code {
-    type enumeration {
-      enum "removed-node";
-      enum "changed-type";
-      enum "decreased-ranged";
-      enum "increased-ranged";
-      // TODO
-    }
+
+  identity yang-change {
+    description
+      "Base type for YANG changes.";
+  }
+
+  identity backwards-compatible {
+    base yang-change;
+    description
+      "Identity for a backwards-compatible change.";
+  }
+
+  identity non-backwards-compatible {
+    base yang-change;
+    description
+      "Identity for a non-backwards-compatible change.";
+  }
+
+  identity possibly-non-backwards-compatible {
+    base yang-change;
+    description
+      "Identity for a possibly-non-backwards-compatible change.";
+  }
+
+  identity removed-node {
+    base non-backwards-compatible;
+    description
+      "A removed node.";
+  }
+
+  identity changed-type {
+    base non-backwards-compatible;
+    description
+      "Node has changed type.";
+  }
+
+  identity decreased-range {
+    base non-backwards-compatible;
+    description
+      "Node has decreased range.";
+  }
+
+  identity increased-range {
+    base backwards-compatible;
+    description
+      "Node has increased range.";
   }
 
   // TODO Need to define a map between code, category, info,
   description, and reason.
 
   grouping diff-info {
-    container diff-info {
+    list diff-info {
+      key code;
+      description
+        "The list of changes for a node.";
       leaf code {
         type diff-code;
         description
@@ -904,10 +945,12 @@ module ietf-yang-diff {
       }
       leaf category {
         type enumeration {
-          enum "placeholder";
+          enum "non-transparent";
+          enum "potentially-non-transparent";
+          enum "transparent";
         }
         description
-          "Category is refined in diff-info groupings.";
+          "The category for the change.";
       }
       leaf info {
         type "string";
@@ -930,54 +973,62 @@ module ietf-yang-diff {
 
   grouping flat-diff {
     container flat-diff {
-      // Perhaps not necessary in on-wire/flat diff?
+      // TODO Perhaps not necessary in on-wire/flat diff?
       list meta-diff {
-        key statment;
-        uses on-wire-diff-info;
+        key statement;
+        leaf statement {
+            type string;
+        }
+        uses diff-info;
       }
 
-      list yang-nodes-flat {
+      list yang-node-paths {
         key path;
         leaf path {
           type yang:instance-identifier;
         }
-        uses on-wire-diff-info;
+        uses diff-info;
       }
     }
   }
+]]></sourcecode>
+    </section>
 
-  grouping schema-diff-info {
-    uses diff-info {
-      refine "diff-info/category" {
-        type enumeration {
-          enum "non-backwards-compatible";
-          enum "potentially-non-backwards-compatible";
-          enum "backwards-compatible";
-        }
-        description
-          "The category for the change.";
-      }
+    <section anchor="schema_diff_structure" numbered="true" toc="default">
+      <name>YANG schema diff structure</name>
+      <sourcecode name="yang-schema-diff.asn1" type="" markers="true"><![CDATA[
+YangSchemaDiff DEFINITIONS ::= BEGIN
+
+    YangSchemaDiff ::= SEQUENCE {
+        code         UniversalString,
+        category     YangSchemaDiffCategory,
+        info         UniversalString,
+        description  UniversalString,
+        reason       UniversalString
     }
-  }
 
-  // Was aiming at a recursive definition which is not allowed
-  grouping -data tree-diff {
-    container tree-diff {
-      list meta-diff
-        key statement;
-        uses schema-diff-info;
-      }
-
-      list nodes {
-        key name;
-        leaf name {
-          type yang-identifier;
-        }
-        uses schema-diff-info;
-      }
+    YangSchemaDiffCategory ::= ENUMERATED {
+        backwards-compatible(0),
+        non-backwards-compatible(1),
+        possibly-non-backwards-compatible(2)
     }
-  }
-}
+
+    YangSchemaMetaDiff ::= SEQUENCE {
+        statement   UniversalString,
+        diff        SEQUENCE OF YangSchemaDiff
+    }
+
+    YangSchemaTreeDiff ::= SEQUENCE {
+        node        UniversalString,
+        diff        SEQUENCE OF YangSchemaDiff,
+        children    SEQUENCE OF YangSchemaTreeDiff
+    }
+
+    YangSchemaDiff ::= SEQUENCE {
+        meta-diff   SEQUENCE OF YangSchemaMetaDiff,
+        nodes-diff  SEQUENCE OF YangSchemaTreeDiff
+    }
+END
 ]]></sourcecode>
     </section>
 
