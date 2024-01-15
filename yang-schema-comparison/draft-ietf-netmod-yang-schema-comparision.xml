@@ -11,12 +11,22 @@
 <?rfc inline="yes"?>
 <?rfc compact="yes"?>
 <?rfc subcompact="no"?>
-<rfc category="std" ipr="trust200902" docName="draft-ietf-netmod-yang-schema-comparison-02" updates="7950">
+<rfc category="std" ipr="trust200902"
+    docName="draft-ietf-netmod-yang-schema-comparison-02" updates="7950"
+    submissionType="IETF" consensus="true">
   <front>
     <title abbrev="YANG Schema Comparison">YANG Schema Comparison</title>
-    <author initials="R." role="editor" surname="Wilton" fullname="Robert Wilton">
+    <author initials="P." role="editor" surname="Andersson" fullname="Per Andersson">
       <organization abbrev="Cisco Systems, Inc.">
-    Cisco Systems, Inc.
+        Cisco Systems, Inc.
+      </organization>
+      <address>
+        <email>perander@cisco.com</email>
+      </address>
+    </author>
+    <author initials="R." surname="Wilton" fullname="Robert Wilton">
+      <organization abbrev="Cisco Systems, Inc.">
+        Cisco Systems, Inc.
       </organization>
       <address>
         <email>rwilton@cisco.com</email>
@@ -33,6 +43,188 @@
     </abstract>
   </front>
   <middle>
+    <section anchor="key-issues" numbered="true" toc="default">
+      <name>Key Issues</name>
+      <t>{ This section is only to present the current ongoing work, not part of
+      the final draft. }</t>
+      <t>The contributors have identified several key issues that need
+      attention. This section presents selected key issues which have been
+      discussed together with suggestions for proposed solution or
+      requirements.</t>
+      <section>
+        <name>On-wire vs Schema analysis</name>
+        <t>Should one algorithm be used or two? The consesus reached was to
+            define two separate algorithms, one for on-wire format and one for
+            schema.</t>
+        <t>On the wire: the focus is on what types of changes affect the
+            client requests and server responses for YANG driven protocols,
+            e.g. NETCONF, RESTCONF, gNMI. If the same requests and responses
+            occur, then there is no "on the wire" impact of the change. For
+            example, changing the name of a "choice" has no impact "on the
+            wire". For many clients, this level of compatiblity is enough.</t>
+        <t>Schema: any changes that affect the YANG schema in an NBC manner
+            according to the full rules of
+            <xref target="I-D.ietf-netmod-yang-module-versioning" format="default"/>.
+            This may be important for clients that, for example, automatically
+            generate code using the YANG and where the change of a typedef name
+            or a choice name could be significant. Also important for other
+            modules that may augment or deviate the schema being compared.</t>
+        <t>Changes to the module that aren't semantic should raise that there
+        has been editorial changes</t>
+        <t>
+            Ordering in the schema, RFC 7950 doesn't allow reordering; thus an
+            NBC change.
+        </t>
+        <t>Open Questions:</t>
+        <t>Groupings / uses</t>
+        <t>typedefs, namespaces, choice names, prefixes, module metadata.
+        <ul><li>typedef renaming (on-wire, same base type etc)</li></ul>
+        </t>
+        <ul>
+            <li>Should all editorial (text) diffs be reported?</li>
+            <li>What about editorial changes that might change semantics, e.g.
+            a description of a leaf?</li>
+            <li>Metadata arguments which relies on the formatted input text.
+                E.g description, contact (etc), extension (how does the user
+                want to tune verbosity level for editorial changes: whitespace, spelling, editorial, potentially-nbc?</li>
+            <li>XPath, must, when: don't normalize XPath expressions</li>
+            <li>presence statements</li>
+        </ul>
+		<section><name>Transparent vs non-transparent changes for Algorithm #1</name>
+		    <t>This section captures some thoughts on changes between two revisions of a YANG blob that may be 'transparent' wrt on-the-wire exchanges (NETCONF, etc) for a client using the old revision and a server using the new revision. By transparent we mean:</t>
+		    <ol>
+		        <li>For 'success cases', an 'old' client can't really tell that the YANG modules on the 'new' server have changed (as long as only 'old' clients are interacting with the server, e.g.. no 'new' client is setting configuration values in the expanded value space of the new server)</li>
+		    	<li>All protocol messages that would have been accepted before, are still accepted by the server (note this doesn't mean that all messages that were previously rejected are still rejected)</li>
+		    </ol>
+		    <t>The transparency of a YANG change depends on the protocol and encoding being used on-the-wire (NETCONF XML, RESTCONF JSON, etc). The tool has an 'encoding' input parameter.</t>
+		    <t>The following changes to the following properties are transparent to at least one type of common encoding:
+		    </t>
+		    <ol>
+		        <li>typedef name change</li>
+				<li>grouping name change (implictly transparent? i.e. not even checked by algorithm #1?)</li>
+                <li>moving elements from one grouping to another (as long as the ultimate schema path and namespace remains the same) (implictly transparent? i.e. not even checked by algorithm #1?)</li>
+                <li>Changing the name of a choice or case statement</li>
+                <li>adding a pre-existing leaf/leaf-list/subtree into a new choice statement
+                    <ul>
+                    <li>only if leaf was non-mandatory, or the leaf is mandatory and the choice is also mandatory</li>
+                    <li>need to be careful about defaults as well</li>
+                    <li>we have questions around this one (a new client could set the leaf in the new case... Does 7950 only work for a set of old clients? only for data going into the server?)</li>
+				    </ul>
+				</li>
+				<li>increasing the size of an int (uint8 -> uint16, but only sending a value less than 256).  For XML and JSON_IETF. TBD gRPC. TBD CBOR. CBOR encoder/decoder *may* make this transparent (at least just above the wire). JSON only encodes to 53 bits, then changes to string</li>
+                <li>changing the base type from X to a union of X and other members (and sending a value of type X). For XML and JSON_IETF.  Not for all gRPC encodings. Not CBOR (uses 'value' for bits/enum, but in a union uses the name of the bit/enum)</li>
+                <li>top level module metadata:
+				    <ul>
+					<li>yang-version</li>
+					<li>prefix  [TBD: any cases? identities somehow?]</li>
+					<li>import statements</li>
+					<li>organization</li>
+					<li>contact</li>
+					<li>description (can this have semantic meaning at the module level?) - yes, it could</li>
+					<li>revision?</li>
+				    </ul>
+			    </li>
+                <li>organization of elements across sub-modules</li>
+                <li>TBD: reordering elements (outside of 'input' and 'output' sections) - TBD for some gRPC encodings (depends on YANG->proto conversion). CBOR (SID numbers refer to previous versions, permanent assignment somehow. TBD how this can work for branching.). But maybe algorithm #1 won't check ordering at all? (even for input/output ?)</li>
+            </ol>
+			<t>The following changes are considered non-transparent (at least for XML, JSON IETF, gNMI and CBOR). Note that this list is not intended to be complete. It only highlights a subset of non-transparent changes of particular interest. Anything not in the 'transparent' list above, and is considered NBC in Module Versioning, is non-transparent:</t>
+            <ol>
+                <li>leaf, leaf-list, presence container descriptions (could change semantics, e.g. only odd numbers)</li>
+				<li>non-presence container and list descriptions</li>
+                <li>the presence statement (i.e the \presence' argument string)</li>
+                <li>removing a 'choice' structure and instead enforcing the same constraints via a 'must' statement (and vice-versa). Can't be done because of the edit-time auto-clearing behavior of 'choice' (other cases a cleared from the candidate when one case is configured)</li>
+                <li>error-app-tag or error-message changes (must sub statements) - like an error code on the API (clients/apps may parse these)</li>
+                <li>removing a default statement (even if the server continues to use the same default, the YANG doesn't know it)</li>
+			</ol>
+		</section>
+      </section>
+      <section>
+        <name>error-tags, error messages, and other error statements</name>
+        <t>Error tags and messages might be relied on verbatim by users.</t>
+        <ul>
+            <li>error-tag: standardized in <xref target="RFC6241"/></li>
+            <li>error-app-tag: arbitrary text (<xref target="RFC6241"/> but
+                also model)</li>
+            <li>error-message: arbitrary</li>
+        </ul>
+        <t>Failed must statement, error-message, assumed NBC</t>
+        <t>Default behaviour is changes to error tags, messages etc are NBC.</t>
+      </section>
+      <section>
+        <name>Comparison on module or full schema (YANG artifact, arbitrary blob.
+            Questions</name>
+          <ul>
+              <li>features</li>
+              <li>packages vs directories vs libraries vs artifact</li>
+              <li>package specific comparison, package metadata or only looking
+                  at the modules</li>
+              <li>import only or implemented module</li>
+          </ul>
+        <t>
+          Filter out comparison for a specific subrtree, path etc. Use case
+          for on-wire e.g. yang subscriptions, did the model change fro what is
+          subscribed on?
+      </t>
+      </section>
+    </section>
+    <section anchor="open-issues">
+      <name>Open Issues</name>
+      <t>{ This section is only to present the current ongoing work, not part of
+      the final draft. }</t>
+      <t>The following issues have not ben discussed in any wider extent yet.</t>
+      <section>
+          <name>Override/per-node tags</name>
+      </section>
+      <section>
+          <name>Separate rules for config vs state</name>
+      </section>
+      <section>
+          <name>Tool/report verbosity</name>
+            <ul>
+              <li>where to report changes (module, grouping, typedef, uses)</li>
+              <li>output level (conceptual level or exact strings)</li>
+              <li>granularity: error/warning/info level per reported change
+                  category</li>
+            </ul>
+      </section>
+      <section>
+          <name>sub-modules</name>
+      </section>
+      <section>
+          <name>Write algorithm in pseudo code or just describe the rules/goals
+              in text?</name>
+      </section>
+      <section>
+          <name>Categories in the report: bc, nbc, potentially-nbc, editorial.
+          Allow filtering in the draft without defining it?</name>
+          <t>One option can be to have a tool option that presents the reason
+            behind the decision, e.g. --details could be used to explain to the
+            user why a certain change was marked as nbc.</t>
+          <t>Another option is to present reasoning and analysis in deeper
+            levels of verbosity; e.g. one extra level of verbosity, -v, could
+            present the reason for categorizing a change nbc, and an additional
+            extra level of verbosity, e.g. -vv, could also present the detailed
+            analysis the tool made to categorize the change.</t>
+      </section>
+      <section>
+          <name>Only for YANG 1.1?</name>
+      </section>
+      <section>
+          <name>renamed-from</name>
+      </section>
+    </section>
+    <section anchor="tool-options">
+      <name>Tool options</name>
+      <t>{ This section is only to present the current ongoing work, not part of
+      the final draft. }</t>
+      <t>During the work a list of useful tool options are identified for
+      later discussion and publication in an appendix.</t>
+      <ul>
+        <li>An option for how to interpret description changes (for the on-wire
+            algorithm) by default, e.g. treat them as editorial or nbc.</li>
+        <li>Option: --skip-error-tags, etc</li>
+      </ul>
+    </section>
     <section anchor="intro" numbered="true" toc="default">
       <name>Introduction</name>
       <t>Warning, this is an early (-00) draft with the intention of scoping the
@@ -151,7 +343,7 @@
      changes are backwards-compatible or non-backwards-compatible.</li>
         <li>The rules specified in section 3.2 of <xref target="I-D.ietf-netmod-yang-packages" format="default"/> determine whether
      backwards-compatible changes are 'minor' or 'editorial'.</li>
-        <li>For YANG description", "must", and "when" statements, the
+        <li>For YANG "description", "must", and "when" statements, the
      "backwards-compatible" and "editorial" extension statements can be used to
      mark instances when the statements have changed in a backwards-compatible
      or editorial way.  Since by default the comparison algorithm assumes that
@@ -167,7 +359,11 @@
         <t/>
       </section>
      <section anchor="node-tags" title="Node compatibility extension statements">
-        <t>In addition to the revision extension statement in (TBD: ref to Module Versionning), this document defines YANG extension statements to indicate compatibility information for individual schema nodes and certain YANG statements.
+        <t>In addition to the revision extension statement in
+        <xref target="I-D.ietf-netmod-yang-module-versioning" format="default"/>,
+        this document defines YANG extension statements to indicate
+        compatibility information for individual schema nodes and certain
+        YANG statements.
         </t>
         <t>The node compatibility extension statements are applicable to schema nodes
         (e.g. leaf, rpc, choice) as defined in <xref target="RFC7950"/>, as well as
@@ -188,10 +384,10 @@
         be classified as an editorial backwards-compatible change.
         Conversely, if the change modifies the behavioral specification of
         the data node then the change would need to be classified as either a
-        non editorial backwards-compatible change or a non-backwards-
-        compatible change.  Hence, extension statements are defined to
-        annotate a YANG module with additional information to clarify the
-        scope of changes in cases that cannot be determined by algorithmic
+        non editorial backwards-compatible change or a
+        non-backwards-compatible change. Hence, extension statements are
+        defined to annotate a YANG module with additional information to clarify
+        the scope of changes in cases that cannot be determined by algorithmic
         comparison.
         </t>
         <t>Three extensions are defined for schema node compatibility information:
@@ -283,25 +479,25 @@
         then all instances where the grouping is used in the module or
         by an importing module are also impacted by the compatibilty information. 
         Similarly for a 'typedef', all 
-        leafs and list-lists that use that typedef share the specified 
+        leafs and leaf-lists that use that typedef share the specified
         compatibility classification. A non-backwards-compatible change 
         to a typedef or grouping defined in one module that is used by 
         an importing module, does not cause the importing module to add a
         non-backwards-compatible-revision statement to the revision history.
         Non-backwards-compatible marking does not carry through import statements.
         </t>
-        <t>A node compatibility statement at a leaf, leaf-list or typedef context
+        <t>A node compatibility statement at a leaf, leaf-list, or typedef context
         takes precedence over a node compatibility statement in a typedef
-        used by the leaf, leaf-list or typedef. If multiple typedefs with 
-        compatibility statements are used by a leaf, leaf-list or typedef (e.g. a union), and there 
-        is no compatibility statement at the top leaf, leaf-list or typedef context, then
+        used by the leaf, leaf-list, or typedef. If multiple typedefs with
+        compatibility statements are used by a leaf, leaf-list, or typedef (e.g. a union), and there
+        is no compatibility statement at the top leaf, leaf-list, or typedef context, then
         the order of precedence used to classify the compatibility of the top level leaf, 
-        leaf-list or typedef is as follows: nbc-change-at, bc-change-at and finally 
-        editorial-change-at. That is, the leaf, leaf-list or typedef takes the most 
+        leaf-list, or typedef is as follows: nbc-change-at, bc-change-at, and finally
+        editorial-change-at. That is, the leaf, leaf-list, or typedef takes the most
         impactful change classification of all the underlying typedefs.</t>
         <t>Node compatibility statements are not supported on YANG
         statements such as 'pattern' or 'range'. The compatibility statement
-        instead goes against the leaf, leaf-list or typedef context.
+        instead goes against the leaf, leaf-list, or typedef context.
         </t>
         <t>Node compatibility statements that refer to pre-release revisions of a module
         MUST be removed when a full release revision of the module is published.
@@ -399,11 +595,15 @@
       <name>Module Versioning Extension YANG Modules</name>
       <t keepWithNext="true"> YANG module with extension statements for annotating NBC changes, revision label, status description,
       and importing by version.</t>
-      <sourcecode name="ietf-yang-rev-annotations@2019-11-11.yang" type="" markers="true"><![CDATA[
+      <sourcecode name="ietf-yang-rev-annotations@2023-02-14.yang" type="" markers="true"><![CDATA[
 module ietf-yang-rev-annotations {
   yang-version 1.1;
   namespace "urn:ietf:params:xml:ns:yang:ietf-yang-rev-annotations";
   prefix rev-ext;
+
+  import ietf-yang-revisions {
+    prefix rev;
+  }
 
   organization
     "IETF NETMOD (Network Modeling) Working Group";
@@ -446,7 +646,7 @@ module ietf-yang-rev-annotations {
   // RFC Ed.: replace XXXX (inc above) with actual RFC number and
   // remove this note.
 
-  revision 2022-10-25 {
+  revision 2023-03-11 {
     rev:revision-label 1.0.0-draft-ietf-netmod-yang-schema-comparison-02;
     description
       "Draft revision";
@@ -479,7 +679,7 @@ module ietf-yang-rev-annotations {
         - YANG extensions
                           
       Each YANG statement MUST only a have a single node
-      compatibilty statement (one of nbc-change-at, bc-change-at
+      compatibilty statement (one of nbc-change-at, bc-change-at,
       or editorial-change-at) for a particular revision. When a node
       has more than one of the node compatibilty statements (for 
       different revisions), they must be ordered from most recent
@@ -524,7 +724,7 @@ module ietf-yang-rev-annotations {
         - YANG extensions
                           
       Each YANG statement MUST only a have a single node
-      compatibilty statement (one of nbc-change-at, bc-change-at
+      compatibilty statement (one of nbc-change-at, bc-change-at,
       or editorial-change-at) for a particular revision. When a node
       has more than one of the node compatibilty statements (for 
       different revisions), they must be ordered from most recent
@@ -569,7 +769,7 @@ module ietf-yang-rev-annotations {
         - YANG extensions
                           
       Each YANG statement MUST only a have a single node
-      compatibilty statement (one of nbc-change-at, bc-change-at
+      compatibilty statement (one of nbc-change-at, bc-change-at,
       or editorial-change-at) for a particular revision. When a node
       has more than one of the node compatibilty statements (for 
       different revisions), they must be ordered from most recent
@@ -635,7 +835,7 @@ module ietf-yang-rev-annotations {
 
        Each YANG statement MUST only a have a single
        non-backwards-compatible, backwards-compatible, or editorial
-       extension statement for a particular revision-label or
+       extension statement for a particular revision-label, or
        corresponding revision-date.";
 
     reference
@@ -689,6 +889,8 @@ module ietf-yang-rev-annotations {
         <li>Qin Wu</li>
         <li>Reshad Rahman</li>
         <li>Rob Wilton</li>
+        <li>Jan Lindblad</li>
+        <li>Per Andersson</li>
       </ul>
       <t>The ideas for a tooling based comparison of YANG module revisions was
    first described in <xref target="I-D.clacla-netmod-yang-model-update" format="default"/>.
@@ -718,6 +920,7 @@ module ietf-yang-rev-annotations {
   <back>
     <references title="Normative References">
         <?rfc include='reference.RFC.2119'?>
+        <?rfc include='reference.RFC.6241'?>
         <?rfc include='reference.RFC.7950'?>
         <?rfc include='reference.RFC.8174'?>
         <?ref include='reference.I-D.ietf-netmod-yang-solutions'?>
