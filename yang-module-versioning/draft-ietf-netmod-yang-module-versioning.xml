@@ -102,6 +102,7 @@
     <section anchor="yang_revision_handling" title="Refinements to YANG revision handling">
       <t><xref target="RFC7950"/> and <xref target="RFC6020"/> assume, but do not explicitly state, that the revision history for a YANG module or submodule is strictly linear, i.e., it is prohibited to have two independent revisions of a YANG module or submodule that are both directly derived from the same parent revision.</t>
       <t>This document clarifies <xref target="RFC7950"/> and <xref target="RFC6020"/> to explicitly allow non-linear development of YANG module and submodule revisions, so that they MAY have multiple revisions that directly derive from the same parent revision.  As per <xref target="RFC7950"/> and <xref target="RFC6020"/>, YANG module and submodule revisions continue to be uniquely identified by their revision date, and hence all revisions of a given module or submodule MUST have unique revision dates.</t>
+      <t>However, using revsision dates alone to identify revisions of a YANG module versioned with a branched revision history is likely to be confusing because the relationship between module revisions is no longer guaranteed to be chronologically ordered.  Instead, for modules that may use a branched revision history, it is RECOMMENDED to use a versioning scheme, such as <xref target="I-D.ietf-netmod-yang-semver"/>, where the revision identifier, e.g., the version label, better describes the semantic relationship between the revisions.</t>
       <t>For a given YANG module revision, revision B is defined as being derived from revision A, if revision A is listed in the revision history of revision B.  Although this document allows for a branched revision history, a given YANG module revision history does not contain all revisions in all possible branches, it only lists those from which is was derived, i.e., the module revision's history describes a single path of derived revisions back to the root of the module's revision history.</t>
       <t>A corollary to the text above is that the ancestry (derived relationship) between two module or submodule revisions cannot be determined by comparing the module or submodule revision date or label alone - the revision history must be consulted.</t>
       <t>A module's name and revision date identifies a specific immutable definition of that module within its revision history.  Hence, if a module includes submodules then to ensure that the module's content is uniquely defined, the module's "include" statements SHOULD use "revision-date" substatements to specify the exact revision date of each included submodule. When a module does not include its submodules by revision-date,  the revision of submodules used cannot be derived from the including module. Mechanisms such as YANG packages <xref target="I-D.ietf-netmod-yang-packages"/>, and YANG library <xref target="RFC8525"/>, MAY be used to specify the exact submodule revisions used when the submodule revision date is not constrained by the "include" statement.</t>
@@ -146,7 +147,7 @@
         <t>Adding, modifying or removing a "rev:non-backwards-compatible" extension statement is considered to be a BC change.</t>
       </section>
       <section anchor="removing-revisions-history" title="Removing revisions from the revision history">
-        <t>Authors may wish to remove revision statements from a module or submodule. Removal of revision information may be desirable for a number of reasons including reducing the size of a large revision history, or removing a revision that should no longer be used or imported. Removing revision statements is allowed, but can cause issues and SHOULD NOT be done without careful analysis of the potential impact to users of the module or submodule. Doing so can lead to import breakages when import by recommended-min is used.  Moreover, truncating history may cause loss of visibility of when non-backwards-compatible changes were introduced.</t>
+        <t>Authors may wish to remove revision statements from a module or submodule. Removal of revision information may be desirable for a number of reasons including reducing the size of a large revision history, or removing a revision that should no longer be used or imported. Removing revision statements is allowed, but can cause issues and SHOULD NOT be done without careful analysis of the potential impact to users of the module or submodule since it can lead to import breakages when import by recommended-min is used.  Moreover, truncating history may cause loss of visibility of when non-backwards-compatible changes were introduced.</t>
         <t> An author MAY remove a contiguous sequence of entries from the end (i.e., oldest entries) of the revision history.  This is acceptable even if the first remaining (oldest) revision entry in the revision history contains a rev:non-backwards-compatible substatement.</t>
         <t>An author MAY remove a contiguous sequence of entries in the revision history as long as the presence or absence of any existing rev:non-backwards-compatible substatements on all remaining entries still accurately reflect the compatibility relationship to their preceding entries remaining in the revision history.</t>
         <t>The author MUST NOT remove the first (i.e., newest) revision entry in the revision history.</t>
@@ -154,46 +155,39 @@
           <preamble>Example revision history:</preamble>
           <artwork align="left" name="revision-history">
 revision 2020-11-11 {
-  rev:label 4.0.0;
   rev:non-backwards-compatible;
 }
 
 revision 2020-08-09 {
-  rev:label 3.0.0;
   rev:non-backwards-compatible;
 }
 
 revision 2020-06-07 {
-  rev:label 2.1.0;
 }
 
 revision 2020-02-10 {
-  rev:label 2.0.0;
   rev:non-backwards-compatible;
 }
 
 revision 2019-10-21 {
-  rev:label 1.1.3;
 }
 
 revision 2019-03-04 {
-  rev:label 1.1.2;
 }
 
 revision 2019-01-02 {
-  rev:label 1.1.1;
 }
 
 </artwork>
         </figure>
-        <t>In the revision history example above, removing the revision history entry for 2020-02-10 would also remove the rev:non-backwards-compatible annotation and hence the resulting revision history would incorrectly indicate that revision 2020-06-07 is backwards-compatible with revisions 2019-01-02 through 2019-10-21 when it is not, and so this change cannot be made.  Conversely, removing one or more revisions out of 2019-03-04, 2019-10-21 and 2020-08-09 from the revision history would still retain a consistent revision history, and is acceptable, subject to an awareness of the concerns raised in the first paragraph of this section.</t>
+        <t>In the revision history example above (with revision descriptions elided for clarity), removing the revision history entry for 2020-02-10 would also remove the rev:non-backwards-compatible annotation and hence the resulting revision history would incorrectly indicate that revision 2020-06-07 is backwards-compatible with revisions 2019-01-02 through 2019-10-21 when it is not, and so this change cannot be made.  Conversely, removing one or more revisions out of 2019-03-04, 2019-10-21 and 2020-08-09 from the revision history would still retain a consistent revision history, and is acceptable, subject to an awareness of the concerns raised in the first paragraph of this section.</t>
       </section>
       <section anchor="example_versions" title="Examples for updating the YANG module revision history">
         <t>The following diagram, explanation, and module history illustrates how the branched revision history, "non-backwards-compatible" extension statement, and revision "label" extension statement could be used:</t>
         <figure>
-          <preamble>Example YANG module with branched revision history.</preamble>
+          <preamble>Example YANG module with branched revision history using version labels defined in <xref target="I-D.ietf-netmod-yang-semver"/>.</preamble>
           <artwork>
-       Module revision date        Revision label
+       Module revision date        Version label
          2019-01-01                 &lt;- 1.0.0
              |
          2019-02-01                 &lt;- 2.0.0
@@ -413,8 +407,7 @@ module: ietf-yang-library-revisions
         <xref target="RFC8407"/> to revise the guidelines for updating YANG modules.
       </t>
       <section anchor="guidelines_authors" title="Guidelines for YANG module authors">
-        <t>All IETF YANG modules MUST include revision label statements for all newly published YANG modules, and all newly published revisions of existing YANG modules.  The revision label MUST take the form of a YANG semantic version number
-          <xref target="I-D.ietf-netmod-yang-semver"/>.
+        <t>All IETF YANG modules MUST include revision label statements for all newly published YANG modules, and all newly published revisions of existing YANG modules.  The revision label MUST take the form of a YANG semantic version number <xref target="I-D.ietf-netmod-yang-semver"/>.
         </t>
         <t>NBC changes to YANG modules may cause problems to clients, who are consumers of YANG models, and hence YANG module authors SHOULD minimize NBC changes and keep changes BC whenever possible.</t>
         <t>When NBC changes are introduced, consideration should be given to the impact on clients and YANG module authors SHOULD try to mitigate that impact.</t>
