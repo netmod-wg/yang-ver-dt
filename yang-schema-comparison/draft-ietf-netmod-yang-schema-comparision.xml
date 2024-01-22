@@ -870,7 +870,252 @@ module ietf-yang-rev-annotations {
   }
 }
 ]]></sourcecode>
+
+      <name>Module Versioning Extension YANG Modules</name>
+      <t keepWithNext="true"> YANG module with extension statements for annotating NBC changes, revision label, status description,
+      and importing by version.</t>
+      <sourcecode name="ietf-yang-diff@2023-05-22.yang" type="" markers="true"><![CDATA[
+module ietf-yang-diff {
+  yang-version 1.1;
+  namespace "urn:ietf:params:xml:ns:yang:ietf-yang-diff";
+  prefix diff;
+
+  import ietf-sid-file {
+    prefix sid;
+  }
+
+  organization
+    "IETF NETMOD (Network Modeling) Working Group";
+  contact
+    "WG Web:   <https://datatracker.ietf.org/wg/netmod/>
+     WG List:  <mailto:netmod@ietf.org>
+
+     Author:   Per Andersson
+               <mailto:perander@cisco.com>";
+
+  description
+    "This YANG 1.1 module contains formats and extensions for
+     difference between YANG artifacts.
+
+     Copyright (c) 2023 IETF Trust and the persons identified as
+     authors of the code.  All rights reserved.
+
+     Redistribution and use in source and binary forms, with or
+     without modification, is permitted pursuant to, and subject
+     to the license terms contained in, the Simplified BSD License
+     set forth in Section 4.c of the IETF Trust's Legal Provisions
+     Relating to IETF Documents
+     (http://trustee.ietf.org/license-info).
+
+     This version of this YANG module is part of RFC XXXX; see
+     the RFC itself for full legal notices.
+
+     The key words 'MUST', 'MUST NOT', 'REQUIRED', 'SHALL', 'SHALL
+     NOT', 'SHOULD', 'SHOULD NOT', 'RECOMMENDED', 'NOT RECOMMENDED',
+     'MAY', and 'OPTIONAL' in this document are to be interpreted as
+     described in BCP 14 (RFC 2119) (RFC 8174) when, and only when,
+     they appear in all capitals, as shown here.";
+
+  // RFC Ed.: update the date below with the date of RFC publication
+  // and remove this note.
+  // RFC Ed.: replace XXXX (inc above) with actual RFC number and
+  // remove this note.
+
+  revision 2023-05-22 {
+    rev:revision-label 1.0.0-draft-ietf-netmod-yang-schema-comparison-02;
+    description
+      "Draft revision";
+    reference
+      "XXXX: YANG Schema Comparison";
+  }
+
+
+  identity yang-change {
+    description
+      "Base type for YANG changes.";
+  }
+
+  identity backwards-compatible {
+    base yang-change;
+    description
+      "Identity for a backwards-compatible change.";
+  }
+
+  identity non-backwards-compatible {
+    base yang-change;
+    description
+      "Identity for a non-backwards-compatible change.";
+  }
+
+  identity possibly-non-backwards-compatible {
+    base yang-change;
+    description
+      "Identity for a possibly-non-backwards-compatible change.";
+  }
+
+  identity removed-node {
+    base non-backwards-compatible;
+    description
+      "A removed node.";
+  }
+
+  identity changed-type {
+    base non-backwards-compatible;
+    description
+      "Node has changed type.";
+  }
+
+  identity decreased-range {
+    base non-backwards-compatible;
+    description
+      "Node has decreased range.";
+  }
+
+  identity increased-range {
+    base backwards-compatible;
+    description
+      "Node has increased range.";
+  }
+
+  // TODO need complete list of change identities
+
+  // TODO Need to define a map between code, category, info,
+  description, and reason.
+
+  grouping diff-info {
+    list diff-info {
+      key code;
+      description
+        "The list of changes for a node.";
+      leaf code {
+        type diff-code;
+        description
+          "The code for the change.";
+      }
+      leaf category {
+        type enumeration {
+          enum "non-transparent";
+          enum "potentially-non-transparent";
+          enum "transparent";
+        }
+        description
+          "The category for the change.";
+      }
+      leaf info {
+        type "string";
+        description
+          "Short informational string about the change.";
+      }
+      leaf description {
+        type "string";
+        description
+          "Longer description about the change.";
+      }
+      leaf reason {
+        type "string";
+        description
+          "Optional explanation why the analysis reached the conclusion
+           about this change.";
+      }
+    }
+  }
+
+  grouping flat-diff {
+    container flat-diff {
+      // TODO Perhaps not necessary in on-wire/flat diff?
+      list meta-diff {
+        key statement;
+        leaf statement {
+            type string;
+        }
+        uses diff-info;
+      }
+
+      list yang-node-paths {
+        key path;
+        leaf path {
+          type sid:schema-node-path;
+        }
+        uses diff-info;
+      }
+    }
+  }
+]]></sourcecode>
     </section>
+
+    <section anchor="schema_diff_structure" numbered="true" toc="default">
+      <name>YANG schema diff structure</name>
+      <sourcecode name="yang-schema-diff.asn1" type="" markers="true"><![CDATA[
+YangSchemaDiff DEFINITIONS ::= BEGIN
+
+    YangSchemaDiff ::= SEQUENCE {
+        code         UniversalString,
+        category     YangSchemaDiffCategory,
+        info         UniversalString,
+        description  UniversalString,
+        reason       UniversalString
+    }
+
+    YangSchemaDiffCategory ::= ENUMERATED {
+        backwards-compatible(0),
+        non-backwards-compatible(1),
+        possibly-non-backwards-compatible(2)
+    }
+
+    YangSchemaMetaDiff ::= SEQUENCE {
+        statement   UniversalString,
+        diff        SEQUENCE OF YangSchemaDiff
+    }
+
+    YangSchemaTreeDiff ::= SEQUENCE {
+        node        UniversalString,
+        diff        SEQUENCE OF YangSchemaDiff,
+        children    SEQUENCE OF YangSchemaTreeDiff
+    }
+
+    YangSchemaDiff ::= SEQUENCE {
+        meta-diff   SEQUENCE OF YangSchemaMetaDiff,
+        nodes-diff  SEQUENCE OF YangSchemaTreeDiff
+    }
+END
+]]></sourcecode>
+    </section>
+
+    <section anchor="changes-list" numbered="true" toc="default">
+      <name>YANG Changes List</name>
+      <t>This section is normative.</t>
+      <t>Each YANG change is defined in this section by a code (wich identifies
+      the change), a category (which determines compatibility), an info string
+      (for brief information, e.g. for tooltips or brief list of all errors),
+      a description (for long form explanation, for detailed and verbose
+      information about the change), and an optional reason (which explains why
+      the this change was concluded).</t>
+      <t>Tools MUST implement code and category, SHOULD implement info, and
+      MAY implement description and reason.</t>
+      <texttable style="none">
+        <ttcol>
+          <c>code:</c>
+          <c></c>
+        </ttcol>
+        <ttcol>
+          <c>category:</c>
+          <c></c>
+        </ttcol>
+        <ttcol>
+          <c>info:</c>
+          <c></c>
+        </ttcol>
+        <ttcol>
+          <c>description:</c>
+          <c></c>
+        </ttcol>
+        <ttcol>
+          <c>reason:</c>
+          <c></c>
+        </ttcol>
+      </texttable>
+    </section>
+
     <section anchor="contributor" numbered="true" toc="default">
       <name>Contributors</name>
       <t>This document grew out of the YANG module versioning design team that
