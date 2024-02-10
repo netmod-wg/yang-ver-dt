@@ -76,8 +76,7 @@
         <t>This document updates <xref target="RFC7950"/> section 11 and <xref target="RFC6020"/> section 10. <xref target="yang_revision_handling"/> describes modifications to YANG revision handling and update rules, and <xref target="import"/> describes a YANG extension statement to describe potential YANG import revision dependencies.</t>
         <t>This document updates <xref target="RFC8407"/> section 4.7. <xref target="guidelines"/> provides guidelines on managing the lifecycle of YANG modules that may contain non-backwards-compatible changes and a branched revision history.
         </t>
-        <t>This document updates
-          <xref target="RFC8525"/> with augmentations to include two boolean leafs to indicate whether status deprecated and status obsolete schema nodes are implemented by the server.
+        <t>This document updates <xref target="RFC8525"/> with augmentations to include two boolean leafs to indicate whether status deprecated and status obsolete schema nodes are implemented by the server.
         </t>
       </section>
     </section>
@@ -372,18 +371,17 @@ import example-module {
         </section>
       </section>
     </section>
-    <section title="Updates to ietf-yang-library" anchor="ietf_yang_library_updates">
-      <t>This document defines the YANG module, ietf-yang-library-revisions, that augments YANG library <xref target="RFC8525"/> with two leafs to indicate how a server implements deprecated and obsolete schema nodes.
+    <section title="New ietf-yang-status-conformance YANG module" anchor="ietf_yang_status_conformance">
+      <t>This document defines the YANG module, ietf-yang-status-conformance, that augments YANG library <xref target="RFC8525"/> with two leafs to indicate how a server implements deprecated and obsolete schema nodes.
       </t>
-      <section title="YANG library versioning augmentations">
         <t></t>
         <figure>
-          <preamble>The "ietf-yang-library-revisions" YANG module has the following structure (using the notation defined in
+          <preamble>The "ietf-yang-status-conformance" YANG module has the following structure (using the notation defined in
             <xref target="RFC8340"/>):
           </preamble>
           <artwork>
             <![CDATA[
-module: ietf-yang-library-revisions
+module: ietf-yang-status-conformance
   augment /yanglib:yang-library/yanglib:schema:
     +--ro deprecated-nodes-implemented?   boolean
     +--ro obsolete-nodes-absent?          boolean
@@ -391,7 +389,7 @@ module: ietf-yang-library-revisions
           </artwork>
         </figure>
         <section title="Reporting how deprecated and obsolete nodes are handled">
-          <t>The ietf-yang-library-revisions YANG module augments YANG library with two boolean leafs to allow a server to report how it implements status "deprecated" and status "obsolete" schema nodes.  The leafs are:
+          <t>The ietf-yang-status-conformance YANG module augments YANG library with two boolean leafs to allow a server to report how it implements status "deprecated" and status "obsolete" schema nodes.  The leafs are:
             <list style="hanging">
               <t hangText="deprecated-nodes-implemented:">If set to "true", this leaf indicates that all schema nodes with a status "deprecated" are implemented equivalently as if they had status "current"; otherwise deviations MUST be used to explicitly remove "deprecated" nodes from the schema.  If this leaf is set to "false" or absent, then the behavior is unspecified.</t>
               <t hangText="obsolete-nodes-absent:">If set to "true", this leaf indicates that the server does not implement any status "obsolete" schema nodes.  If this leaf is set to "false" or absent, then the behaviour is unspecified.</t>
@@ -400,14 +398,13 @@ module: ietf-yang-library-revisions
           <t>Servers SHOULD set both the "deprecated-nodes-implemented" and "obsolete-nodes-absent" leafs to "true".</t>
           <t>If a server does not set the "deprecated-nodes-implemented" leaf to "true", then clients MUST NOT rely solely on the "rev:non-backwards-compatible" statements to determine whether two module revisions are backwards-compatible, and MUST also consider whether the status of any nodes has changed to "deprecated" and whether those nodes are implemented by the server.</t>
         </section>
-      </section>
     </section>
     <section anchor="guidelines" title="Guidelines for using the YANG module update rules">
       <t>The following text updates section 4.7 of
         <xref target="RFC8407"/> to revise the guidelines for updating YANG modules.
       </t>
       <section anchor="guidelines_authors" title="Guidelines for YANG module authors">
-        <t>All IETF YANG modules MUST conform to this specification.  In particular, sections: <xref target="yang_revision_handling"/>, <xref target="import-overview"/>, and the guidelines documented in this section.</t>
+        <t>All IETF YANG modules MUST conform to this specification. In particular, sections: <xref target="yang_revision_handling"/>, <xref target="import-overview"/>, and the guidelines documented in this section.</t>
         <t>NBC changes to YANG modules may cause problems to clients, who are consumers of YANG models, and hence YANG module authors SHOULD minimize NBC changes and keep changes BC whenever possible.</t>
         <t>When NBC changes are introduced, consideration should be given to the impact on clients and YANG module authors SHOULD try to mitigate that impact.</t>
         <t>A "rev:non-backwards-compatible" statement MUST be added if there are NBC changes relative to the previous revision.</t>
@@ -616,22 +613,26 @@ module ietf-yang-revisions {
           </artwork>
         </figure>
         <figure>
-          <preamble>YANG module with augmentations to YANG Library to revision labels</preamble>
-          <artwork name="ietf-yang-library-revisions@2021-11-04.yang">
+          <preamble>YANG module for status conformance</preamble>
+          <artwork name="ietf-yang-status-conformance@2024-02-14.yang">
             <![CDATA[
-<CODE BEGINS> file "ietf-yang-library-revisions@2021-11-04.yang"
-module ietf-yang-library-revisions {
+<CODE BEGINS> file "ietf-yang-status-conformance@2024-02-14.yang"
+module ietf-yang-status-conformance {
   yang-version 1.1;
   namespace
-    "urn:ietf:params:xml:ns:yang:ietf-yang-library-revisions";
-  prefix yl-rev;
+    "urn:ietf:params:xml:ns:yang:ietf-yang-status-conformance";
+  prefix ys-conf;
   
+  import ietf-yang-revisions { 
+    prefix "rev"; 
+    reference
+      "XXXX: Updated YANG Module Revision Handling";
+  }
   import ietf-yang-library {
-    prefix yanglib;
+    prefix "yanglib";
     reference
       "RFC 8525: YANG Library";
   }
-
   organization
     "IETF NETMOD (Network Modeling) Working Group";
   contact
@@ -653,9 +654,9 @@ module ietf-yang-library-revisions {
      Author:   Jason Sterne
                <mailto:jason.sterne@nokia.com>";
   description
-    "This module contains augmentations to YANG Library to add module
-     level revision label and to provide an indication of how
-     deprecated and obsolete nodes are handled by the server.
+    "This module contains augmentations to YANG Library to provide an 
+     indication of how deprecated and obsolete nodes are handled by the
+     server.
 
      Copyright (c) 2002 IETF Trust and the persons identified as
      authors of the code.  All rights reserved.
@@ -683,8 +684,8 @@ module ietf-yang-library-revisions {
   // RFC Ed.: please replace label version with 1.0.0 and
   // remove this note.
 
-  revision 2021-11-04 {
-    rev:label "1.0.0-draft-ietf-netmod-yang-module-versioning-05";
+  revision 2024-02-14 {
+    rev:label "1.0.0-draft-ietf-netmod-yang-module-versioning-11";
     description
       "Initial revision";
     reference
@@ -694,8 +695,7 @@ module ietf-yang-library-revisions {
   augment "/yanglib:yang-library/yanglib:schema" {
     description
       "Augmentations to the ietf-yang-library module to indicate how
-       deprecated and obsoleted nodes are handled for each datastore
-       schema supported by the server.";
+       deprecated and obsoleted nodes are handled by the server.";
     leaf deprecated-nodes-implemented {
       type boolean;
       description
@@ -707,7 +707,7 @@ module ietf-yang-library-revisions {
          unspecified.";
       reference
         "XXXX: Updated YANG Module Revision Handling;
-         Section 5.2.2, Reporting how deprecated and obsolete nodes
+         Section 5.1, Reporting how deprecated and obsolete nodes
          are handled";
     }
     leaf obsolete-nodes-absent {
@@ -718,8 +718,9 @@ module ietf-yang-library-revisions {
          is absent or set to false, then the behaviour is
          unspecified.";
       reference
-        "XXXX: Updated YANG Module Revision Handling; Section 5.2.2,
-         Reporting how deprecated and obsolete nodes are handled";
+        "XXXX: Updated YANG Module Revision Handling; 
+         Section 5.1, Reporting how deprecated and obsolete nodes 
+         are handled";
     }
   }
 }
@@ -755,7 +756,7 @@ module ietf-yang-library-revisions {
             <t>XML: N/A, the requested URI is an XML namespace.</t>
           </list>
           <list style="empty">
-            <t>URI: urn:ietf:params:xml:ns:yang:ietf-yang-library-revisions</t>
+            <t>URI: urn:ietf:params:xml:ns:yang:ietf-yang-status-conformance</t>
             <t>Registrant Contact: The IESG.</t>
             <t>XML: N/A, the requested URI is an XML namespace.</t>
           </list>
@@ -771,11 +772,11 @@ module ietf-yang-library-revisions {
             <t>Reference: [RFCXXXX]</t>
           </list>
         </t>
-        <t>The ietf-yang-library-revisions module:</t>
+        <t>The ietf-yang-status-conformance module:</t>
         <t>
           <list>
-            <t>Name: ietf-yang-library-revisions</t>
-            <t>XML Namespace: urn:ietf:params:xml:ns:yang:ietf-yang-library-revisions</t>
+            <t>Name: ietf-yang-status-conformance</t>
+            <t>XML Namespace: urn:ietf:params:xml:ns:yang:ietf-yang-status-conformance</t>
             <t>Prefix: yl-rev</t>
             <t>Reference: [RFCXXXX]</t>
           </list>
