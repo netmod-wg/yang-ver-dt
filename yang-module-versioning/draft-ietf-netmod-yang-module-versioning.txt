@@ -100,7 +100,7 @@ Table of Contents
      8.1.  Security considerations for module revisions  . . . . . .  24
      8.2.  Security considerations for the modules defined in this
            document  . . . . . . . . . . . . . . . . . . . . . . . .  25
-   9.  IANA Considerations . . . . . . . . . . . . . . . . . . . . .  26
+   9.  IANA Considerations . . . . . . . . . . . . . . . . . . . . .  25
      9.1.  YANG Module Registrations . . . . . . . . . . . . . . . .  26
      9.2.  Guidance for versioning in IANA maintained YANG
            modules . . . . . . . . . . . . . . . . . . . . . . . . .  26
@@ -566,7 +566,6 @@ Internet-Draft    Updated YANG Module Revision Handling    February 2024
 
      namespace "urn:example:module";
      prefix "prefix-name";
-     rev:revision-label-scheme "yangver:yang-semver";
 
      import ietf-yang-revisions { prefix "rev"; }
      import ietf-yang-semver { prefix "yangver"; }
@@ -613,6 +612,7 @@ Internet-Draft    Updated YANG Module Revision Handling    February 2024
 
 
 
+
 Wilton, et al.           Expires 17 August 2024                [Page 11]
 
 Internet-Draft    Updated YANG Module Revision Handling    February 2024
@@ -622,7 +622,6 @@ Internet-Draft    Updated YANG Module Revision Handling    February 2024
 
      namespace "urn:example:module";
      prefix "prefix-name";
-     rev:revision-label-scheme "yangver:yang-semver";
 
      import ietf-yang-revisions { prefix "rev"; }
      import ietf-yang-semver { prefix "yangver"; }
@@ -664,8 +663,9 @@ Internet-Draft    Updated YANG Module Revision Handling    February 2024
    section Section 6.1 suggests that authors do not restrict YANG module
    imports to exact revision dates.
 
-
-
+   Instead, for conformance purposes (section 5.6 of [RFC7950]), the
+   recommended approach for defining the relationship between specific
+   YANG module revisions is to specify the relationships outside of the
 
 
 
@@ -674,9 +674,6 @@ Wilton, et al.           Expires 17 August 2024                [Page 12]
 Internet-Draft    Updated YANG Module Revision Handling    February 2024
 
 
-   Instead, for conformance purposes (section 5.6 of [RFC7950]), the
-   recommended approach for defining the relationship between specific
-   YANG module revisions is to specify the relationships outside of the
    YANG modules, e.g., via YANG library [RFC8525], YANG packages
    [I-D.ietf-netmod-yang-packages], a filesystem directory containing a
    set of consistent YANG module revisions, or a revision control system
@@ -716,20 +713,6 @@ Internet-Draft    Updated YANG Module Revision Handling    February 2024
       The argument to the "recommended-min-date" extension statement is
       a revision date.
 
-
-
-
-
-
-
-
-
-
-Wilton, et al.           Expires 17 August 2024                [Page 13]
-
-Internet-Draft    Updated YANG Module Revision Handling    February 2024
-
-
       A particular revision of an imported module adheres to an import's
       "recommended-min-date" extension statement if the imported
       module's revision history contains a revision statement with a
@@ -738,6 +721,14 @@ Internet-Draft    Updated YANG Module Revision Handling    February 2024
       longer satisfy an import's "recommended-min-date" statement if the
       revision-date is no longer present in the module's revision
       history; further described in Section 3.3 and Section 6.1.
+
+
+
+
+Wilton, et al.           Expires 17 August 2024                [Page 13]
+
+Internet-Draft    Updated YANG Module Revision Handling    February 2024
+
 
       The "recommended-min-date" extension statement MAY be specified
       multiple times, allowing a set of recommended minimum revisions to
@@ -778,6 +769,15 @@ Internet-Draft    Updated YANG Module Revision Handling    February 2024
    revisions/labels: 2019-02-01/2.0.0, 2019-03-01/3.0.0,
    2019-04-01/2.1.0, 2019-05-01/2.2.0 and 2019-06-01/3.1.0.
 
+   import example-module {
+     rev:recommended-min-date 2019-02-01;
+   }
+
+   Alternatively, the first example could have used the revision label
+   "2.0.0" instead, which selects the same set of revisions/labels.
+
+
+
 
 
 
@@ -785,13 +785,6 @@ Wilton, et al.           Expires 17 August 2024                [Page 14]
 
 Internet-Draft    Updated YANG Module Revision Handling    February 2024
 
-
-   import example-module {
-     rev:recommended-min-date 2019-02-01;
-   }
-
-   Alternatively, the first example could have used the revision label
-   "2.0.0" instead, which selects the same set of revisions/labels.
 
    import example-module {
      rev:recommended-min-date 2.0.0;
@@ -832,6 +825,13 @@ Internet-Draft    Updated YANG Module Revision Handling    February 2024
    structure (using the notation defined in [RFC8340]):
 
 
+   module: ietf-yang-status-conformance
+     augment /yanglib:yang-library/yanglib:schema:
+       +--ro deprecated-nodes-implemented?   boolean
+       +--ro obsolete-nodes-absent?          boolean
+
+
+
 
 
 
@@ -840,12 +840,6 @@ Internet-Draft    Updated YANG Module Revision Handling    February 2024
 Wilton, et al.           Expires 17 August 2024                [Page 15]
 
 Internet-Draft    Updated YANG Module Revision Handling    February 2024
-
-
-   module: ietf-yang-status-conformance
-     augment /yanglib:yang-library/yanglib:schema:
-       +--ro deprecated-nodes-implemented?   boolean
-       +--ro obsolete-nodes-absent?          boolean
 
 
 5.1.  Reporting how deprecated and obsolete nodes are handled
@@ -888,7 +882,13 @@ Internet-Draft    Updated YANG Module Revision Handling    February 2024
    particular, sections: Section 3, Section 4, and the guidelines
    documented in this section.
 
+   NBC changes to YANG modules may cause problems to clients, who are
+   consumers of YANG models, and hence YANG module authors SHOULD
+   minimize NBC changes and keep changes BC whenever possible.
 
+   When NBC changes are introduced, consideration should be given to the
+   impact on clients and YANG module authors SHOULD try to mitigate that
+   impact.
 
 
 
@@ -897,14 +897,6 @@ Wilton, et al.           Expires 17 August 2024                [Page 16]
 
 Internet-Draft    Updated YANG Module Revision Handling    February 2024
 
-
-   NBC changes to YANG modules may cause problems to clients, who are
-   consumers of YANG models, and hence YANG module authors SHOULD
-   minimize NBC changes and keep changes BC whenever possible.
-
-   When NBC changes are introduced, consideration should be given to the
-   impact on clients and YANG module authors SHOULD try to mitigate that
-   impact.
 
    A "rev:non-backwards-compatible" statement MUST be added if there are
    NBC changes relative to the previous revision.
@@ -946,14 +938,6 @@ Internet-Draft    Updated YANG Module Revision Handling    February 2024
    assumption that deprecated nodes are implemented by the server, and
    obsolete nodes are not:
 
-
-
-
-Wilton, et al.           Expires 17 August 2024                [Page 17]
-
-Internet-Draft    Updated YANG Module Revision Handling    February 2024
-
-
    1.  The changes should be made gradually, e.g., a data node's status
        SHOULD NOT be changed directly from "current" to "obsolete" (see
        Section 4.7 of [RFC8407]), instead the status SHOULD first be
@@ -962,6 +946,14 @@ Internet-Draft    Updated YANG Module Revision Handling    February 2024
        and preferred, option is to keep the data node definition in the
        model and change the status to “obsolete”. The second option is
        to simply remove the data node from the model, but this has the
+
+
+
+Wilton, et al.           Expires 17 August 2024                [Page 17]
+
+Internet-Draft    Updated YANG Module Revision Handling    February 2024
+
+
        risk of breaking modules which import the modified module, and
        the removed identifier may be accidently reused in a future
        revision.
@@ -1002,6 +994,14 @@ Internet-Draft    Updated YANG Module Revision Handling    February 2024
    Guidelines for clients of modules using the new module revision
    update procedure:
 
+   *  Clients SHOULD be liberal when processing data received from a
+      server.  For example, the server may have increased the range of
+      an operational node causing the client to receive a value which is
+      outside the range of the YANG model revision it was coded against.
+
+
+
+
 
 
 
@@ -1009,11 +1009,6 @@ Wilton, et al.           Expires 17 August 2024                [Page 18]
 
 Internet-Draft    Updated YANG Module Revision Handling    February 2024
 
-
-   *  Clients SHOULD be liberal when processing data received from a
-      server.  For example, the server may have increased the range of
-      an operational node causing the client to receive a value which is
-      outside the range of the YANG model revision it was coded against.
 
    *  Clients SHOULD monitor changes to published YANG modules through
       their revision history, and use appropriate tooling to understand
@@ -1058,6 +1053,11 @@ Internet-Draft    Updated YANG Module Revision Handling    February 2024
 
         Author:   Jason Sterne
                  <mailto:jason.sterne@nokia.com>";
+     description
+       "This YANG 1.1 module contains definitions and extensions to
+        support updated YANG revision handling.
+
+        Copyright (c) 2002 IETF Trust and the persons identified as
 
 
 
@@ -1066,11 +1066,6 @@ Wilton, et al.           Expires 17 August 2024                [Page 19]
 Internet-Draft    Updated YANG Module Revision Handling    February 2024
 
 
-     description
-       "This YANG 1.1 module contains definitions and extensions to
-        support updated YANG revision handling.
-
-        Copyright (c) 2002 IETF Trust and the persons identified as
         authors of the code.  All rights reserved.
 
         Redistribution and use in source and binary forms, with or
@@ -1114,6 +1109,11 @@ Internet-Draft    Updated YANG Module Revision Handling    February 2024
      }
 
      extension non-backwards-compatible {
+       description
+         "This statement is used to indicate YANG module revisions that
+          contain non-backwards-compatible changes.
+
+          The statement MUST only be a substatement of the 'revision'
 
 
 
@@ -1122,11 +1122,6 @@ Wilton, et al.           Expires 17 August 2024                [Page 20]
 Internet-Draft    Updated YANG Module Revision Handling    February 2024
 
 
-       description
-         "This statement is used to indicate YANG module revisions that
-          contain non-backwards-compatible changes.
-
-          The statement MUST only be a substatement of the 'revision'
           statement.  Zero or one 'non-backwards-compatible' statements
           per parent statement is allowed.  No substatements for this
           extension have been standardized.
@@ -1170,6 +1165,11 @@ Internet-Draft    Updated YANG Module Revision Handling    February 2024
           'revision-date' defined type.
 
           The statement MUST only be a substatement of the import
+          statement.  Zero, one or more 'recommended-min-date' statements per
+          parent statement are allowed.  No substatements for this
+          extension have been standardized.
+
+          If specified multiple times, then any module revision that
 
 
 
@@ -1178,11 +1178,6 @@ Wilton, et al.           Expires 17 August 2024                [Page 21]
 Internet-Draft    Updated YANG Module Revision Handling    February 2024
 
 
-          statement.  Zero, one or more 'recommended-min-date' statements per
-          parent statement are allowed.  No substatements for this
-          extension have been standardized.
-
-          If specified multiple times, then any module revision that
           satisfies at least one of the 'recommended-min-date' statements is
           an acceptable recommended revision for import.
 
@@ -1226,6 +1221,11 @@ Internet-Draft    Updated YANG Module Revision Handling    February 2024
         Author:   Reshad Rahman
                   <mailto:reshad@yahoo.com>
 
+        Author:   Robert Wilton
+                  <mailto:rwilton@cisco.com>
+
+        Author:   Balazs Lengyel
+                  <mailto:balazs.lengyel@ericsson.com>
 
 
 
@@ -1233,12 +1233,6 @@ Wilton, et al.           Expires 17 August 2024                [Page 22]
 
 Internet-Draft    Updated YANG Module Revision Handling    February 2024
 
-
-        Author:   Robert Wilton
-                  <mailto:rwilton@cisco.com>
-
-        Author:   Balazs Lengyel
-                  <mailto:balazs.lengyel@ericsson.com>
 
         Author:   Jason Sterne
                   <mailto:jason.sterne@nokia.com>";
@@ -1282,6 +1276,12 @@ Internet-Draft    Updated YANG Module Revision Handling    February 2024
 
      augment "/yanglib:yang-library/yanglib:schema" {
        description
+         "Augmentations to the ietf-yang-library module to indicate how
+          deprecated and obsoleted nodes are handled by the server.";
+       leaf deprecated-nodes-implemented {
+         type boolean;
+         description
+           "If set to true, this leaf indicates that all schema nodes
 
 
 
@@ -1290,12 +1290,6 @@ Wilton, et al.           Expires 17 August 2024                [Page 23]
 Internet-Draft    Updated YANG Module Revision Handling    February 2024
 
 
-         "Augmentations to the ietf-yang-library module to indicate how
-          deprecated and obsoleted nodes are handled by the server.";
-       leaf deprecated-nodes-implemented {
-         type boolean;
-         description
-           "If set to true, this leaf indicates that all schema nodes
             with a status 'deprecated' are implemented equivalently as
             if they had status 'current'; otherwise deviations MUST be
             used to explicitly remove deprecated nodes from the schema.
@@ -1338,6 +1332,12 @@ Internet-Draft    Updated YANG Module Revision Handling    February 2024
    carefully considered, including the scenarios described below.  The
    rev:non-backwards-compatible extension statement introduced in this
    document provides an alert that the module or submodule may contain
+   changes that impact users and need to be examined more closely for
+   both compatibility and potential security implications.  Flagging the
+   change reduces the risk of introducing silent exploitable
+   vulnerabilities.
+
+
 
 
 
@@ -1345,11 +1345,6 @@ Wilton, et al.           Expires 17 August 2024                [Page 24]
 
 Internet-Draft    Updated YANG Module Revision Handling    February 2024
 
-
-   changes that impact users and need to be examined more closely for
-   both compatibility and potential security implications.  Flagging the
-   change reduces the risk of introducing silent exploitable
-   vulnerabilities.
 
    When a module undergoes a non-backwards-compatible change, a server
    may implement different semantics for a given leaf than a client
@@ -1395,14 +1390,17 @@ Internet-Draft    Updated YANG Module Revision Handling    February 2024
    read-only augmentations do not add any new security considerations
    beyond those already present in [RFC8525].
 
+9.  IANA Considerations
+
+
+
+
 
 
 Wilton, et al.           Expires 17 August 2024                [Page 25]
 
 Internet-Draft    Updated YANG Module Revision Handling    February 2024
 
-
-9.  IANA Considerations
 
 9.1.  YANG Module Registrations
 
@@ -1449,7 +1447,9 @@ Internet-Draft    Updated YANG Module Revision Handling    February 2024
    the registries and IANA YANG modules are referenced in the
    appropriate way.
 
-
+   IANA is responsible for maintaining and versioning YANG modules that
+   are derived from other IANA registries.  For example,
+   "iana-if-type.yang" [IfTypeYang] is derived from the "Interface Types
 
 
 
@@ -1458,9 +1458,6 @@ Wilton, et al.           Expires 17 August 2024                [Page 26]
 Internet-Draft    Updated YANG Module Revision Handling    February 2024
 
 
-   IANA is responsible for maintaining and versioning YANG modules that
-   are derived from other IANA registries.  For example,
-   "iana-if-type.yang" [IfTypeYang] is derived from the "Interface Types
    (ifType) IANA registry" [IfTypesReg], and "iana-routing-types.yang"
    [RoutingTypesYang] is derived from the "Address Family Numbers"
    [AddrFamilyReg] and "Subsequent Address Family Identifiers (SAFI)
@@ -1505,6 +1502,9 @@ Internet-Draft    Updated YANG Module Revision Handling    February 2024
    compatible changes are: Changing the status of an identity to
    obsolete, removing an identity, renaming an identity, or changing the
    described meaning of an identity.
+
+
+
 
 
 
