@@ -89,7 +89,7 @@ Table of Contents
        4.1.1.  Module import examples  . . . . . . . . . . . . . . .  14
    5.  New ietf-yang-status-conformance YANG module  . . . . . . . .  15
      5.1.  Reporting how deprecated and obsolete nodes are
-           handled . . . . . . . . . . . . . . . . . . . . . . . . .  16
+           handled . . . . . . . . . . . . . . . . . . . . . . . . .  15
    6.  Guidelines for using the YANG module update rules . . . . . .  16
      6.1.  Guidelines for YANG module authors  . . . . . . . . . . .  16
        6.1.1.  Making non-backwards-compatible changes to a YANG
@@ -719,8 +719,8 @@ Internet-Draft    Updated YANG Module Revision Handling    February 2024
       the revision date argument of the "recommended-min-date" extension
       statement in the importing module.
 
-
-
+      Zero or one "recommended-min-date" extension statement is allowed
+      for each parent "import" statement.
 
 
 
@@ -729,12 +729,6 @@ Wilton, et al.           Expires 22 August 2024                [Page 13]
 
 Internet-Draft    Updated YANG Module Revision Handling    February 2024
 
-
-      The "recommended-min-date" extension statement MAY be specified
-      multiple times, allowing a set of recommended minimum revisions to
-      be documented.  Module implementors are recommended to pick a
-      module revision that adheres to any of the "recommended-min-date"
-      statements.
 
       Adding, modifying or removing a "recommended-min-date" extension
       statement is a BC change.
@@ -776,6 +770,12 @@ Internet-Draft    Updated YANG Module Revision Handling    February 2024
    Alternatively, the first example could have used the revision label
    "2.0.0" instead, which selects the same set of revisions/labels.
 
+   import example-module {
+     rev:recommended-min-date 2.0.0;
+   }
+
+
+
 
 
 
@@ -785,10 +785,6 @@ Wilton, et al.           Expires 22 August 2024                [Page 14]
 
 Internet-Draft    Updated YANG Module Revision Handling    February 2024
 
-
-   import example-module {
-     rev:recommended-min-date 2.0.0;
-   }
 
 4.1.1.2.  Example 2
 
@@ -831,8 +827,12 @@ Internet-Draft    Updated YANG Module Revision Handling    February 2024
        +--ro obsolete-nodes-absent?          boolean
 
 
+5.1.  Reporting how deprecated and obsolete nodes are handled
 
-
+   The ietf-yang-status-conformance YANG module augments YANG library
+   with two boolean leafs to allow a server to report how it implements
+   status "deprecated" and status "obsolete" schema nodes.  The leafs
+   are:
 
 
 
@@ -841,13 +841,6 @@ Wilton, et al.           Expires 22 August 2024                [Page 15]
 
 Internet-Draft    Updated YANG Module Revision Handling    February 2024
 
-
-5.1.  Reporting how deprecated and obsolete nodes are handled
-
-   The ietf-yang-status-conformance YANG module augments YANG library
-   with two boolean leafs to allow a server to report how it implements
-   status "deprecated" and status "obsolete" schema nodes.  The leafs
-   are:
 
    deprecated-nodes-implemented:  If set to "true", this leaf indicates
       that all schema nodes with a status "deprecated" are implemented
@@ -890,6 +883,13 @@ Internet-Draft    Updated YANG Module Revision Handling    February 2024
    impact on clients and YANG module authors SHOULD try to mitigate that
    impact.
 
+   A "rev:non-backwards-compatible" statement MUST be added if there are
+   NBC changes relative to the previous revision.
+
+   Removing old revision statements from a module's revision history
+   could break import by revision, and hence it is RECOMMENDED to retain
+   them.  If all dependencies have been updated to not import specific
+   revisions of a module, then the corresponding revision statements can
 
 
 
@@ -898,13 +898,6 @@ Wilton, et al.           Expires 22 August 2024                [Page 16]
 Internet-Draft    Updated YANG Module Revision Handling    February 2024
 
 
-   A "rev:non-backwards-compatible" statement MUST be added if there are
-   NBC changes relative to the previous revision.
-
-   Removing old revision statements from a module's revision history
-   could break import by revision, and hence it is RECOMMENDED to retain
-   them.  If all dependencies have been updated to not import specific
-   revisions of a module, then the corresponding revision statements can
    be removed from that module.  An alternative solution, if the
    revision section is too long, would be to remove, or curtail, the
    older description statements associated with the previous revisions.
@@ -946,6 +939,13 @@ Internet-Draft    Updated YANG Module Revision Handling    February 2024
        and preferred, option is to keep the data node definition in the
        model and change the status to “obsolete”. The second option is
        to simply remove the data node from the model, but this has the
+       risk of breaking modules which import the modified module, and
+       the removed identifier may be accidently reused in a future
+       revision.
+
+   2.  For deprecated data nodes the "description" statement SHOULD also
+       indicate until when support for the node is guaranteed (if
+       known).  If there is a replacement data node, rpc, action or
 
 
 
@@ -954,13 +954,6 @@ Wilton, et al.           Expires 22 August 2024                [Page 17]
 Internet-Draft    Updated YANG Module Revision Handling    February 2024
 
 
-       risk of breaking modules which import the modified module, and
-       the removed identifier may be accidently reused in a future
-       revision.
-
-   2.  For deprecated data nodes the "description" statement SHOULD also
-       indicate until when support for the node is guaranteed (if
-       known).  If there is a replacement data node, rpc, action or
        notification for the deprecated node, this SHOULD be stated in
        the "description".  The reason for deprecating the node can also
        be included in the "description" if it is deemed to be of
@@ -999,6 +992,13 @@ Internet-Draft    Updated YANG Module Revision Handling    February 2024
       an operational node causing the client to receive a value which is
       outside the range of the YANG model revision it was coded against.
 
+   *  Clients SHOULD monitor changes to published YANG modules through
+      their revision history, and use appropriate tooling to understand
+      the specific changes between module revision.  In particular,
+      clients SHOULD NOT migrate to NBC revisions of a module without
+      understanding any potential impact of the specific NBC changes.
+
+
 
 
 
@@ -1009,12 +1009,6 @@ Wilton, et al.           Expires 22 August 2024                [Page 18]
 
 Internet-Draft    Updated YANG Module Revision Handling    February 2024
 
-
-   *  Clients SHOULD monitor changes to published YANG modules through
-      their revision history, and use appropriate tooling to understand
-      the specific changes between module revision.  In particular,
-      clients SHOULD NOT migrate to NBC revisions of a module without
-      understanding any potential impact of the specific NBC changes.
 
    *  Clients SHOULD plan to make changes to match published status
       changes.  When a node's status changes from "current" to
@@ -1058,6 +1052,12 @@ Internet-Draft    Updated YANG Module Revision Handling    February 2024
         support updated YANG revision handling.
 
         Copyright (c) 2002 IETF Trust and the persons identified as
+        authors of the code.  All rights reserved.
+
+        Redistribution and use in source and binary forms, with or
+        without modification, is permitted pursuant to, and subject to
+        the license terms contained in, the Revised BSD License set
+        forth in Section 4.c of the IETF Trust's Legal Provisions
 
 
 
@@ -1066,12 +1066,6 @@ Wilton, et al.           Expires 22 August 2024                [Page 19]
 Internet-Draft    Updated YANG Module Revision Handling    February 2024
 
 
-        authors of the code.  All rights reserved.
-
-        Redistribution and use in source and binary forms, with or
-        without modification, is permitted pursuant to, and subject to
-        the license terms contained in, the Revised BSD License set
-        forth in Section 4.c of the IETF Trust's Legal Provisions
         Relating to IETF Documents
         (https://trustee.ietf.org/license-info).
 
@@ -1114,6 +1108,12 @@ Internet-Draft    Updated YANG Module Revision Handling    February 2024
           contain non-backwards-compatible changes.
 
           The statement MUST only be a substatement of the 'revision'
+          statement.  Zero or one 'non-backwards-compatible' statements
+          per parent statement is allowed.  No substatements for this
+          extension have been standardized.
+
+          If a revision of a YANG module contains changes, relative to
+          the preceding revision in the revision history, that do not
 
 
 
@@ -1122,12 +1122,6 @@ Wilton, et al.           Expires 22 August 2024                [Page 20]
 Internet-Draft    Updated YANG Module Revision Handling    February 2024
 
 
-          statement.  Zero or one 'non-backwards-compatible' statements
-          per parent statement is allowed.  No substatements for this
-          extension have been standardized.
-
-          If a revision of a YANG module contains changes, relative to
-          the preceding revision in the revision history, that do not
           conform to the backwards-compatible module update rules
           defined in RFC-XXX, then the 'non-backwards-compatible'
           statement MUST be added as a substatement to the revision
@@ -1169,7 +1163,13 @@ Internet-Draft    Updated YANG Module Revision Handling    February 2024
           parent statement are allowed.  No substatements for this
           extension have been standardized.
 
-          If specified multiple times, then any module revision that
+          Zero or one 'recommended-min-date' extension statement is allowed
+          for each parent 'import' statement.
+
+          A particular revision of an imported module adheres to an
+          import's 'recommended-min-date' extension statement if the
+          imported module's latest revision date satisfies, i.e., does not
+          precede, the revision date argument of the 'recommended-min-date'
 
 
 
@@ -1178,13 +1178,6 @@ Wilton, et al.           Expires 22 August 2024                [Page 21]
 Internet-Draft    Updated YANG Module Revision Handling    February 2024
 
 
-          satisfies at least one of the 'recommended-min-date' statements is
-          an acceptable recommended revision for import.
-
-          A particular revision of an imported module adheres to an
-          import's 'recommended-min-date' extension statement if the
-          imported module's latest revision date satisfies, i.e., does not
-          precede, the revision date argument of the 'recommended-min-date'
           extension statement in the importing module.
 
           Adding, removing or updating a 'recommended-min-date' statement to
@@ -1226,6 +1219,13 @@ Internet-Draft    Updated YANG Module Revision Handling    February 2024
                   <mailto:rwilton@cisco.com>
 
         Author:   Balazs Lengyel
+                  <mailto:balazs.lengyel@ericsson.com>
+
+        Author:   Jason Sterne
+                  <mailto:jason.sterne@nokia.com>";
+     description
+       "This module contains augmentations to YANG Library to provide an
+        indication of how deprecated and obsolete nodes are handled by the
 
 
 
@@ -1234,13 +1234,6 @@ Wilton, et al.           Expires 22 August 2024                [Page 22]
 Internet-Draft    Updated YANG Module Revision Handling    February 2024
 
 
-                  <mailto:balazs.lengyel@ericsson.com>
-
-        Author:   Jason Sterne
-                  <mailto:jason.sterne@nokia.com>";
-     description
-       "This module contains augmentations to YANG Library to provide an
-        indication of how deprecated and obsolete nodes are handled by the
         server.
 
         Copyright (c) 2002 IETF Trust and the persons identified as
@@ -1282,6 +1275,13 @@ Internet-Draft    Updated YANG Module Revision Handling    February 2024
           deprecated and obsoleted nodes are handled by the server.";
        leaf deprecated-nodes-implemented {
          type boolean;
+         description
+           "If set to true, this leaf indicates that all schema nodes
+            with a status 'deprecated' are implemented equivalently as
+            if they had status 'current'; otherwise deviations MUST be
+            used to explicitly remove deprecated nodes from the schema.
+            If this leaf is absent or set to false, then the behavior is
+            unspecified.";
 
 
 
@@ -1290,13 +1290,6 @@ Wilton, et al.           Expires 22 August 2024                [Page 23]
 Internet-Draft    Updated YANG Module Revision Handling    February 2024
 
 
-         description
-           "If set to true, this leaf indicates that all schema nodes
-            with a status 'deprecated' are implemented equivalently as
-            if they had status 'current'; otherwise deviations MUST be
-            used to explicitly remove deprecated nodes from the schema.
-            If this leaf is absent or set to false, then the behavior is
-            unspecified.";
          reference
            "XXXX: Updated YANG Module Revision Handling;
             Section 5.1, Reporting how deprecated and obsolete nodes
@@ -1338,6 +1331,13 @@ Internet-Draft    Updated YANG Module Revision Handling    February 2024
    both compatibility and potential security implications.  Flagging the
    change reduces the risk of introducing silent exploitable
    vulnerabilities.
+
+
+
+
+
+
+
 
 
 
