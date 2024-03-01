@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
-<rfc xmlns:xi="http://www.w3.org/2001/XInclude" updates="8407" category="std" ipr="trust200902" consensus="true" docName="draft-ietf-netmod-yang-semver-13" xml:lang="en" obsoletes="" submissionType="IETF" version="3">
+<rfc xmlns:xi="http://www.w3.org/2001/XInclude" updates="8407,8525,7950" category="std" ipr="trust200902" consensus="true" docName="draft-ietf-netmod-yang-semver-13" xml:lang="en" obsoletes="" submissionType="IETF" version="3">
   <front>
     <title abbrev="YANG Semver">YANG Semantic Versioning</title>
 <seriesInfo name="Internet-Draft" value="draft-ietf-netmod-yang-semver-13"/>
@@ -65,7 +65,8 @@
     <abstract>
 <t>This document specifies a YANG extension along with guidelines for applying an extended set of
     semantic versioning rules to revisions of YANG artifacts (e.g., modules and packages).  Additionally, this
-document defines a YANG extension for controlling module imports based on these modified semantic versioning rules.</t>
+document defines a YANG extension for controlling module imports based on these modified semantic versioning rules.
+This document updates RFCs 7950, 8407, and 8525.</t>
     </abstract>
   </front>
   <middle>
@@ -83,7 +84,8 @@ module or submodule is derived.</t>
         with a version identifier that adheres to extended semantic versioning rules <xref target="SemVer" format="default"/>.
       The goal being to add a human readable version identifier that
     provides compatibility information for the YANG artifact without needing to compare or parse its body.
-The version identifier and rules defined herein represent the RECOMMENDED approach to apply versioning to IETF YANG artifacts.</t>
+The version identifier and rules defined herein represent the RECOMMENDED approach to apply versioning to IETF YANG artifacts.
+This document defines augmentations to ietf-yang-library to reflect the version of YANG modules within the module-set data.</t>
     <t>Note that a specific revision of the SemVer 2.0.0 specification is referenced here (from June 19, 2020) to provide an immutable version.  This is because
     the 2.0.0 version of the specification has changed over time without any change to the semantic version itself.  In some cases
     the text has changed in non-backwards-compatible ways.</t>
@@ -717,10 +719,48 @@ have been the initial, pre-NMDA release, and 1.1.0 would have been the NMDA revi
 </section>
 </section>
 </section>
-<section anchor="yang_module" numbered="true" toc="default">
-<name>YANG Module</name>
+<section title="Updates to ietf-yang-library" anchor="ietf_yang_library_updates">
+<t>This document updates YANG 1.1 <xref target="RFC7950"/>
+ and YANG library <xref target="RFC8525"/>
+ to clarify how ambiguous
+    module imports are resolved.  It also defines the YANG module, ietf-yang-library-semver, that augments YANG library <xref target="RFC8525"/>
+ with
+    a version leaf for modules and submodules.</t>
+<section title="YANG library versioning augmentations">
+<t></t>
+<t>The "ietf-yang-library-semver" YANG module has the following
+            structure (using the notation defined in <xref target="RFC8340"/>):</t>
+<figure>
+<artwork name="ietf-yang-library-semver tree" type="" align="left" alt="">
+<![CDATA[
+module: ietf-yang-library-semver
+
+  augment /yanglib:yang-library/yanglib:module-set/yanglib:module:
+    +--ro version?   ys:version
+  augment /yanglib:yang-library/yanglib:module-set/yanglib:module
+            /yanglib:submodule:
+    +--ro version?   ys:version
+  augment /yanglib:yang-library/yanglib:module-set
+            /yanglib:import-only-module:
+    +--ro version?   ys:version
+  augment /yanglib:yang-library/yanglib:module-set
+            /yanglib:import-only-module/yanglib:submodule:
+    +--ro version?   ys:version
+]]>
+</artwork>
+</figure>
+
+<section title="Advertising version">
+<t>The ietf-yang-library-semver YANG module augments the "module" and "submodule" lists in ietf-yang-library with "version"
+        leafs to optionally declare the version identifier associated with each module and submodule.</t>
+</section>
+</section>
+</section>
+
+<section anchor="yang_modules" numbered="true" toc="default">
+<name>YANG Modules</name>
 <t>This YANG module contains the typedef for the YANG semantic version and the identity to signal its use.</t>
-<sourcecode name="ietf-yang-semver@2024-01-22.yang" type="" markers="true"><![CDATA[
+<sourcecode name="ietf-yang-semver@2024-03-01.yang" type="" markers="true"><![CDATA[
 module ietf-yang-semver {
   yang-version 1.1;
   namespace "urn:ietf:params:xml:ns:yang:ietf-yang-semver";
@@ -869,6 +909,153 @@ module ietf-yang-semver {
   }
 }
     ]]></sourcecode>
+<t>This YANG module contains the augmentations to the ietf-yang-library.</t>
+<sourcecode name="ietf-yang-library-semver@2024-03-01.yang" type="" markers="true"><![CDATA[
+module ietf-yang-library-semver {
+  yang-version 1.1;
+  namespace
+    "urn:ietf:params:xml:ns:yang:ietf-yang-library-semver";
+  prefix yl-rev;
+
+  import ietf-yang-semver {
+    prefix ys;
+    reference
+      "XXXX: YANG Semantic Versioning";
+  }
+  import ietf-yang-library {
+    prefix yanglib;
+    reference
+      "RFC 8525: YANG Library";
+  }
+
+  organization
+    "IETF NETMOD (Network Modeling) Working Group";
+  contact
+    "WG Web:   <https://datatracker.ietf.org/wg/netmod/>
+     WG List:  <mailto:netmod@ietf.org>
+
+     Author:   Joe Clarke
+               <mailto:jclarke@cisco.com>
+
+     Author:   Reshad Rahman
+               <mailto:reshad@yahoo.com>
+
+     Author:   Robert Wilton
+               <mailto:rwilton@cisco.com>
+
+     Author:   Balazs Lengyel
+               <mailto:balazs.lengyel@ericsson.com>
+
+     Author:   Jason Sterne
+               <mailto:jason.sterne@nokia.com>";
+  description
+    "This module contains augmentations to YANG Library to add module
+     and submodule level version identifiers.
+
+     Copyright (c) 2024 IETF Trust and the persons identified as
+     authors of the code.  All rights reserved.
+
+     Redistribution and use in source and binary forms, with or
+     without modification, is permitted pursuant to, and subject
+     to the license terms contained in, the Revised BSD License
+     set forth in Section 4.c of the IETF Trust's Legal Provisions
+     Relating to IETF Documents
+     (http://trustee.ietf.org/license-info).
+
+     This version of this YANG module is part of RFC XXXX; see
+     the RFC itself for full legal notices.
+
+     The key words 'MUST', 'MUST NOT', 'REQUIRED', 'SHALL', 'SHALL
+     NOT', 'SHOULD', 'SHOULD NOT', 'RECOMMENDED', 'NOT RECOMMENDED',
+     'MAY', and 'OPTIONAL' in this document are to be interpreted as
+     described in BCP 14 (RFC 2119) (RFC 8174) when, and only when,
+     they appear in all capitals, as shown here.";
+
+  // RFC Ed.: update the date below with the date of RFC publication
+  // and remove this note.
+  // RFC Ed.: replace XXXX (including in the imports above) with
+  // actual RFC number and remove this note.
+  // RFC Ed.: please replace ys:version with 1.0.0 and
+  // remove this note.
+
+  revision 2024-03-01 {
+    ys:version "1.0.0-draft-ietf-netmod-yang-semver-13";
+    description
+      "Initial revision";
+    reference
+      "XXXX: YANG Semantic Versioning";
+  }
+
+  // library 1.0 modules-state is not augmented with version
+
+  augment "/yanglib:yang-library/yanglib:module-set/yanglib:module" {
+    description
+      "Add a version to module information";
+    leaf version {
+      type ys:version;
+      description
+        "The version associated with this module revision.
+         The value MUST match the version value in the
+         specific revision of the module loaded in this module-set.";
+      reference
+        "XXXX: YANG Semantic Versioning;
+         Section 7.1.1, Advertising version";
+    }
+  }
+
+  augment
+    "/yanglib:yang-library/yanglib:module-set/yanglib:module/"
+  + "yanglib:submodule" {
+    description
+      "Add a version to submodule information";
+    leaf version {
+      type ys:version;
+      description
+        "The version associated with this submodule revision.
+         The value MUST match the version value in the
+         specific revision of the submodule included by the module
+         loaded in this module-set.";
+      reference
+        "XXXX: YANG Semantic Versioning;
+         Section 7.1.1, Advertising version";
+    }
+  }
+
+  augment "/yanglib:yang-library/yanglib:module-set/"
+        + "yanglib:import-only-module" {
+    description
+      "Add a version to module information";
+    leaf version {
+      type ys:version;
+      description
+        "The version associated with this module revision.
+         The value MUST match the version value in the
+         specific revision of the module included in this
+         module-set.";
+      reference
+        "XXXX: YANG Semantic Versioning;
+         Section 7.1.1, Advertising version";
+    }
+  }
+
+  augment "/yanglib:yang-library/yanglib:module-set/"
+        + "yanglib:import-only-module/yanglib:submodule" {
+    description
+      "Add a version to submodule information";
+    leaf version {
+      type ys:version;
+      description
+        "The version associated with this submodule revision.
+         The value MUST match the version value in the specific
+         revision of the submodule included by the import-only-module
+         loaded in this module-set.";
+      reference
+        "XXXX: Updated YANG Module Revision Handling;
+         Section 7.1.1, Advertising version";
+    }
+  }
+}
+]]></sourcecode>
 </section>
 <section anchor="contributors" numbered="true" toc="default">
 <name>Contributors</name>
@@ -986,6 +1173,7 @@ The extensions defined are only used to document YANG artifacts.</t>
 <xi:include href="http://xml2rfc.tools.ietf.org/public/rfc/bibxml/reference.RFC.8174.xml"/>
 <xi:include href="http://xml2rfc.tools.ietf.org/public/rfc/bibxml/reference.RFC.8407.xml"/>
 <xi:include href="http://xml2rfc.tools.ietf.org/public/rfc/bibxml/reference.RFC.7950.xml"/>
+<xi:include href="http://xml2rfc.tools.ietf.org/public/rfc/bibxml/reference.RFC.8525.xml"/>
 <xi:include href="http://xml2rfc.tools.ietf.org/public/rfc/bibxml3/reference.I-D.ietf-netmod-yang-module-versioning.xml"/>
 </references>
 <references>
@@ -993,6 +1181,7 @@ The extensions defined are only used to document YANG artifacts.</t>
 <xi:include href="http://xml2rfc.tools.ietf.org/public/rfc/bibxml3/reference.I-D.clacla-netmod-yang-model-update.xml"/>
 <xi:include href="http://xml2rfc.tools.ietf.org/public/rfc/bibxml3/reference.I-D.ietf-netmod-yang-packages.xml"/>
 <xi:include href="http://xml2rfc.tools.ietf.org/public/rfc/bibxml3/reference.I-D.ietf-netmod-yang-schema-comparison.xml"/>
+<xi:include href="http://xml2rfc.tools.ietf.org/public/rfc/bibxml/reference.RFC.8340.xml"/>
 <xi:include href="http://xml2rfc.tools.ietf.org/public/rfc/bibxml/reference.RFC.8342.xml"/>
 <xi:include href="http://xml2rfc.tools.ietf.org/public/rfc/bibxml/reference.RFC.6241.xml"/>
 <xi:include href="http://xml2rfc.tools.ietf.org/public/rfc/bibxml/reference.RFC.6242.xml"/>
