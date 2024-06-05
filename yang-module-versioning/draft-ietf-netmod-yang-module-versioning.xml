@@ -12,7 +12,7 @@
 <?rfc inline="yes"?>
 <?rfc compact="yes"?>
 <?rfc subcompact="no"?>
-<rfc updates="6020,7950,8407,8525" category="std" ipr="trust200902" docName="draft-ietf-netmod-yang-module-versioning-11" submissionType="IETF" consensus="yes">
+<rfc updates="6020,7950,8407,8525" category="std" ipr="trust200902" docName="draft-ietf-netmod-yang-module-versioning-12" submissionType="IETF" consensus="yes">
   <front>
     <title abbrev="Updated YANG Module Revision Handling">Updated YANG Module Revision Handling</title>
     <author initials="R." role="editor" surname="Wilton" fullname="Robert Wilton">
@@ -62,8 +62,8 @@
       <t>Several other documents build on this document with additional capabilities. <xref target="I-D.ietf-netmod-yang-schema-comparison"/> specifies an algorithm that can be used to compare two revisions of a YANG schema and provide granular information to allow module users to determine if they are impacted by changes between the revisions. The <xref target="I-D.ietf-netmod-yang-semver"/> document defines a YANG extension that tags a YANG artifact with a version identifier based on semantic versioning. YANG packages <xref target="I-D.ietf-netmod-yang-packages"/> provides a mechanism to group sets of related YANG modules together in order to manage schema and conformance of YANG modules as a cohesive set instead of individually. Finally, <xref target="I-D.ietf-netmod-yang-ver-selection"/> provides a schema selection mechanism that allows a client to choose which schemas to use when interacting with a server from the available schema that are supported and advertised by the server. These other documents are mentioned here as informative references. Support of the other documents is not required in an implementation in order to take advantage of the mechanisms and functionality offered by this module versioning document. </t>
       <t>The document comprises four parts:
         <list style="bullets">
-          <t>Refinements to the YANG 1.1 module revision update procedure, supported by new extension statements to indicate when a revision contains non-backwards-compatible changes.</t>
-          <t>Updated guidance for revision selection on imports and a YANG extension statement allowing YANG module imports to document an earliest module revision that may satisfy the import dependency.</t>
+          <t>Refinements to the YANG 1 and YANG 1.1 module revision update procedure, supported by a new extension statement to indicate when a revision contains non-backwards-compatible changes.</t>
+          <t>Updated guidance for revision selection on imports and a YANG extension statement allowing YANG module imports to document a recommended earliest module revision that may satisfy the import dependency.</t>
           <t>Updates and augmentations to ietf-yang-library to report how "deprecated" and "obsolete" nodes are handled by a server.</t>
           <t>Guidelines for how the YANG module update rules defined in this document should be used, along with examples.</t>
         </list>
@@ -102,7 +102,7 @@
       <t><xref target="RFC7950"/> and <xref target="RFC6020"/> assume, but do not explicitly state, that the revision history for a YANG module or submodule is strictly linear, i.e., it is prohibited to have two independent revisions of a YANG module or submodule that are both directly derived from the same parent revision.</t>
       <t>This document clarifies <xref target="RFC7950"/> and <xref target="RFC6020"/> to explicitly allow non-linear development of YANG module and submodule revisions, so that they MAY have multiple revisions that directly derive from the same parent revision.  As per <xref target="RFC7950"/> and <xref target="RFC6020"/>, YANG module and submodule revisions continue to be uniquely identified by their revision date, and hence all revisions of a given module or submodule MUST have unique revision dates.</t>
       <t>However, using revision dates alone to identify revisions of a YANG module versioned with a branched revision history is likely to be confusing because the relationship between module revisions is no longer guaranteed to be chronologically ordered. Instead, for modules that may use a branched revision history, it is RECOMMENDED to use a version identifier, such as the one described in <xref target="I-D.ietf-netmod-yang-semver"/>, that better describes the semantic relationship between the revisions.</t>
-      <t>For a given YANG module revision, revision B is defined as being derived from revision A, if revision A is listed in the revision history of revision B.  Although this document allows for a branched revision history, a given YANG module revision history does not contain all revisions in all possible branches, it only lists those from which is was derived, i.e., the module revision's history describes a single path of derived revisions back to the root of the module's revision history.</t>
+      <t>For a given YANG module revision, revision B is defined as being derived from revision A, if revision A is listed in the revision history of revision B, or if revision A would have been listed had it not been removed (see <xref target="removing-revisions-history"/>).  Although this document allows for a branched revision history, a given YANG module revision history does not contain all revisions in all possible branches, it only lists those from which it was derived, i.e., the module revision's history describes a single path of derived revisions (or a subset of them if one or more have been removed) back to the root of the module's revision history.</t>
       <t>A corollary to the text above is that the ancestry (derived relationship) between two module or submodule revisions cannot be determined by comparing the module or submodule revision date or version identifier alone - the revision history must be consulted.</t>
       <t>A module's name and revision date identifies a specific immutable definition of that module within its revision history.  Hence, if a module includes submodules then to ensure that the module's content is uniquely defined, the module's "include" statements SHOULD use "revision-date" substatements to specify the exact revision date of each included submodule. When a module does not include its submodules by revision-date,  the revision of submodules used cannot be derived from the including module. Mechanisms such as YANG packages <xref target="I-D.ietf-netmod-yang-packages"/>, and YANG library <xref target="RFC8525"/>, could be used to specify the exact submodule revisions used when the submodule revision date is not constrained by the "include" statement.</t>
       <t><xref target="RFC7950"/> section 11 and <xref target="RFC6020"/> section 10 require that all updates to a YANG module are backwards-compatible (BC) to the previous revision of the module.  This document introduces a method to indicate that an non-backwards-compatible (NBC) change has occurred between module revisions: this is done by using a new "non-backwards-compatible" YANG extension statement in the module revision history.</t>
@@ -127,7 +127,7 @@
               changing "status" to "obsolete" is a non-backwards-compatible change.</t>
               <t>YANG schema nodes with a "status" "obsolete" substatement MAY be removed from published modules, and the removal  is classified as a backwards-compatible change.  In some circumstances it may be helpful to retain the obsolete definitions since their identifiers may still be referenced by other modules and to ensure that their identifiers are not reused with a different meaning.</t>
               <t>A statement that is defined using the YANG "extension" statement MAY be added, removed, or changed, if it does not change the semantics of the module.  Extension statement definitions SHOULD specify whether adding, removing, or changing statements defined by that extension are backwards-compatible or non-backwards-compatible.</t>
-              <t>Any change made to the "revision-date" or "recommended-min-date" substatements of an "import" statement, including adding new "revision-date" or "recommended-min-date" substatements, changing the argument of any "revision-date" or "recommended-min-date" substatetements, or removing any "revision-date" or "recommended-min-date" substatements, is classified as backwards-compatible.</t>
+              <t>Any change made to the "revision-date" or "recommended-min-date" substatements of an "import" statement, including adding new "revision-date" or "recommended-min-date" substatements, changing the argument of any "revision-date" or "recommended-min-date" substatements, or removing any "revision-date" or "recommended-min-date" substatements, is classified as backwards-compatible.</t>
               <t>Any changes (including whitespace or formatting changes) that do not change the semantic meaning of the module are backwards-compatible.</t>
             </list>
           </t>
@@ -140,7 +140,7 @@
       </section>
       <section anchor="revision_nbc_marker" title="non-backwards-compatible extension statement">
         <t>The "rev:non-backwards-compatible" extension statement is used to indicate YANG module revisions that contain NBC changes.</t>
-        <t>If a revision of a YANG module contains changes, relative to the preceding revision in the revision history, that do not conform to the module update rules defined in <xref target="bc_update_rules"/>, then a "rev:non-backwards-compatible" extension statement MUST be added as a substatement to the "revision" statement.
+        <t>If a revision of a YANG module contains changes, relative to its parent revision, that do not conform to the module update rules defined in <xref target="bc_update_rules"/>, then a "rev:non-backwards-compatible" extension statement MUST be added as a substatement to the "revision" statement.
         </t>
         <t>Adding, modifying or removing a "rev:non-backwards-compatible" extension statement is considered to be a BC change.</t>
       </section>
@@ -199,7 +199,7 @@ revision 2019-01-02 {
                      2019-06-01     &lt;- 2.2.0
 </artwork>
         </figure>
-        <t>The tree diagram above illustrates how an example module's revision history might evolve, over time.  For example, the tree might represent the following changes, listed in chronological order from the oldest revision to the newest revision: </t>
+        <t>The tree diagram above illustrates how an example module's revision history might evolve over time.  For example, the tree might represent the following changes, listed in chronological order from the oldest revision to the newest revision: </t>
         <figure>
           <preamble>Example module, revision 2019-05-01:</preamble>
           <artwork>
@@ -293,8 +293,8 @@ module example-module {
         <xref target="I-D.ietf-netmod-yang-packages"/>, a filesystem directory containing a set of consistent YANG module revisions, or a revision control system commit label.
       </t>
       <section title="Recommending a minimum revision for module imports" anchor="import">
-        <t>Although the previous section indicates that the actual relationship constraints between different revisions of YANG modules should be specified outside of the modules, in some scenarios YANG modules are designed to be loosely coupled, and implementors may wish to select sets of YANG module revisions that are expected to work together. For these cases it can be helpful for a module author to provide guidance on a recommended minimum revision that is expected to satisfy an YANG import.  E.g., the module author may know of a dependency on a type or grouping that has been introduced in a particular imported YANG module revision.  Although there can be no guarantee that all derived future revisions from the particular imported module will necessarily also be compatible, older revisions of the particular imported module are very unlikely to ever be compatible.</t>
-        <t>This module introduces, for modules with a linear revision history that are versioned using revision dates, a new YANG extension statement to provide guidance to module implementors on a recommended minimum module revision of an imported module that is anticipated to be compatible.  This statement has been designed to be machine-readable so that tools can parse the minimum revision extension statement and generate warnings if appropriate, but this extension statement does not alter YANG module conformance of valid YANG module versions in any way, and specifically it does not alter the behavior of the YANG module import statement from that specified in <xref target="RFC7950"/>.
+        <t>Although the previous section indicates that the actual relationship constraints between different revisions of YANG modules should be specified outside of the modules, in some scenarios YANG modules are designed to be loosely coupled, and implementors may wish to select sets of YANG module revisions that are expected to work together. For these cases it can be helpful for a module author to provide guidance on a recommended minimum revision that is expected to satisfy a YANG import.  E.g., the module author may know of a dependency on a type or grouping that has been introduced in a particular imported YANG module revision.  Although there can be no guarantee that all derived future revisions from the particular imported module will necessarily also be compatible, older revisions of the particular imported module may not be compatible.</t>
+        <t>This module introduces, primarily for modules with a linear revision history that are versioned using revision dates, a new YANG extension statement to provide guidance to module implementors on a recommended minimum module revision of an imported module that is anticipated to be compatible.  This statement has been designed to be machine-readable so that tools can parse the minimum revision extension statement and generate warnings if appropriate, but this extension statement does not alter YANG module conformance of valid YANG module versions in any way, and specifically it does not alter the behavior of the YANG module import statement from that specified in <xref target="RFC7950"/>.
         </t>
         <t>The ietf-revisions module defines the "recommended-min-date" extension statement, a substatement to the YANG "import" statement, to allow for a "minimum recommended date" to be documented:
           <list>
@@ -439,7 +439,7 @@ module: ietf-yang-status-conformance
           <preamble> YANG module with extension statements for annotating NBC changes and importing by revision.</preamble>
           <artwork name="ietf-yang-revisions@2024-02-19.yang">
             <![CDATA[
-<CODE BEGINS> file "ietf-yang-revisions@2024-02-19.yang"
+<CODE BEGINS> file "ietf-yang-revisions@2024-06-04.yang"
 module ietf-yang-revisions {
   yang-version 1.1;
   namespace "urn:ietf:params:xml:ns:yang:ietf-yang-revisions";
@@ -493,7 +493,7 @@ module ietf-yang-revisions {
   // RFC Ed.: replace XXXX (inc above) with actual RFC number and
   // remove this note.
 
-  revision 2024-02-19 {
+  revision 2024-06-04 {
     description
       "Initial version.";
     reference
@@ -547,7 +547,7 @@ module ietf-yang-revisions {
     reference
       "XXXX: Updated YANG Module Revision Handling;
        Section 3.2,
-       non-backwards-compatible revision extension statement";
+       non-backwards-compatible extension statement";
   }
 
   extension recommended-min-date {
@@ -578,7 +578,7 @@ module ietf-yang-revisions {
        statement to an import is a backwards-compatible change.";
     reference
       "XXXX: Updated YANG Module Revision Handling; Section 4,
-       Recommending a minimum revision for module imports";
+       Guidance for revision selection on imports";
   }
 }
 <CODE ENDS>
@@ -836,7 +836,7 @@ module ietf-yang-status-conformance {
     </references>
     <?rfc needLines="100"?>
     <section anchor="appendix" title="Examples of changes that are NBC">
-      <t>Examples of NBC changes include:
+      <t>Examples of NBC changes include (this list is for illustrative purposes and not intended to be complete):
         <list style="symbols">
           <t>Deleting a data node, or changing it to status obsolete.</t>
           <t>Changing the name, type, or units of a data node.</t>
@@ -878,6 +878,7 @@ module ietf-yang-status-conformance {
               <xref target="type_change"/>
             </t>
           </list>
+          In both cases above, the "rev:non-backwards-compatible" extension statement is used to indicate that the YANG module contains an NBC change.
         </t>
       </section>
       <section anchor="key_change" title="Changing the key of a list">
