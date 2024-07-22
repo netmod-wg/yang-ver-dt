@@ -1,0 +1,211 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE rfc SYSTEM "rfc2629.dtd">
+<?rfc toc="yes"?>
+<?rfc symrefs="yes"?>
+<?rfc sortrefs="yes" ?>
+<?rfc compact="yes"?>
+<?rfc subcompact="no"?>
+<?rfc linkmailto="no" ?>
+<?rfc editing="no" ?>
+<?rfc comments="yes" ?>
+<?rfc inline="yes"?>
+<?rfc rfcedstyle="yes"?>
+<?rfc-ext allow-markup-in-artwork="yes" ?>
+<?rfc-ext include-index="no" ?>
+<!--<?rfc strict="no"?> -->
+
+<rfc xmlns:xi="http://www.w3.org/2001/XInclude"
+     docName="draft-ietf-netmod-yang-module-filename-00"
+     category="std"
+     consensus="true"
+     updates="6020, 7950, 8407"
+     ipr="trust200902">
+
+  <front>
+    <title abbrev="YANG module file name convention">
+        YANG module file name convention
+    </title>
+
+    <author fullname="Per Andersson" initials="P." surname="Andersson">
+      <organization>Cisco Systems</organization>
+      <address>
+        <email>per.ietf@ionio.se</email>
+      </address>
+    </author>
+
+    <date/>
+    <area>OPS Area</area>
+    <workgroup>NETMOD Working Group</workgroup>
+
+    <abstract>
+      <t>This document presents YANG module file name convention. The convention
+        extends the current YANG module file name using revision&nbhy;date, with
+        the YANG semantic version extension. The YANG semantic version extension
+        allows for an informative version to be associated with a particular
+        YANG module revision.</t>
+    </abstract>
+
+    <note title="Editorial note (To be removed by the RFC Editor)">
+      <t>In the YANG module versioning work it was previously defined in
+        <xref target="I-D.ietf-netmod-yang-semver"/> that file names
+        could use the revision label (YANG Semantic version extension) instead
+        of the revision date, which is standardized in <xref target="RFC7950"/>.
+        This work was removed in an attempt to progress the module versioning
+        work, but the YANG versioning design team was tasked to address it by
+        the NETMOD WG. This draft extends YANG module file names conformity with
+        the possibility to use revision label instead of revision date.
+      </t>
+    </note>
+  </front>
+  <middle>
+    <section anchor="intro" title="Introduction">
+      <t>This document defines the YANG module file convention. It extends the
+        current convention defined in <xref target="RFC7950"/>, which uses
+        revision-date, with the YANG semantic version extension defined in
+        <xref target="I-D.ietf-netmod-yang-semver"/>.</t>
+
+      <section anchor="motivation" title="Motivation">
+        <t>
+          The motivation for using YANG semantic version instead of revision
+          date is that it carries information to the user. A revision date only
+          tells the user that it has been updated, while, for instance, a YANG
+          Semver version can tell the user about the module's compatibility
+          level at a glance. Having this information available as early as
+          possible, i.e. in the module file name, makes it possible to quickly
+          identify the module revision; compared to searching in the file
+          contents and checking the revisions. Having the YANG semantic version
+          visible in the file name will make it easier to handle large sets of
+          YANG modules.
+        </t>
+        <t>
+          The YANG module file name schema described in this draft is already
+          deployed in the industry. Now is the time to standardize before
+          several proprietary solutions emerge. One possibility is to propose a
+          standard that gains operational experience.
+        </t>
+        <t>
+          It is relatively easy to update tooling to handle YANG semantic
+          version in the YANG module file name according to this draft. However,
+          it is recognized that the migration of all tooling within the industry
+          will take time.
+        </t>
+      </section>
+    </section>
+
+    <section anchor="module-filenames" title="Module file names">
+      <t>
+        This section updates <xref section="5.2" target="RFC7950"/>,
+        <xref section="5.2" target="RFC6020"/>, and
+        <xref section="3.2" target="RFC8407"/>.
+      </t>
+
+      <t>
+        If a revision has an associated YANG semantic version (ys:version)
+        then it MAY use the YANG semantic version instead of the revision date
+        in the file name of a YANG file, where it takes the form:
+        <figure align="center" anchor="filename" suppress-title="true">
+          <artwork align="left" name="filename-abnf">
+<![CDATA[
+    module-or-submodule-name [['@' revision-date]['#' ys:version]]
+        ( '.yang' / '.yin' )
+]]>
+          </artwork>
+        </figure>
+        E.g., acme-router-module@2024-05-15.yang or
+        acme&nbhy;router&nbhy;module#2.0.3.yang.
+      </t>
+
+      <t>
+        In short, the YANG semantic version is recommended in order to simplify
+        for module consumers, i.e. to convey compatibility status without
+        needing to read the module.
+      </t>
+
+      <t>
+        YANG module (or submodule) files MAY be identified using either
+        revision-date or YANG semantic version (ys:version). Typically, only one
+        file name SHOULD exist for the same module (or submodule) revision. Two
+        file names, one with the revision date and another with the YANG
+        semantic version, MAY exist for the same module (or submodule) revision,
+        e.g., when migrating from one scheme to the other.
+      </t>
+
+      <section anchor="yang-semver" title="Coexistence with YANG Semver">
+        <t>
+          As can be seen above, all valid identifiers for YANG semantic version
+          are valid in the filename as well.
+          <xref section="4.3" target="I-D.ietf-netmod-yang-semver"/>
+        </t>
+        <t>
+          The following example is a valid YANG module file name
+        <figure align="center" anchor="filename-label" suppress-title="true">
+          <artwork align="left">
+<![CDATA[
+    example-module#2.3.1_non_compatible+build2237refM443ss.yang
+]]>
+          </artwork>
+        </figure>
+        </t>
+        <t>
+          One consequence of this is that there might exist two child modules
+          of version 2.0.0 with the same X.Y.Z digits (2.0.1) but different
+          version labels:
+          <figure align="center" anchor="filenames-same-ver"
+                  suppress-title="true">
+            <artwork align="left">
+<![CDATA[
+    2.0.1-draft-superman-super-stuff-03
+
+    2.0.1-draft-batman-cool-addition-07   (a competing draft)
+]]>
+            </artwork>
+          </figure>
+        </t>
+      </section>
+
+      <section title="Known incompatibilities">
+        <t>
+          There are currently no known publicly available tools that support
+          the YANG semantic version file name schema. There are known
+          proprietary tooling that already uses the file name schema presented
+          in this document.
+        </t>
+        <t>
+          At the IETF 119 Hackathon, there was a project that investigated
+          the feasibility to modify popular YANG tooling to support the proposed
+          schema. There was a successful attempt to modify pyang to support the
+          file name schema and also "recommended-min" previously included in
+          <xref target="I-D.ietf-netmod-yang-module-versioning"/>. Furthermore,
+          there were efforts in researching yanger and libyang to support the
+          schema, but the hackathon ended before these projects could be
+          concluded.
+        </t>
+      </section>
+    </section>
+
+    <section anchor="security" title="Security Considerations">
+      <t>There are no security considerations for this draft.</t>
+    </section>
+  </middle>
+  <back>
+    <references title="Normative References">
+      <xi:include href="https://xml2rfc.ietf.org/public/rfc/bibxml3/reference.I-D.ietf-netmod-rfc8407bis.xml"/>
+      <xi:include href="https://xml2rfc.ietf.org/public/rfc/bibxml3/reference.I-D.ietf-netmod-yang-module-versioning.xml"/>
+      <xi:include href="https://xml2rfc.ietf.org/public/rfc/bibxml3/reference.I-D.ietf-netmod-yang-semver.xml"/>
+      <?rfc include="reference.RFC.2119.xml"?> <!-- MUSTs, etc. -->
+      <?rfc include="reference.RFC.6020.xml"?> <!-- YANG (orig) -->
+      <?rfc include="reference.RFC.7950.xml"?> <!-- YANG (curr) -->
+      <?rfc include="reference.RFC.8407.xml"?> <!-- YANG guidelines -->
+      <?rfc include="reference.RFC.8174.xml"?> <!-- rfc2119 update -->
+    </references>
+    <references title="Informative References">
+    </references>
+
+    <section title="Acknowledgements" numbered="no">
+      <t>
+        The author would like to thank Joe Clarke, Reshad Rahman, for their
+        excellent technical reviews, support, and guidance.
+      </t>
+    </section>
+  </back>
+</rfc>
