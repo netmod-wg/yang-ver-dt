@@ -577,7 +577,7 @@ imports are resolved.</t>
 <section anchor="recommend_min_version" numbered="true" toc="default">
 <name>The recommended-min-version Extension</name>
 <t>The ietf-yang-semver module defines a "recommended-min-version" extension -- a substatement to the "import" statement -- 
-that takes a YANG semantic version as its argument and specifies
+that takes the numeric version triplet (i.e., X.Y.Z) of the YANG Semver as its argument and specifies
 that the minimum version of the associated module being imported SHOULD be greater than or equal to the specified
 value.  The specific conditions for determining if a module's version is greater than or equal is defined in
 <xref target="semver_import_rules" format="default"/> below.  At most one instance of recommended-min-version MAY be used.  
@@ -591,11 +591,11 @@ statement is considered a backwards compatible change.  An example use is:</t>
 </section>
 <section anchor="semver_import_rules" numbered="true" toc="default">
 <name>Import by YANG Semantic Version Rules</name>
-<t>When evaluating the recommended-min-version extension value as well as the target module to import, only the triplet of MAJOR.MINOR.PATCH are considered.
-The "_compatible" and "_non_compatible" modifiers as well as any pre-release metadata are ignored.
+<t>When evaluating target module to import, only the numeric triplet of MAJOR.MINOR.PATCH is considered.
+The "_compatible" and "_non_compatible" modifiers as well as any metadata are ignored.
  A module to be imported is considered as meeting the recommended minimum version criteria if it meets one of the following conditions:</t>
 <ol type="1" spacing="normal">
-<li>Has the exact MAJOR, MINOR, PATCH as in the recommend-min-version value.</li>
+<li>Has the exact same MAJOR, MINOR, PATCH as in the recommend-min-version value.</li>
 <li>Has the same MAJOR and MINOR version numbers and a greater PATCH number.</li>
 <li>Has the same MAJOR version number and greater MINOR number.  In this case the PATCH number is ignored.</li>
 <li>Has a greater MAJOR version number.  In this case MINOR and PATCH numbers are ignored.</li>
@@ -608,7 +608,7 @@ The "_compatible" and "_non_compatible" modifiers as well as any pre-release met
 <li>4.1.2 (by condition 4 above)</li>
 <li>3.1.1_compatible (by condition 2 above, noting that modifiers are ignored)</li>
 <li>3.1.2_non_compatible (by condition 2 above, noting that modifiers are ignored)</li>
-<li>3.3.0-draft-ietf-netmod-example-module-00 (by condition 3 above, noting that the pre-release metadata is ignored)</li>
+<li>3.3.0-00 (by condition 3 above, noting that the pre-release metadata is ignored)</li>
 </ul>
 <t>If an import by recommended-min-version cannot locate a module with a version that is viable according to the conditions above, 
   the YANG compiler should emit a warning, and then continue to resolve the import based on established <xref target="RFC7950" format="default"/> rules.</t>
@@ -632,7 +632,7 @@ The "_compatible" and "_non_compatible" modifiers as well as any pre-release met
     (e.g., a module's or submodule's version may transition from 0.3.0 to
     1.0.0-beta.1 to indicate it is more mature and ready for testing).</t>
 <t>When using pre-release notation, the format MUST include at least one alphabetic
-    component and MUST end with a '.' or '-' and then one or more digits.  These alphanumeric components will
+    component and SHOULD end with a '.' or '-' and then one or more digits.  These alphanumeric components can
     be used when deciding pre-release precedence.  The following are examples of
     valid pre-release versions:
 </t>
@@ -688,25 +688,37 @@ overall changes to the module or submodule.</t>
 <section anchor="ietf_guidelines" numbered="true" toc="default">
 <name>YANG Semver in IETF Modules</name>
 <t>All published IETF modules and submodules MUST use YANG semantic versions in their revisions.</t>
-<t>Development of a new module or submodule within the IETF SHOULD begin with the 0 MAJOR number scheme as described above.
+<t>Development of a new module or submodule (i.e., when there is no existing module of the same name) within the IETF MUST 
+    begin with the 0 MAJOR number scheme as described above.  If the Internet Draft containing the module or submodule is an adopted document,
+    pre-release metadata MUST not be used.  Instead, the Y.Z (i.e., MINOR.PATCH) version components MUST be incremented
+    with new revisions in order to maintain version uniqueness.
     When revising an existing IETF module or submodule, the version MUST use the target (i.e., intended) MAJOR
     and MINOR version components with a 0 PATCH version number.  If the intended RFC release will be non-backwards-compatible
     with the current RFC release, the MINOR version number MUST be 0.</t>
 <section anchor="ietf_module_development" numbered="true" toc="default">
 <name>Guidelines for IETF Module Development</name>
-<t>All IETF modules and submodules in development MUST use the whole document name as a pre-release version identifier,
+<t>All IETF modules and submodules being developed in individual Internet Drafts MUST include the full
+    the whole document name as a pre-release version identifier,
         including the current document revision.  For
         example, if a module or submodule which is currently released at version 1.0.0 is being
         revised to include non-backwards-compatible changes in draft-user-netmod-foo, its
         development versions MUST include 2.0.0-draft-user-netmod-foo followed by the
       document's revision (e.g., 2.0.0-draft-user-netmod-foo-02).  This will ensure each
-      pre-release version is unique across the lifecycle of the module or submodule.  Even when using the 0 MAJOR
-      version for initial module or submodule development (where MINOR and PATCH can change), appending the
-      draft name as a pre-release component helps to ensure uniqueness when there are perhaps
+      pre-release version is unique across the lifecycle of the module or submodule.  When using the 0 MAJOR
+      version for initial module or submodule development in an individual Internet Draft (where MINOR and PATCH can change),
+      appending the draft name as a pre-release component helps to ensure uniqueness when there are perhaps
       multiple, parallel efforts creating the same module or submodule.</t>
-<t>Some draft revisions may not include an update to the YANG modules or submodules contained in the draft.  In that case, those modules or submodules
-      that are not updated do not not require a change to their versions.  Updates to the YANG Semver version MUST only be done when the revision
-      of the module changes.</t>
+  <t>Once an Internet Draft containing the module or submodule is adopted as an IETF document, the need for pre-release
+    metadata changes.  For new modules and submodules, the pre-release metadata MUST NOT be used.  Instead, the
+    Y.Z (i.e., MINOR.PATCH) version components are incremented as desired while leaving the X (i.e., MAJOR) component at 0.
+    For module or submodule
+    revisions, only the revision of the Internet Draft is required.  For example, if the module ietf-foo.yang is being
+    revised by draft-ietf-netmod-rfcABCDbis to include backwards-compatible changes, its versions would be 1.1.0-01, 1.1.0-02,
+    etc. as the draft progresses.</t>
+<t>Some draft revisions may not include an update to the YANG modules or submodules contained in the draft.  In that case, 
+      those modules or submodules
+      that are not updated do not not require a change to their versions.  Updates to the YANG Semver version MUST 
+      only be done when the revision of the module changes.</t>
 <t>See <xref target="appendix_A" format="default"/>
  for a detailed example of IETF pre-release versions.</t>
 </section>
@@ -764,7 +776,7 @@ module: ietf-yang-library-semver
 <section anchor="yang_modules" numbered="true" toc="default">
 <name>YANG Modules</name>
 <t>This YANG module contains the typedef for the YANG semantic version and the identity to signal its use.</t>
-<sourcecode name="ietf-yang-semver@2024-11-19.yang" type="yang" markers="true"><![CDATA[
+<sourcecode name="ietf-yang-semver@2024-12-16.yang" type="yang" markers="true"><![CDATA[
 module ietf-yang-semver {
   yang-version 1.1;
   namespace "urn:ietf:params:xml:ns:yang:ietf-yang-semver";
@@ -817,8 +829,8 @@ module ietf-yang-semver {
   // note.
   // RFC Ed. update the ys:version to "1.0.0".
 
-  revision 2024-11-19 {
-    ys:version "1.0.0-draft-ietf-netmod-yang-semver-18";
+  revision 2024-12-16 {
+    ys:version "0.19.0";
     description
       "Initial revision";
     reference
@@ -854,7 +866,7 @@ module ietf-yang-semver {
        version.";
     reference
       "XXXX: YANG Semantic Versioning;
-       Section 3.2, YANG Semantic Version Extension";
+       Section 4.2, YANG Semantic Version Extension";
   }
 
   extension recommended-min-version {
@@ -864,10 +876,10 @@ module ietf-yang-semver {
        one that is greater than or equal to the specified version.
 
        The format of the recommended-min-version extension argument
-       MUST conform to the 'version' typedef defined in this module.
-       However, '_compatible' and '_non_compatible' modifiers as
-       well as pre-release metadata are ignored for the
-       comparisions.
+       must be the MAJOR.MINOR.PATCH components from the
+       'version' typedef defined in this module (i.e., excluding
+       the '_compatible' and '_non_compatible' modifiers as
+       well as any metadata).
 
        The statement MUST only be a substatement of the import
        statement.  Zero or one 'recommended-min-version'
@@ -879,7 +891,7 @@ module ietf-yang-semver {
        recommended minimum version criteria if it meets one of
        the following conditions:
 
-       * Has the exact MAJOR, MINOR, PATCH as in the
+       * Has the exact same MAJOR, MINOR, PATCH as in the
           recommend-min-version value.
        * Has the same MAJOR and MINOR version numbers and a
          greater PATCH number.
@@ -891,7 +903,7 @@ module ietf-yang-semver {
        Adding, removing or updating a 'recommended-min-version'
        statement to an import is a backwards-compatible change.";
     reference
-      "XXXX: YANG Semantic Versioning; Section 4,
+      "XXXX: YANG Semantic Versioning; Section 5,
        Import Module by Semantic Version";
   }
 
@@ -1239,7 +1251,7 @@ The extensions defined are only used to document YANG artifacts.</t>
 <section anchor="appendix_A" numbered="true" toc="default">
 <name>Example IETF Module Development</name>
 <t>Assume a new YANG module is being developed in the netmod working group in the IETF.
-    Initially, this module is being developed in an individual internet draft, draft-jdoe-netmod-example-module.
+    Initially, this module is being developed in an individual Internet Draft, draft-jdoe-netmod-example-module.
     The following represents the initial version tree (i.e., value of ys:version) of the module as it's being initially developed.</t>
 <t keepWithNext="true">Version lineage for initial module development:</t>
 <artwork name="" type="" align="left" alt=""><![CDATA[
@@ -1252,14 +1264,14 @@ The extensions defined are only used to document YANG artifacts.</t>
       0.2.1-draft-jdoe-netmod-example-module-03
 ]]></artwork>
 <t>At this point, development stabilizes, and the workgroup adopts the draft.  Thus now the draft becomes
-    draft-ietf-netmod-example-module.  The initial pre-release lineage continues as follows.</t>
+    draft-ietf-netmod-example-module.  The pre-release metadata is no longer required.</t>
 <t keepWithNext="true">Continued version progression after adoption:</t>
 <artwork name="" type="" align="left" alt=""><![CDATA[
-    1.0.0-draft-ietf-netmod-example-module-00
+    0.3.0
       |
-    1.0.0-draft-ietf-netmod-example-module-01
+    0.3.1
       |
-    1.0.0-draft-ietf-netmod-example-module-02
+    0.4.0
 ]]></artwork>
 <t>At this point, the draft is standardized and becomes RFC12345 and the YANG module version becomes 1.0.0.</t>
 <t>A time later, the module needs to be revised to add additional capabilities.  Development will be done in a
@@ -1279,15 +1291,16 @@ The extensions defined are only used to document YANG artifacts.</t>
       1.1.0-draft-asmith-netmod-exmod-changes-01
 ]]></artwork>
 <t>At this point, the WG decides to merge some aspects of both and adopt the work in asmith's draft
-    as draft-ietf-netmod-exmod-changes.  A single version progression continues.</t>
+    as draft-ietf-netmod-exmod-changes.  Since the draft is now an adopted IETF document, the pre-release
+    metadata changes to simply include the adopted draft's revision.  A single version progression continues.</t>
 <artwork name="" type="" align="left" alt=""><![CDATA[
-      1.1.0-draft-ietf-netmod-exmod-changes-00
+      1.1.0-00
         |
-      1.1.0-draft-ietf-netmod-exmod-changes-01
+      1.1.0-01
         |
-      1.1.0-draft-ietf-netmod-exmod-changes-02
+      1.1.0-02
         |
-      1.1.0-draft-ietf-netmod-exmod-changes-03
+      1.1.0-03
 ]]></artwork>
 <t>The draft is standardized, and the new module version becomes 1.1.0.</t>
 </section>
