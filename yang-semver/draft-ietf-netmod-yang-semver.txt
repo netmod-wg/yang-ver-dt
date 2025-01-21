@@ -126,8 +126,8 @@ Internet-Draft                 YANG Semver                  January 2025
    relating to modified rules for updating YANG modules and submodules,
    a means to signal when a new revision of a module or submodule has
    non-backwards-compatible (NBC) changes compared to its previous
-   revision, and a more flexible approach to importing modules by
-   revision.
+   revision, and extends the YANG import statement with a minimum
+   revision suggestion to help document inter-module dependencies.
 
    This document defines a YANG extension that tags a YANG artifact
    (i.e., YANG modules, YANG submodules, and YANG packages
@@ -340,7 +340,7 @@ Internet-Draft                 YANG Semver                  January 2025
 
    Every YANG module and submodule versioned using the YANG semantic
    versioning scheme specifies the module's or submodule's semantic
-   version as the argument to the 'ys:version' statement.
+   version as the argument to the 'ysv:version' statement.
 
    Because the rules put forth in
    [I-D.ietf-netmod-yang-module-versioning] are designed to work well
@@ -712,14 +712,14 @@ Internet-Draft                 YANG Semver                  January 2025
        prefix "exvermod";
 
        import ietf-yang-revisions { prefix "rev"; }
-       import ietf-yang-semver { prefix "ys"; }
+       import ietf-yang-semver { prefix "ysv"; }
 
        description
          "to be completed";
 
        revision 2017-08-30 {
          description "Backport 'wibble' leaf";
-         ys:version 1.2.2_non_compatible;
+         ysv:version 1.2.2_non_compatible;
        }
 
 
@@ -732,23 +732,23 @@ Internet-Draft                 YANG Semver                  January 2025
 
        revision 2017-07-30 {
          description "Rename 'baz' to 'bar'";
-         ys:version 1.2.1_non_compatible;
+         ysv:version 1.2.1_non_compatible;
          rev:non-backwards-compatible;
        }
 
        revision 2017-04-20 {
          description "Add new functionality, leaf 'baz'";
-         ys:version 1.2.0;
+         ysv:version 1.2.0;
        }
 
        revision 2017-04-03 {
          description "Add new functionality, leaf 'foo'";
-         ys:version 1.1.0;
+         ysv:version 1.1.0;
        }
 
        revision 2017-02-07 {
          description "First release version.";
-         ys:version 1.0.0;
+         ysv:version 1.0.0;
        }
 
        // Note: YANG Semver rules do not apply to 0.X.Y labels.
@@ -760,7 +760,7 @@ Internet-Draft                 YANG Semver                  January 2025
 
        // revision 2017-01-30 {
        //   description "NBC changes to initial revision";
-       //   ys:version 0.2.0;
+       //   ysv:version 0.2.0;
        //   rev:non-backwards-compatible; // optional
        //                         // (theoretically no
        //                         // 'previous released version')
@@ -768,7 +768,7 @@ Internet-Draft                 YANG Semver                  January 2025
 
        // revision 2017-01-26 {
        //   description "Initial module version";
-       //   ys:version 0.1.0;
+       //   ysv:version 0.1.0;
        // }
 
        //YANG module definition starts here
@@ -848,7 +848,7 @@ Internet-Draft                 YANG Semver                  January 2025
    considered a backwards compatible change.  An example use is:
 
            import example-module {
-               ys:recommended-min-version 3.0.0;
+               ysv:recommended-min-version 3.0.0;
            }
 
 5.2.  Import by YANG Semantic Version Rules
@@ -898,10 +898,10 @@ Clarke, et al.            Expires 25 July 2025                 [Page 16]
 Internet-Draft                 YANG Semver                  January 2025
 
 
-   If an import by recommended-min-version cannot locate a module with a
-   version that is viable according to the conditions above, the YANG
-   compiler should emit a warning, and then continue to resolve the
-   import based on established [RFC7950] rules.
+   If a compiler that supports the recommended-min-version extension
+   cannot locate a module with a version that is viable according to the
+   conditions above, that YANG compiler should emit a warning, and then
+   continue to resolve the import based on established [RFC7950] rules.
 
 6.  Guidelines for Using YANG Semver During Module Development
 
@@ -1090,7 +1090,7 @@ Internet-Draft                 YANG Semver                  January 2025
 
    Some draft revisions may not include an update to the YANG modules or
    submodules contained in the draft.  In that case, those modules or
-   submodules that are not updated do not not require a change to their
+   submodules that are not updated do not require a change to their
    versions.  Updates to the YANG Semver version MUST only be done when
    the revision of the module changes.
 
@@ -1125,16 +1125,16 @@ Internet-Draft                 YANG Semver                  January 2025
    module: ietf-yang-library-semver
 
      augment /yanglib:yang-library/yanglib:module-set/yanglib:module:
-       +--ro version?   ys:version
+       +--ro version?   ysv:version
      augment /yanglib:yang-library/yanglib:module-set/yanglib:module
                /yanglib:submodule:
-       +--ro version?   ys:version
+       +--ro version?   ysv:version
      augment /yanglib:yang-library/yanglib:module-set
                /yanglib:import-only-module:
-       +--ro version?   ys:version
+       +--ro version?   ysv:version
      augment /yanglib:yang-library/yanglib:module-set
                /yanglib:import-only-module/yanglib:submodule:
-       +--ro version?   ys:version
+       +--ro version?   ysv:version
 
                                   Figure 3
 
@@ -1150,11 +1150,11 @@ Internet-Draft                 YANG Semver                  January 2025
    This YANG module contains the typedef for the YANG semantic version
    and the identity to signal its use.
 
-   <CODE BEGINS> file "ietf-yang-semver@2025-01-11.yang"
+   <CODE BEGINS> file "ietf-yang-semver@2025-01-21.yang"
    module ietf-yang-semver {
      yang-version 1.1;
      namespace "urn:ietf:params:xml:ns:yang:ietf-yang-semver";
-     prefix ys;
+     prefix ysv;
 
      organization
        "IETF NETMOD (Network Modeling) Working Group";
@@ -1209,10 +1209,10 @@ Internet-Draft                 YANG Semver                  January 2025
      // and remove this note.
      // RFC Ed.: replace XXXX with actual RFC number and remove this
      // note.
-     // RFC Ed. update the ys:version to "1.0.0".
+     // RFC Ed. update the ysv:version to "1.0.0".
 
-     revision 2025-01-11 {
-       ys:version "0.19.0";
+     revision 2025-01-21 {
+       ysv:version "0.20.0";
        description
          "Initial revision";
        reference
@@ -1327,7 +1327,7 @@ Internet-Draft                 YANG Semver                  January 2025
 
    This YANG module contains the augmentations to the ietf-yang-library.
 
-   <CODE BEGINS> file "ietf-yang-library-semver@2025-01-11.yang"
+   <CODE BEGINS> file "ietf-yang-library-semver@2025-01-21.yang"
    module ietf-yang-library-semver {
      yang-version 1.1;
      namespace
@@ -1335,7 +1335,7 @@ Internet-Draft                 YANG Semver                  January 2025
      prefix yl-semver;
 
      import ietf-yang-semver {
-       prefix ys;
+       prefix ysv;
        reference
          "XXXX: YANG Semantic Versioning";
 
@@ -1408,11 +1408,11 @@ Internet-Draft                 YANG Semver                  January 2025
      // and remove this note.
      // RFC Ed.: replace XXXX (including in the imports above) with
      // actual RFC number and remove this note.
-     // RFC Ed.: please replace ys:version with 1.0.0 and
+     // RFC Ed.: please replace ysv:version with 1.0.0 and
      // remove this note.
 
-     revision 2025-01-11 {
-       ys:version "0.19.0";
+     revision 2025-01-21 {
+       ysv:version "0.20.0";
        description
          "Initial revision";
        reference
@@ -1425,7 +1425,7 @@ Internet-Draft                 YANG Semver                  January 2025
        description
          "Add a version to module information";
        leaf version {
-         type ys:version;
+         type ysv:version;
          description
            "The version associated with this module revision.
             The value MUST match the version value in the
@@ -1442,7 +1442,7 @@ Internet-Draft                 YANG Semver                  January 2025
        description
          "Add a version to submodule information";
        leaf version {
-         type ys:version;
+         type ysv:version;
          description
            "The version associated with this submodule revision.
             The value MUST match the version value in the
@@ -1467,7 +1467,7 @@ Internet-Draft                 YANG Semver                  January 2025
        description
          "Add a version to module information";
        leaf version {
-         type ys:version;
+         type ysv:version;
          description
            "The version associated with this module revision.
             The value MUST match the version value in the
@@ -1484,7 +1484,7 @@ Internet-Draft                 YANG Semver                  January 2025
        description
          "Add a version to submodule information";
        leaf version {
-         type ys:version;
+         type ysv:version;
          description
            "The version associated with this submodule revision.
             The value MUST match the version value in the specific
@@ -1823,7 +1823,7 @@ Appendix A.  Example IETF Module Development
    group in the IETF.  Initially, this module is being developed in an
    individual Internet Draft, draft-jdoe-netmod-example-module.  The
    following represents the initial version tree (i.e., value of
-   ys:version) of the module as it's being initially developed.
+   ysv:version) of the module as it's being initially developed.
 
    Version lineage for initial module development:
 
