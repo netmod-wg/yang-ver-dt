@@ -12,7 +12,7 @@
 <?rfc inline="yes"?>
 <?rfc compact="yes"?>
 <?rfc subcompact="no"?>
-<rfc updates="6020,7950,8407,8525" category="std" ipr="trust200902" docName="draft-ietf-netmod-yang-module-versioning-12" submissionType="IETF" consensus="yes">
+<rfc updates="6020,7950,8407,8525" category="std" ipr="trust200902" docName="draft-ietf-netmod-yang-module-versioning-13" submissionType="IETF" consensus="yes">
   <front>
     <title abbrev="Updated YANG Module Revision Handling">Updated YANG Module Revision Handling</title>
     <author initials="R." role="editor" surname="Wilton" fullname="Robert Wilton">
@@ -126,11 +126,12 @@
               <t>A "status" "deprecated" statement MAY be added, or changed from "current" to "deprecated", but adding or
               changing "status" to "obsolete" is a non-backwards-compatible change.</t>
               <t>YANG schema nodes with a "status" "obsolete" substatement MAY be removed from published modules, and the removal  is classified as a backwards-compatible change.  In some circumstances it may be helpful to retain the obsolete definitions since their identifiers may still be referenced by other modules and to ensure that their identifiers are not reused with a different meaning.</t>
-              <t>A statement that is defined using the YANG "extension" statement MAY be added, removed, or changed, if it does not change the semantics of the module.  Extension statement definitions SHOULD specify whether adding, removing, or changing statements defined by that extension are backwards-compatible or non-backwards-compatible.</t>
+              <t>A statement that is defined using the YANG "extension" statement MAY be added, removed, or changed, if it does not change the semantics of the module.  Extension statement definitions SHOULD specify whether adding, removing, or changing statements defined by that extension are backwards-compatible or non-backwards-compatible, this is needed for clients which support that extension.</t>
               <t>Any change made to the "revision-date" or "recommended-min-date" substatements of an "import" statement, including adding new "revision-date" or "recommended-min-date" substatements, changing the argument of any "revision-date" or "recommended-min-date" substatements, or removing any "revision-date" or "recommended-min-date" substatements, is classified as backwards-compatible.</t>
               <t>Any changes (including whitespace or formatting changes) that do not change the semantic meaning of the module are backwards-compatible.</t>
             </list>
           </t>
+          <t>Only changes in the module itself are considered for determining backwards compatibility. Changes in other imported modules do not have a bearing on the backwards compatibility status of the importing module.</t>
         </section>
         <section anchor="nbc_update_rules" title="Non-backwards-compatible changes">
           <t>Any changes to YANG modules that are not defined by
@@ -348,17 +349,17 @@ import example-module {
         </section>
       </section>
     </section>
-    <section title="New ietf-yang-status-conformance YANG module" anchor="ietf_yang_status_conformance">
-      <t>This document defines the YANG module, ietf-yang-status-conformance, that augments YANG library <xref target="RFC8525"/> with two leafs to indicate how a server implements deprecated and obsolete schema nodes.
+    <section title="New yang-library-status YANG module" anchor="ietf_yang_status_conformance">
+      <t>This document defines the YANG module, yang-library-status, that augments YANG library <xref target="RFC8525"/> with two leafs to indicate how a server implements deprecated and obsolete schema nodes.
       </t>
         <t></t>
         <figure>
-          <preamble>The "ietf-yang-status-conformance" YANG module has the following structure (using the notation defined in
+          <preamble>The "yang-library-status" YANG module has the following structure (using the notation defined in
             <xref target="RFC8340"/>):
           </preamble>
           <artwork>
             <![CDATA[
-module: ietf-yang-status-conformance
+module: yang-library-status
   augment /yanglib:yang-library/yanglib:schema:
     +--ro deprecated-nodes-implemented?   boolean
     +--ro obsolete-nodes-absent?          boolean
@@ -366,7 +367,7 @@ module: ietf-yang-status-conformance
           </artwork>
         </figure>
         <section title="Reporting how deprecated and obsolete nodes are handled">
-          <t>The ietf-yang-status-conformance YANG module augments YANG library with two boolean leafs to allow a server to report how it implements status "deprecated" and status "obsolete" schema nodes.  The leafs are:
+          <t>The yang-library-status YANG module augments YANG library with two boolean leafs to allow a server to report how it implements status "deprecated" and status "obsolete" schema nodes.  The leafs are:
             <list style="hanging">
               <t hangText="deprecated-nodes-implemented:">If set to "true", this leaf indicates that all schema nodes with a status "deprecated" are implemented equivalently as if they had status "current"; otherwise deviations MUST be used by the server to explicitly remove "deprecated" nodes from the schema.  If this leaf is set to "false" or absent, then the behavior is unspecified.</t>
               <t hangText="obsolete-nodes-absent:">If set to "true", this leaf indicates that the server does not implement any status "obsolete" schema nodes.  If this leaf is set to "false" or absent, then the behaviour is unspecified.</t>
@@ -418,7 +419,7 @@ module: ietf-yang-status-conformance
         </section>
       </section>
       <section anchor="guidelines_clients" title="Versioning Considerations for Clients">
-        <t>Guidelines for clients of modules using the new module revision update procedure:
+        <t>Guidelines for clients, and therefore also for developers of those clients, of modules using the new module revision update procedure:
           <list style="symbols">
             <t>Clients SHOULD be liberal when processing data received from a server. For example, the server may have
             increased the range of an operational node causing the client to receive a value which is outside the range
@@ -439,11 +440,17 @@ module: ietf-yang-status-conformance
           <preamble> YANG module with extension statements for annotating NBC changes and importing by revision.</preamble>
           <artwork name="ietf-yang-revisions@2024-02-19.yang">
             <![CDATA[
-<CODE BEGINS> file "ietf-yang-revisions@2024-06-04.yang"
+<CODE BEGINS> file "ietf-yang-revisions@2025-01-24.yang"
 module ietf-yang-revisions {
   yang-version 1.1;
   namespace "urn:ietf:params:xml:ns:yang:ietf-yang-revisions";
   prefix rev;
+
+  import ietf-yang-types {
+    prefix yang;
+    reference
+      "RFC YYYY-draft-ietf-netmod-rfc6991-bis: Common YANG Data Types";
+  }
 
   organization
     "IETF NETMOD (Network Modeling) Working Group";
@@ -492,8 +499,10 @@ module ietf-yang-revisions {
   // and remove this note.
   // RFC Ed.: replace XXXX (inc above) with actual RFC number and
   // remove this note.
+  // RFC Ed.: replace YYYY-draft-ietf-netmod-rfc6991-bis (inc above) with actual RFC number and
+  // remove this note.
 
-  revision 2024-06-04 {
+  revision 2025-01-24 {
     description
       "Initial version.";
     reference
@@ -501,9 +510,7 @@ module ietf-yang-revisions {
   }
 
   typedef revision-date {
-    type string {
-      pattern '[0-9]{4}-(1[0-2]|0[1-9])-(0[1-9]|[1-2][0-9]|3[0-1])';
-    }
+    type yang:date-no-zone;
     description
       "A date associated with a YANG revision.
 
@@ -525,7 +532,7 @@ module ietf-yang-revisions {
        If a revision of a YANG module contains changes, relative to
        the preceding revision in the revision history, that do not
        conform to the backwards-compatible module update rules
-       defined in RFC-XXX, then the 'non-backwards-compatible'
+       defined in RFC-XXXX, then the 'non-backwards-compatible'
        statement MUST be added as a substatement to the revision
        statement.
 
@@ -587,14 +594,14 @@ module ietf-yang-revisions {
         </figure>
         <figure>
           <preamble>YANG module for status conformance</preamble>
-          <artwork name="ietf-yang-status-conformance@2024-02-14.yang">
+          <artwork name="yang-library-status@2025-01-24.yang">
             <![CDATA[
-<CODE BEGINS> file "ietf-yang-status-conformance@2024-02-14.yang"
-module ietf-yang-status-conformance {
+<CODE BEGINS> file "yang-library-status@2025-01-24.yang"
+module yang-library-status {
   yang-version 1.1;
   namespace
-    "urn:ietf:params:xml:ns:yang:ietf-yang-status-conformance";
-  prefix ys-conf;
+    "urn:ietf:params:xml:ns:yang:yang-library-status";
+  prefix yls;
   
   import ietf-yang-library {
     prefix "yanglib";
@@ -650,7 +657,7 @@ module ietf-yang-status-conformance {
   // RFC Ed.: replace XXXX (including in the imports above) with
   // actual RFC number and remove this note.
 
-  revision 2024-02-14 {
+  revision 2025-01-24 {
     description
       "Initial revision";
     reference
@@ -721,7 +728,7 @@ module ietf-yang-status-conformance {
             <t>XML: N/A, the requested URI is an XML namespace.</t>
           </list>
           <list style="empty">
-            <t>URI: urn:ietf:params:xml:ns:yang:ietf-yang-status-conformance</t>
+            <t>URI: urn:ietf:params:xml:ns:yang:yang-library-status</t>
             <t>Registrant Contact: The IESG.</t>
             <t>XML: N/A, the requested URI is an XML namespace.</t>
           </list>
@@ -737,12 +744,12 @@ module ietf-yang-status-conformance {
             <t>Reference: [RFCXXXX]</t>
           </list>
         </t>
-        <t>The ietf-yang-status-conformance module:</t>
+        <t>The yang-library-status module:</t>
         <t>
           <list>
-            <t>Name: ietf-yang-status-conformance</t>
-            <t>XML Namespace: urn:ietf:params:xml:ns:yang:ietf-yang-status-conformance</t>
-            <t>Prefix: ys-conf</t>
+            <t>Name: yang-library-status</t>
+            <t>XML Namespace: urn:ietf:params:xml:ns:yang:yang-library-status</t>
+            <t>Prefix: yls</t>
             <t>Reference: [RFCXXXX]</t>
           </list>
         </t>
@@ -782,6 +789,7 @@ module ietf-yang-status-conformance {
       <?rfc include='reference.RFC.8407'?>
       <?rfc include='reference.RFC.8446'?>
       <?rfc include='reference.RFC.8525'?>
+      <?ref include='reference.I-D.ietf-netmod-rfc6991-bis'?>
     </references>
     <references title="Informative References">
       <?ref include='reference.I-D.ietf-netmod-yang-semver'?>
@@ -839,7 +847,8 @@ module ietf-yang-status-conformance {
       <t>Examples of NBC changes include (this list is for illustrative purposes and not intended to be complete):
         <list style="symbols">
           <t>Deleting a data node, or changing it to status obsolete.</t>
-          <t>Changing the name, type, or units of a data node.</t>
+          <t>Changing the name or units of a data node.</t>
+          <t>Changing the type of a data node if that leads to a change in the syntax or semantics of the type. See Section 11 of <xref target="RFC7950"/>).</t>
           <t>Modifying the description in a way that changes the semantic meaning of the data node.</t>
           <t>Any changes that remove any previously allowed values from the allowed value set of the data node, either through changes in the type definition, or the addition or changes to "must" statements, or changes in the description.</t>
           <t>Adding or modifying "when" statements that reduce when the data node is available in the schema.</t>
