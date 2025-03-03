@@ -50,11 +50,11 @@ module ietf-yang-package-types {
      authors of the code.  All rights reserved.
 
      Redistribution and use in source and binary forms, with or
-     without modification, is permitted pursuant to, and subject
-     to the license terms contained in, the Simplified BSD License
-     set forth in Section 4.c of the IETF Trust's Legal Provisions
+     without modification, is permitted pursuant to, and subject to
+     the license terms contained in, the Revised BSD License set
+     forth in Section 4.c of the IETF Trust's Legal Provisions
      Relating to IETF Documents
-     (http://trustee.ietf.org/license-info).
+     (https://trustee.ietf.org/license-info).
 
      This version of this YANG module is part of RFC XXXX; see
      the RFC itself for full legal notices.
@@ -69,7 +69,7 @@ module ietf-yang-package-types {
   // and remove this note.
   // RFC Ed.: replace XXXX with actual RFC number and remove this
   // note.
-  revision 2025-02-11 {
+  revision 2025-03-03 {
     ys:version 0.5.0;
     description
       "Initial revision";
@@ -252,7 +252,6 @@ module ietf-yang-package-types {
 
            If multiple locations are provided, then the first
            location in the leaf-list MUST be the definitive location
-
            that uniquely identifies this package";
       }
 
@@ -351,6 +350,7 @@ module ietf-yang-package-types {
 
       leaf name {
         type yang:yang-identifier;
+        mandatory true;
         description
           "The YANG module name.";
       }
@@ -418,16 +418,20 @@ module ietf-yang-package-types {
       }
     }
 
-    list mounted-package {
+    list mounted {
       key "mount-path";
       description
         "An entry in this list represents a package that will be
-         found mounted at the specified mount path.
+         found mounted in the schema at the specified mount path.
 
-         The total list of mounted packages is represented by
-         combining the mounted packages from all included packages, but with
-         any duplicate mount paths (with or without keys specified) specified
-         here replacing all equivalent mount paths from included packages.";
+         For a given mount path, the set of mounted package
+         versions is the union of all packages mounted at the
+         given mount point.  Any conflicting package versions
+         MUST be explicitly resolved via an entry in the
+         mounted/packages of the package definition.
+
+         A mount path with specific keys MUST also includes any
+         mounted packages without specific keys.";
 
       leaf "mount-path" {
         type string;
@@ -459,26 +463,26 @@ module ietf-yang-package-types {
              entries in the module list.";
       }
 
-      container package {
+      list packages {
+        key "name";
         description
           "The package that will be mounted at the specified mount
            path";
         uses yang-pkg-identification-leafs;
-      }
 
-      leaf-list location {
-        type inet:uri;
-        description
-          "Contains a URL that represents where an instance data file
-           for this YANG package can be found.
+        leaf-list location {
+          type inet:uri;
+          description
+            "Contains a URL that represents where an instance data
+             file for this YANG package can be found.
 
-           This leaf will only be present if there is a URL available
-           for retrieval of the schema for this entry.
+             This leaf will only be present if there is a URL
+             available for retrieval of the schema for this entry.
 
-           If multiple locations are provided, then the first
-           location in the leaf-list MUST be the definitive location.
-
-           that uniquely identifies this package";
+             If multiple locations are provided, then the first
+             location in the leaf-list MUST be the definitive
+             location to retreive the package definition.";
+        }
       }
     }
   }

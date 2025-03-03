@@ -26,7 +26,7 @@
 <?rfc inline="yes"?>
 <?rfc compact="yes"?>
 <?rfc subcompact="no"?>
-<rfc category="std" docName="draft-ietf-netmod-yang-packages-04"
+<rfc category="std" docName="draft-ietf-netmod-yang-packages-05"
      ipr="trust200902">
   <front>
     <title abbrev="YANG Packages">YANG Packages</title>
@@ -259,6 +259,9 @@
 
           <t>a set of YANG module features that must be supported by servers
           that implement the package.</t>
+
+          <t> Sets of YANG packages that will be found at particular mount
+          points.</t>
         </list></t>
 
       <t>The structure for YANG package definitions uses existing YANG
@@ -712,7 +715,6 @@ module: ietf-yang-package-types
   grouping yang-pkg-identification-leafs:
     +-- name       pkg-name
     +-- version    pkg-version
-
   grouping yang-pkg-instance:
     +-- name                  pkg-name
     +-- version               pkg-version
@@ -737,7 +739,7 @@ module: ietf-yang-package-types
     |     +-- version     version-or-rev-date
     |     +-- location*   inet:uri
     +-- import-only-module* [name version]
-    |  +-- name?               yang:yang-identifier
+    |  +-- name                yang:yang-identifier
     |  +-- version             version-or-rev-date
     |  +-- replaces-version*   version-or-rev-date
     |  +-- location*           inet:uri
@@ -745,12 +747,12 @@ module: ietf-yang-package-types
     |     +-- name?       yang:yang-identifier
     |     +-- version     version-or-rev-date
     |     +-- location*   inet:uri
-    +-- mounted-package* [mount-path]
+    +-- mounted* [mount-path]
        +-- mount-path?   string
-       +-- package
-       |  +-- name       pkg-name
-       |  +-- version    pkg-version
-       +-- location*     inet:uri
+       +-- packages* [name]
+          +-- name        pkg-name
+          +-- version     pkg-version
+          +-- location*   inet:uri
         ]]></artwork>
         </figure>
       </section>
@@ -901,7 +903,7 @@ module: ietf-yang-inst-data-pkg
       +-- pkg-schema
         +-- name        pkg-name
         +-- version     pkg-version
-        +-- location*   inet:uri         
+        +-- location*   inet:uri
         ]]></artwork>
       </figure>
     </section>
@@ -912,8 +914,7 @@ module: ietf-yang-inst-data-pkg
 
       <figure>
         <artwork><![CDATA[
-          
-<CODE BEGINS> file "ietf-yang-package-types#0.4.0-draft-ietf-netmod-yang-packages-04.yang"
+<CODE BEGINS> file "ietf-yang-package-types#0.5.0.yang"
 module ietf-yang-package-types {
   yang-version 1.1;
   namespace "urn:ietf:params:xml:ns:yang:ietf-yang-package-types";
@@ -962,15 +963,15 @@ module ietf-yang-package-types {
     "This module provides type and grouping definitions for YANG
      packages.
 
-     Copyright (c) 2024 IETF Trust and the persons identified as
+     Copyright (c) 2025 IETF Trust and the persons identified as
      authors of the code.  All rights reserved.
 
      Redistribution and use in source and binary forms, with or
-     without modification, is permitted pursuant to, and subject
-     to the license terms contained in, the Simplified BSD License
-     set forth in Section 4.c of the IETF Trust's Legal Provisions
+     without modification, is permitted pursuant to, and subject to
+     the license terms contained in, the Revised BSD License set
+     forth in Section 4.c of the IETF Trust's Legal Provisions
      Relating to IETF Documents
-     (http://trustee.ietf.org/license-info).
+     (https://trustee.ietf.org/license-info).
 
      This version of this YANG module is part of RFC XXXX; see
      the RFC itself for full legal notices.
@@ -985,8 +986,8 @@ module ietf-yang-package-types {
   // and remove this note.
   // RFC Ed.: replace XXXX with actual RFC number and remove this
   // note.
-  revision 2024-10-14 {
-    ys:version 0.4.0-draft-ietf-netmod-yang-packages-05;
+  revision 2025-03-03 {
+    ys:version 0.5.0;
     description
       "Initial revision";
     reference
@@ -1157,13 +1158,6 @@ module ietf-yang-package-types {
 
       uses yang-pkg-identification-leafs;
 
-      leaf-list replaces-version {
-        type pkg-version;
-        description
-          "Gives the version of an included package version that
-           is replaced by this included package version.";
-      }
-
       leaf-list location {
         type inet:uri;
         description
@@ -1175,7 +1169,6 @@ module ietf-yang-package-types {
 
            If multiple locations are provided, then the first
            location in the leaf-list MUST be the definitive location
-
            that uniquely identifies this package";
       }
 
@@ -1210,14 +1203,6 @@ module ietf-yang-package-types {
           "Identifies the module version.  If available, the YANG
            Semantic Version SHOULD be used, otherwise the YANG module
            revision date is used.";
-      }
-
-      leaf-list replaces-version {
-        type version-or-rev-date;
-        description
-          "Gives the version of an module (implemented or
-           import-only) defined in an included package that is
-           replaced by this implemented module version.";
       }
 
       leaf-list location {
@@ -1282,6 +1267,7 @@ module ietf-yang-package-types {
 
       leaf name {
         type yang:yang-identifier;
+        mandatory true;
         description
           "The YANG module name.";
       }
@@ -1349,16 +1335,20 @@ module ietf-yang-package-types {
       }
     }
 
-    list mounted-package {
+    list mounted {
       key "mount-path";
       description
         "An entry in this list represents a package that will be
-         found mounted at the specified mount path.
+         found mounted in the schema at the specified mount path.
 
-         The total list of mounted packages is represented by
-         combining the mounted packages from all included packages, but with
-         any duplicate mount paths (with or without keys specified) specified
-         here replacing all equivalent mount paths from included packages.";
+         For a given mount path, the set of mounted package
+         versions is the union of all packages mounted at the
+         given mount point.  Any conflicting package versions
+         MUST be explicitly resolved via an entry in the
+         mounted/packages of the package definition.
+
+         A mount path with specific keys MUST also includes any
+         mounted packages without specific keys.";
 
       leaf "mount-path" {
         type string;
@@ -1390,26 +1380,26 @@ module ietf-yang-package-types {
              entries in the module list.";
       }
 
-      container package {
+      list packages {
+        key "name";
         description
           "The package that will be mounted at the specified mount
            path";
         uses yang-pkg-identification-leafs;
-      }
 
-      leaf-list location {
-        type inet:uri;
-        description
-          "Contains a URL that represents where an instance data file
-           for this YANG package can be found.
+        leaf-list location {
+          type inet:uri;
+          description
+            "Contains a URL that represents where an instance data
+             file for this YANG package can be found.
 
-           This leaf will only be present if there is a URL available
-           for retrieval of the schema for this entry.
+             This leaf will only be present if there is a URL
+             available for retrieval of the schema for this entry.
 
-           If multiple locations are provided, then the first
-           location in the leaf-list MUST be the definitive location.
-
-           that uniquely identifies this package";
+             If multiple locations are provided, then the first
+             location in the leaf-list MUST be the definitive
+             location to retreive the package definition.";
+        }
       }
     }
   }
@@ -1420,7 +1410,7 @@ module ietf-yang-package-types {
 
       <figure>
         <artwork><![CDATA[
-<CODE BEGINS> file "ietf-yang-package-instance#0.4.0-draft-ietf-netmod-yang-packages-04.yang"
+<CODE BEGINS> file "ietf-yang-package-instance#0.5.0.yang"
 module ietf-yang-package-instance {
   yang-version 1.1;
   namespace "urn:ietf:params:xml:ns:yang:ietf-yang-package-instance";
@@ -1433,7 +1423,7 @@ module ietf-yang-package-instance {
 
   import ietf-yang-package-types {
     prefix pkg-types;
-    ys:recommended-min-version 0.4.0;
+    ys:recommended-min-version 0.5.0;
     reference "RFC XXX: this RFC.";
   }
 
@@ -1457,15 +1447,15 @@ module ietf-yang-package-instance {
      used as the content schema for an YANG instance data document specifying
      a YANG package.
 
-     Copyright (c) 2024 IETF Trust and the persons identified as
+     Copyright (c) 2025 IETF Trust and the persons identified as
      authors of the code.  All rights reserved.
 
      Redistribution and use in source and binary forms, with or
-     without modification, is permitted pursuant to, and subject
-     to the license terms contained in, the Simplified BSD License
-     set forth in Section 4.c of the IETF Trust's Legal Provisions
+     without modification, is permitted pursuant to, and subject to
+     the license terms contained in, the Revised BSD License set
+     forth in Section 4.c of the IETF Trust's Legal Provisions
      Relating to IETF Documents
-     (http://trustee.ietf.org/license-info).
+     (https://trustee.ietf.org/license-info).
 
      This version of this YANG module is part of RFC XXXX; see
      the RFC itself for full legal notices.
@@ -1481,8 +1471,8 @@ module ietf-yang-package-instance {
   // and remove this note.
   // RFC Ed.: replace XXXX with actual RFC number and remove this
   // note.
-  revision 2024-10-14 {
-    ys:version 0.4.0-draft-ietf-netmod-yang-packages-05;
+  revision 2025-03-03 {
+    ys:version 0.5.0;
     description
       "Initial revision";
     reference
@@ -1508,8 +1498,7 @@ module ietf-yang-package-instance {
 
       <figure>
         <artwork><![CDATA[
-          
-<CODE BEGINS> file "ietf-yang-package#0.4.0-draft-ietf-netmod-yang-packages-04.yang"
+<CODE BEGINS> file "ietf-yang-packages#0.5.0.yang"
 module ietf-yang-packages {
   yang-version 1.1;
   namespace "urn:ietf:params:xml:ns:yang:ietf-yang-packages";
@@ -1527,7 +1516,7 @@ module ietf-yang-packages {
 
   import ietf-yang-package-types {
     prefix pkg-types;
-    ys:recommended-min-version 0.4.0;
+    ys:recommended-min-version 0.5.0;
     reference "RFC XXX: this RFC.";
   }
 
@@ -1551,15 +1540,15 @@ module ietf-yang-packages {
   description
     "This module defines YANG packages on a server implementation.
 
-     Copyright (c) 2024 IETF Trust and the persons identified as
+     Copyright (c) 2025 IETF Trust and the persons identified as
      authors of the code.  All rights reserved.
 
      Redistribution and use in source and binary forms, with or
-     without modification, is permitted pursuant to, and subject
-     to the license terms contained in, the Simplified BSD License
-     set forth in Section 4.c of the IETF Trust's Legal Provisions
+     without modification, is permitted pursuant to, and subject to
+     the license terms contained in, the Revised BSD License set
+     forth in Section 4.c of the IETF Trust's Legal Provisions
      Relating to IETF Documents
-     (http://trustee.ietf.org/license-info).
+     (https://trustee.ietf.org/license-info).
 
      This version of this YANG module is part of RFC XXXX; see
      the RFC itself for full legal notices.
@@ -1575,8 +1564,8 @@ module ietf-yang-packages {
   // and remove this note.
   // RFC Ed.: replace XXXX with actual RFC number and remove this
   // note.
-  revision 2024-10-14 {
-    ys:version 0.4.0-draft-ietf-netmod-yang-packages-05;
+  revision 2025-03-03 {
+    ys:version 0.5.0;
     description
       "Initial revision";
     reference
@@ -1678,7 +1667,7 @@ module ietf-yang-packages {
 
       <figure>
         <artwork><![CDATA[
-<CODE BEGINS> file "ietf-yl-package#0.4.0-draft-ietf-netmod-yang-packages-04.yang"
+<CODE BEGINS> file "ietf-yl-packages#0.5.0.yang"
 module ietf-yl-packages {
   yang-version 1.1;
   namespace "urn:ietf:params:xml:ns:yang:ietf-yl-packages";
@@ -1696,7 +1685,7 @@ module ietf-yl-packages {
 
   import ietf-yang-packages {
     prefix pkgs;
-    ys:recommended-min-version 0.4.0;
+    ys:recommended-min-version 0.5.0;
     reference "RFC XXX: YANG Packages.";
   }
 
@@ -1720,15 +1709,15 @@ module ietf-yl-packages {
     "This module provides defined augmentations to YANG library to
      allow a server to report YANG package information.
 
-     Copyright (c) 2024 IETF Trust and the persons identified as
+     Copyright (c) 2025 IETF Trust and the persons identified as
      authors of the code.  All rights reserved.
 
      Redistribution and use in source and binary forms, with or
-     without modification, is permitted pursuant to, and subject
-     to the license terms contained in, the Simplified BSD License
-     set forth in Section 4.c of the IETF Trust's Legal Provisions
+     without modification, is permitted pursuant to, and subject to
+     the license terms contained in, the Revised BSD License set
+     forth in Section 4.c of the IETF Trust's Legal Provisions
      Relating to IETF Documents
-     (http://trustee.ietf.org/license-info).
+     (https://trustee.ietf.org/license-info).
 
      This version of this YANG module is part of RFC XXXX; see
      the RFC itself for full legal notices.
@@ -1745,8 +1734,8 @@ module ietf-yl-packages {
   // and remove this note.
   // RFC Ed.: replace XXXX with actual RFC number and remove this
   // note.
-  revision 2024-10-14 {
-    ys:version 0.4.0-draft-ietf-netmod-yang-packages-05;
+  revision 2025-03-03 {
+    ys:version 0.5.0;
     description
       "Initial revision";
     reference
@@ -1773,7 +1762,7 @@ module ietf-yl-packages {
 
       <figure>
         <artwork><![CDATA[
-<CODE BEGINS> file "ietf-yang-inst-data-pkg#0.4.0-draft-ietf-netmod-yang-packages-04.yang"
+<CODE BEGINS> file "ietf-yang-inst-data-pkg#0.5.0.yang"
 module ietf-yang-inst-data-pkg {
   yang-version 1.1;
   namespace "urn:ietf:params:xml:ns:yang:ietf-yang-inst-data-pkg";
@@ -1786,7 +1775,7 @@ module ietf-yang-inst-data-pkg {
 
   import ietf-yang-package-types {
     prefix pkg-types;
-    ys:recommended-min-version 0.4.0;
+    ys:recommended-min-version 0.5.0;
     reference "RFC XXX: this RFC.";
   }
 
@@ -1815,15 +1804,15 @@ module ietf-yang-inst-data-pkg {
      definitions to be used to define content schema in YANG instance data
      documents.
 
-     Copyright (c) 2024 IETF Trust and the persons identified as
+     Copyright (c) 2025 IETF Trust and the persons identified as
      authors of the code.  All rights reserved.
 
      Redistribution and use in source and binary forms, with or
-     without modification, is permitted pursuant to, and subject
-     to the license terms contained in, the Simplified BSD License
-     set forth in Section 4.c of the IETF Trust's Legal Provisions
+     without modification, is permitted pursuant to, and subject to
+     the license terms contained in, the Revised BSD License set
+     forth in Section 4.c of the IETF Trust's Legal Provisions
      Relating to IETF Documents
-     (http://trustee.ietf.org/license-info).
+     (https://trustee.ietf.org/license-info).
 
      This version of this YANG module is part of RFC XXXX; see
      the RFC itself for full legal notices.
@@ -1838,8 +1827,8 @@ module ietf-yang-inst-data-pkg {
   // and remove this note.
   // RFC Ed.: replace XXXX with actual RFC number and remove this
   // note.
-  revision 2024-10-14 {
-    ys:version 0.4.0-draft-ietf-netmod-yang-packages-05;
+  revision 2025-03-03 {
+    ys:version 0.5.0;
     description
       "Initial revision";
     reference
