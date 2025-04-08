@@ -1,0 +1,162 @@
+package build.pkgs.device.routing
+
+import mill._, scalalib._
+
+import uk.org.wilton.{plugins, yang}
+import plugins.mill.*
+import yang.packages.tools.lib.*
+import build.pkgs.common.IetfCommonTypesBasePkg
+import build.pkgs.device.IetfDevicePkgDefn
+
+/**
+  * IETF Routing Package Definitions for Network Devices.
+  *
+  * This directory contains device YANG package definitions for routing
+  * protocols.
+  */
+
+/**
+  * Any common constraints on IETF service package definitions (e.g. naming).
+  */
+trait IetfRoutingPkgDefn extends IetfDevicePkgDefn {
+  require(name.startsWith("ietf-rtg-"))
+}
+
+/**
+  * IETF Routing Common Types Package Definition.
+  */
+object IetfRoutingCommonTypesPkg extends IetfRoutingPkgDefn {
+  def name = "ietf-rtg-common-types-pkg"
+  def version = "0.1.0"
+  def description = "Common types for IETF routing YANG modules"
+  def reference = "RFC 8294"
+
+  def ietfIncludedPackages = Task {
+    Seq(IetfCommonTypesBasePkg.ref())
+  }
+
+  def ietfModules = Seq()
+
+  def ietfImportOnlyModules =
+    Seq(
+      "ietf-routing-types@2017-12-04.yang",
+      "iana-routing-types@2025-02-18.yang",
+      "iana-bfd-types@2021-10-21",
+      "ietf-bfd-types@2022-09-22",
+      "ietf-routing@2018-03-13"
+    )
+}
+
+
+/**
+  * IETF Routing Common Package Definitions.
+  */
+object IetfRoutingCommonPkg extends IetfRoutingPkgDefn {
+  def name = "ietf-rtg-common-pkg"
+  def version = "0.1.0"
+  def description = "Common modules for IETF routing"
+  def reference = "RFC 8349"
+
+  def ietfIncludedPackages = Task {
+    Seq(IetfRoutingCommonTypesPkg.ref())
+  }
+
+  def ietfModules = 
+    Seq("ietf-routing@2018-03-13",
+        "ietf-key-chain@2017-06-15")
+    
+  def ietfImportOnlyModules = Seq()
+}
+
+
+/**
+  * IETF Routing Policy Package Definition.
+  */
+object IetfRoutingPolicyPkg extends IetfRoutingPkgDefn {
+  def name = "ietf-rtg-plcy-pkg"
+  def version = "0.1.0"
+  def description = "IETF Routing Policy YANG module"
+  def reference = "RFC 9067"
+
+  def ietfIncludedPackages = Task {
+    Seq(IetfRoutingCommonTypesPkg.ref())
+  }
+
+  // TODO: Some of these modules include sub-modules, they should also be
+  // included in the package definition.
+
+  def ietfModules =
+    Seq(
+      "ietf-routing-policy@2021-10-11"
+    )
+
+  def ietfImportOnlyModules =
+    Seq(
+      "ietf-interfaces@2018-02-20",
+      "ietf-routing@2018-03-13"
+    )
+}
+
+
+/**
+  * IETF BGP Routing Protocol Package Definition.
+  */
+object IetfRoutingBgpPkg extends IetfDevicePkgDefn {
+  def name = "ietf-rtg-bgp-pkg"
+  def version = "0.1.0"
+  def description = "IETF BGP Routing Protocol YANG modules"
+  def reference = "draft-ietf-idr-bgp-model-18"
+
+  def ietfIncludedPackages = Task {
+    Seq(IetfRoutingCommonPkg.ref(),
+        IetfRoutingPolicyPkg.ref())
+  }
+
+  // TODO: Some of these modules include sub-modules, they should also be
+  // included in the package definition.
+
+  def ietfModules =
+    Seq(
+      "ietf-bgp@2024-10-21",
+      "ietf-bgp-policy@2024-10-21",
+      "iana-bgp-community-types@2024-10-21",
+      "iana-bgp-notification@2024-10-21",
+      "iana-bgp-types@2024-10-21",
+      "iana-bgp-rib-types@2024-10-21"
+    )
+
+  def ietfImportOnlyModules =
+    Seq(
+
+    )
+}
+
+/**
+  * IETF ISIS Routing Protocol Package Definition.
+  * 
+  * TODO - The main ISIS YANG module in RFC 9130 is augmenting ietf-interfaces
+  * but that probably won't work if the ISIS YANG module is being mounted under
+  * a VRF, and instead should be removed and split out into a separate YANG
+  * module.
+  */
+object IetfRoutingIsIsPkg extends IetfDevicePkgDefn {
+  def name = "ietf-rtg-isis-pkg"
+  def version = "0.1.0"
+  def description = "IETF ISIS Routing Protocol YANG modules"
+  def reference = "RFC 9130"
+
+  def ietfIncludedPackages = Task {
+    Seq(IetfRoutingCommonPkg.ref())
+  }
+
+  // TODO: Some of these modules include sub-modules, they should also be
+  // included in the package definition.
+
+  def ietfModules =
+    Seq(
+      "ietf-isis@2022-10-19"
+    )
+
+  def ietfImportOnlyModules =
+    Seq()
+}
