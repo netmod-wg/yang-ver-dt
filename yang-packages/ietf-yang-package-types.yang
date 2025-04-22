@@ -69,8 +69,8 @@ module ietf-yang-package-types {
   // and remove this note.
   // RFC Ed.: replace XXXX with actual RFC number and remove this
   // note.
-  revision 2025-03-03 {
-    ys:version 0.5.0;
+  revision 2025-04-23 {
+    ys:version 0.6.0;
     description
       "Initial revision";
     reference
@@ -143,6 +143,66 @@ module ietf-yang-package-types {
     }
   }
 
+  grouping yang-pkg-exclusions {
+    description
+      "Parameters for excluding modules and packages from a YANG
+       package definition";
+
+    container exclude {
+      description
+        "Contains parameters for excluding modules and packages
+         from a YANG package definition";
+
+      leaf-list package {
+        type pkg-name;
+        description
+          "Lists descendent packages, of any version, to be excluded
+          from this package definition.
+
+          The behaviour is equivalent to the package definitions of
+          the included package and any descendent included packages
+          never having included the excluded packages in the first
+          place.
+
+          Excluding a package also implicitly excludes any modules
+          and submodules (implemented or import-only) that were
+          only present due to the definition of the package being
+          excluded.";
+      }
+
+      leaf-list module {
+        type pkg-name;
+        description
+          "Lists modules, implemented or import-only, of any
+          version, to exclude from this included package
+          definition.
+
+          The behaviour is equivalent to the package definitions of
+          the included package and any descendent included packages
+          never having included the module in the first place.";
+      }
+    }
+  }
+
+  grouping yang-pkg-location {
+    description
+      "Parameters for locating a YANG package instance";
+
+    leaf-list location {
+      type inet:uri;
+      description
+        "Contains a URL that represents where an instance data file
+          for this YANG package can be found.
+
+          This leaf will only be present if there is a URL available
+          for retrieval of the schema for this entry.
+
+          If multiple locations are provided, then the first
+          location in the leaf-list MUST be the definitive location
+          that uniquely identifies this package";
+    }
+  }
+
   grouping yang-pkg-instance {
     description
       "Specifies the data node for a full YANG package instance
@@ -193,11 +253,11 @@ module ietf-yang-package-types {
     leaf-list tag {
       type tags:tag;
       description
-        "Tags associated with a YANG package.  Module tags defined in
-         XXX, ietf-netmod-module-tags can be used here but with the
-         modification that the tag applies to the entire package
-         rather than a specific module.  See the IANA 'YANG Module
-         Tag Prefix' registry for reserved prefixes and the IANA
+        "Tags associated with a YANG package.  Module tags defined
+         in RFC 8819 can be used here but with the modification that
+         the tag applies to the entire package rather than a
+         specific module.  See the IANA 'YANG Module Tag Prefix'
+         registry for reserved prefixes and the IANA
          'YANG Module IETF Tag' registry for IETF standard tags.";
     }
 
@@ -217,7 +277,7 @@ module ietf-yang-package-types {
          Features are identified using <module-name>:<feature-name>.";
     }
 
-    list included-package {
+    list include-package {
       key "name";
       description
         "An entry in this list represents a package that is included
@@ -236,25 +296,10 @@ module ietf-yang-package-types {
          For import-only modules, the 'replaces-revision' leaf-list
          can be used to select the specific module revisions used by
          this package.";
-      reference
-        "XXX";
 
       uses yang-pkg-identification-leafs;
-
-      leaf-list location {
-        type inet:uri;
-        description
-          "Contains a URL that represents where an instance data file
-           for this YANG package can be found.
-
-           This leaf will only be present if there is a URL available
-           for retrieval of the schema for this entry.
-
-           If multiple locations are provided, then the first
-           location in the leaf-list MUST be the definitive location
-           that uniquely identifies this package";
-      }
-
+      uses yang-pkg-exclusions;
+      uses yang-pkg-location;
     }
 
     list module {
@@ -418,7 +463,7 @@ module ietf-yang-package-types {
       }
     }
 
-    list mounted {
+    list mount {
       key "mount-path";
       description
         "An entry in this list represents a package that will be
@@ -433,7 +478,7 @@ module ietf-yang-package-types {
          A mount path with specific keys MUST also includes any
          mounted packages without specific keys.";
 
-      leaf "mount-path" {
+      leaf "path" {
         type string;
         description
           "This path identifies a mount point in the schema.
@@ -463,26 +508,14 @@ module ietf-yang-package-types {
              entries in the module list.";
       }
 
-      list packages {
+      list package {
         key "name";
         description
           "The package that will be mounted at the specified mount
            path";
         uses yang-pkg-identification-leafs;
-
-        leaf-list location {
-          type inet:uri;
-          description
-            "Contains a URL that represents where an instance data
-             file for this YANG package can be found.
-
-             This leaf will only be present if there is a URL
-             available for retrieval of the schema for this entry.
-
-             If multiple locations are provided, then the first
-             location in the leaf-list MUST be the definitive
-             location to retreive the package definition.";
-        }
+        uses yang-pkg-exclusions;
+        uses yang-pkg-location;
       }
     }
   }
