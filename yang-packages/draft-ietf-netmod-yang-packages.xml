@@ -264,57 +264,78 @@
       <xref target="I-D.ietf-netmod-yang-semver"/>. This is described in further
       detail in <xref target="versioning"/>.</t>
 
-      <t>Each YANG package version, defines: <list style="symbols">
-          <t>YANG package meta-data. E.g., "name", "version",
-          "organization", "description", "complete", etc.  Any data nodes not
-          listed in the bullets below are considered to be YANG package meta-data
-          fields.</t>
+        <t>TODO - This overview is giving too much detail, the conformance
+        statements (RFC 2119) should be moved elsewhere, maybe the YANG
+        module definitions descriptions - or perhaps we keep strict conformance
+        out of the YANG module, and keep it only in the RFC.</t>
 
-          <t>TODO - Should we call them "a list" or "a set" or "an unordered
-          list"?</t>
-          <t>TODO - This overview is giving too much detail, the conformance
-          statements (RFC 2119) should be moved elsewhere, maybe the YANG
-          module definitions descriptions - or perhaps we keep strict conformance
-          out of the YANG module, and keep it only in the RFC.</t>
+      <t>Each YANG package defines: <list style="symbols">
+        <t>YANG package meta-data, such as "name", "version",
+        "organization", "description", "complete" flag, etc.  <!--Any data nodes not
+        listed in the bullets below are considered to be part of the YANG
+        package meta-data.</t>-->
 
-          <t>An "includes" container containing:
-            <list style="symbols">
-            <t>A list of included packages at given versions, which replace any
-            versions of the same package that are themselves included from any
-            entries in this package versions lists.</t>
-            <t>A list of implemented modules, at particular versions/revisions,
-            which replace any versions of the same modules (implemented or
-            import-only) from included packages.</t>
-            <t>A list of import-only modules, at particular versions/revisions,
-            which may optionally replace other import-only module versions from
-            included packages.</t>
-            </list>
-          </t>
+        <t>An "includes" container holding a list of included packages.  It
+        also contains lists of any implemented modules and import-only modules
+        that are used in addition to, or with different version/revisions to,
+        the modules defined in the included packages.</t>
+          <!--<list style="symbols">
+            <t>A list of included packages at given versions</t>
+            <t>A list of additional implemented modules, at particular
+            versions/revisions</t>
+            <t>A list of additional import-only modules, at particular
+            versions/revisions</t>-->
 
-          <t>An "excludes" container comprising:
-            <list style="symbols">
-            <t>A list of excluded packages that are not implenented by this
-            package at any version.  Entries in this list MUST NOT be present
-            directly in the "includes/packages" list, but MUST indirectly be
-            included by an entry in the "includes/packages" list.</t>
-            <t>A list of excluded modules, at particular versions/revisions,
-            that are not implemented by this package version.</t>
-            </list>
-          </t>
+<!--            <t>A list of included packages at given versions, which replace any
+          versions of the same package that are themselves included from any
+          entries in this package versions lists.</t>
+          <t>A list of implemented modules, at particular versions/revisions,
+          which replace any versions of the same modules (implemented or
+          import-only) from included packages.</t>
+          <t>A list of import-only modules, at particular versions/revisions,
+          which may optionally replace other import-only module versions from
+          included packages.</t>
+          </list>
+        </t>-->
 
-          <t>A "mandatory-features" container comprising:
-            <list style="symbols">
-            <t>includes - A list of YANG module features that are supported by
-            servers that implement the package.</t>
-            <t>excludes - A list of YANG module features, that a listed as being
-            supported by an included package, but are not supported by this
-            package definition.</t>
-            </list>
-          </t>
+        <t>An "excludes" container comprising packages and modules that are
+        implicitly included by entries in the "includes/packages" list, but are
+        excluded from this package definition.</t>
 
-          <t>Sets of YANG packages that will be found at particular mount
-          points by any server implementing this package version.</t>
-        </list></t>
+          <!--<list style="symbols">
+          <t>A list of excluded packages, implicitly included by an entry 
+          in the "includes/packages" list, that are excluded from this
+          package definition.</t>
+          <t>A list of excluded modules, included by an entry in the
+          "includes/packages" list, that are excluded from this package
+          definition.</t>
+          <t>at particular versions/revisions,
+            that are not implenented by this
+          package at any version.  Entries in this list MUST NOT be present
+          directly in the "includes/packages" list, but MUST indirectly be
+          included by an entry in the "includes/packages" list.</t>
+          <t>A list of excluded modules, at particular versions/revisions,
+          that are not implemented by this package version.</t>
+          </list>
+        </t>-->
+
+        <t>A "mandatory-features" container with lists of YANG module features
+        that are either implemented in addition to those defined in included
+        packages; or have been defined as being mandatory for included packages,
+        but are excluded fom this package definition.</t>
+        <!--  <list style="symbols">
+          <t>includes - A list of YANG module features supported by
+          servers that implement the package.</t>
+          <t>excludes - A list of YANG module features, that a listed as being
+          supported by an included package, but are not supported by this
+          package definition.</t>
+          </list>
+        </t>-->
+
+        <t>Lists of YANG packages that will be found at particular mount
+        points by any server implementing this package, used in conjunction with
+        mount points defined by any included packages.</t>
+      </list></t>
 
       <t>The structure for YANG package definitions uses existing YANG
       language statements, YANG Data Structure Extensions <xref
@@ -330,7 +351,7 @@
       client applications downloading the entire contents of YANG library to
       confirm that the server's datastore schema are compatible with the client, 
       they can simply check the names and versions of the packages advertised
-      in YANG library to know what schema to expect in the server datastores.</t>
+      in YANG library to know the expected schema in the server datastores.</t>
 
       <t>YANG package definitions can also be used to define the content schema
       associated with YANG instance data files holding other, e.g., non
@@ -343,12 +364,23 @@
             modules or MAY represent a set of modules with some module import 
             dependencies missing, as described in <xref target="completeness"/>.</t>
 
-            <t>Packages definitions are hierarchical. A package can include
-            other packages. Only a single version of a package can be
-            included, and conflicting package includes (e.g. from descendant
-            package includes) MUST be explicitly resolved by indicating which
-            version takes precedence, and which versions are being
-            replaced.</t>
+            <t>Packages definitions are hierarchical because a package can
+            include other packages. Only a single version of any included
+            package (including any descendant included packages) MUST be
+            implemented by a package.  Conflicting package versions (e.g. from
+            descendant package includes) MUST be resolved via explicit includes
+            of the package version that takes precedence over all other
+            versions, where the selected version SHOULD be greater or equal to
+            the most recent incldued version.</t>
+
+            <t>For each module implemented by a package, only a single
+            version/revision of that module MUST be implemented. Multiple
+            versions/revisions of a module MAY be listed as import-only
+            dependencies.</t>
+
+            <t>The revision of a module listed in the package 'module' list
+            supersedes any 'implemented' revision of the module listed in an
+            included package module list.</t>
 
             <t>YANG package definitions MAY include modules containing
             deviation statements, but those deviation statements MUST only be
@@ -359,25 +391,15 @@
             <xref target="deviations-in-packages"/> for further guidance on the
             use of deviations in YANG packages.</t>
 
-            <t>For each module implemented by a package, only a single
-            version/revision of that module MUST be implemented. Multiple
-            versions/revisions of a module MAY be listed as import-only
-            dependencies.</t>
-
-            <t>The revision of a module listed in the package 'module' list
-            supersedes any 'implemented' revision of the module listed in an
-            included package module list. The 'replaces-revision' leaf-list is
-            used to indicate which 'implemented' or 'import-only' module
-            revisions are replaced by this module revision. This allows a
-            package to explicitly resolve conflicts between implemented module
-            revisions in included packages.</t>
-
             <t>The 'replaces-revision' leaf-list in the 'import-only-module'
             list can be used to exclude duplicate revisions of import-only
             modules from included packages. Otherwise, the import-only-modules
             for a package are the import-only-modules from all included
             packages combined with any modules listed in the packages
             import-only-module list.</t>
+
+            <t>TODO - I think that if a package implements a module then it
+            should replace all import-only module versions?</t>
           </list></t>
       </section>
 
