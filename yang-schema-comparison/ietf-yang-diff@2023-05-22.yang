@@ -1,0 +1,171 @@
+module ietf-yang-diff {
+  yang-version 1.1;
+  namespace "urn:ietf:params:xml:ns:yang:ietf-yang-diff";
+  prefix diff;
+
+  import ietf-yang-types {
+    prefix yang;
+  }
+
+  organization
+    "IETF NETMOD (Network Modeling) Working Group";
+  contact
+    "WG Web:   <https://datatracker.ietf.org/wg/netmod/>
+     WG List:  <mailto:netmod@ietf.org>
+
+     Author:   Per Andersson
+               <mailto:perander@cisco.com>";
+
+  description
+    "This YANG 1.1 module contains formats and extensions for
+     difference between YANG artifacts.
+
+     Copyright (c) 2023 IETF Trust and the persons identified as
+     authors of the code.  All rights reserved.
+
+     Redistribution and use in source and binary forms, with or
+     without modification, is permitted pursuant to, and subject
+     to the license terms contained in, the Simplified BSD License
+     set forth in Section 4.c of the IETF Trust's Legal Provisions
+     Relating to IETF Documents
+     (http://trustee.ietf.org/license-info).
+
+     This version of this YANG module is part of RFC XXXX; see
+     the RFC itself for full legal notices.
+
+     The key words 'MUST', 'MUST NOT', 'REQUIRED', 'SHALL', 'SHALL
+     NOT', 'SHOULD', 'SHOULD NOT', 'RECOMMENDED', 'NOT RECOMMENDED',
+     'MAY', and 'OPTIONAL' in this document are to be interpreted as
+     described in BCP 14 (RFC 2119) (RFC 8174) when, and only when,
+     they appear in all capitals, as shown here.";
+
+  // RFC Ed.: update the date below with the date of RFC publication
+  // and remove this note.
+  // RFC Ed.: replace XXXX (inc above) with actual RFC number and
+  // remove this note.
+
+  revision 2023-05-22 {
+    rev:revision-label 1.0.0-draft-ietf-netmod-yang-schema-comparison-02;
+    description
+      "Draft revision";
+    reference
+      "XXXX: YANG Schema Comparison";
+  }
+
+  // TODO use identities with multiple inheritence
+  // TODO use description for info
+  typedef diff-code {
+    type enumeration {
+      enum "removed-node";
+      enum "changed-type";
+      enum "decreased-ranged";
+      enum "increased-ranged";
+      // TODO
+    }
+  }
+
+  // TODO Need to define a map between code, category, info,
+  // description, and reason.
+
+  grouping diff-info {
+    container diff-info {
+      leaf code {
+        type diff-code;
+        description
+          "The code for the change.";
+      }
+      leaf category {
+        type enumeration {
+          enum "placeholder";
+        }
+        description
+          "Category is refined in diff-info groupings.";
+      }
+      leaf info {
+        type "string";
+        description
+          "Short informational string about the change.";
+      }
+      leaf description {
+        type "string";
+        description
+          "Longer description about the change.";
+      }
+      leaf reason {
+        type "string";
+        description
+          "Optional explanation why the analysis reached the conclusion
+           about this change.";
+      }
+    }
+  }
+
+  grouping flat-diff-info {
+    uses diff-info {
+      refine "diff-info/category" {
+        type enumeration {
+          enum "non-transparent";
+          enum "potentially-non-transparent";
+          enum "transparent";
+        }
+        description
+          "The category for the change.";
+      }
+    }
+  }
+
+  // TODO open question aggregate changes on module, namespace, package
+  grouping flat-diff {
+    container flat-diff {
+      // Perhaps not necessary in on-wire/flat diff?
+      list meta-diff {
+        key statment;
+        uses on-wire-diff-info;
+      }
+
+      list yang-nodes-flat {
+        key path;
+        leaf path {
+          // TODO don't want /interface=eth0 but schema load path
+          // (check SID work)
+          type instance-identifier;
+        }
+        // TODO add list for several warnings on same node
+        uses on-wire-diff-info;
+      }
+    }
+  }
+
+  grouping schema-diff-info {
+    uses diff-info {
+      refine "diff-info/category" {
+        type enumeration {
+          enum "non-backwards-compatible";
+          enum "potentially-non-backwards-compatible";
+          enum "backwards-compatible";
+        }
+        description
+          "The category for the change.";
+      }
+    }
+  }
+
+  // TODO create JSON data structure instead
+  // Was aiming at a recursive definition which is not allowed
+  grouping tree-diff {
+    container tree-diff {
+      list meta-diff {
+        key statement;
+        uses schema-diff-info;
+      }
+
+      list nodes {
+        key name;
+        leaf name {
+          type yang-identifier;
+        }
+        uses schema-diff-info;
+      }
+    }
+  }
+}
