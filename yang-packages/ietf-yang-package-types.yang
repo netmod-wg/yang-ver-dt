@@ -154,25 +154,41 @@ module ietf-yang-package-types {
 
           The behaviour is equivalent to the package definitions of
           any descendent included packages never having included
-          the excluded packages in the first place.
+          the excluded packages.
 
           Excluding a package also implicitly excludes any modules
-          and submodules (implemented or import-only) that were
-          only present due to the definition of the package being
-          excluded.";
+          submodules (implemented or import-only), mandatory-features
+          and mount-point definitions that were only present due to
+          the definition of the package being excluded.
+
+          It is an error to list a package in both this list and the
+          'includes/package' list.";
       }
 
       leaf-list module {
         type pkg-name;
         description
-          "Lists modules, implemented or import-only, of any
-          version, to exclude from all included package
-          definitions.
+          "Lists implemented modules, of any version, that may have
+           have been brought in by included packages, but are
+           explicitly excluded from this package definition.
 
-          The behaviour is equivalent to the package definitions of
-          the any included package and any descendent included
-          packages never having included the module in the first
-          place.";
+           Excluding a module can affect the compliance and
+           correctness of any included packages that expect that
+           module to be implemented.
+
+           It is an error to list a module in both this list and the
+           'includes/module' list.";
+      }
+
+      leaf-list import-only-module {
+        type pkg-name;
+        description
+          "Lists import-only modules, of any version, that may have
+           have been brought in by included packages, but are
+           explicitly excluded from this package definition.
+
+           It is an error to list a module in both this list and the
+           'includes/import-only-module' list.";
       }
     }
   }
@@ -252,21 +268,16 @@ module ietf-yang-package-types {
         key "name";
         description
           "An entry in this list represents a package that is included
-          as part of the package definition, or an indirectly included
-          package that is changed in a non backwards compatible way.
+          as part of the package definition, or to change the version
+          of a descendent included package.
 
-          It can be used to resolve inclusion of conflicting package
-          versions by explicitly specifying which package version is
-          used.
+          An entry in this list overrides any other package version
+          'included' by an included package, which can be used for
+          resolving conflicting package versions from included
+          packages.
 
-          If included packages implement different revisions
-          of the same module, then an explicit entry in the
-          module list MUST be provided to select the specific module
-          revision 'implemented' by this package definition.
-
-          For import-only modules, the 'replaces-revision' leaf-list
-          can be used to select the specific module revisions used by
-          this package.";
+          A package definition MUST resolve to including only a single
+          version of any YANG package.";
 
         uses yang-pkg-identification-leafs;
         uses yang-pkg-location;
@@ -275,12 +286,12 @@ module ietf-yang-package-types {
       list module {
         key "name";
         description
-          "An entry in this list represents a module that must be
+          "An entry in this list represents a module that MUST be
           implemented by a server implementing this package, as per
           RFC 7950 section 5.6.5.
 
           A entry in this list overrides any module version
-          'implemented' or 'import-only' by an included package.";
+          'implemented' by an included package.";
         reference
           "RFC 7950: The YANG 1.1 Data Modeling Language.";
 
@@ -451,31 +462,17 @@ module ietf-yang-package-types {
       leaf-list exclude {
         type scoped-feature;
         description
-          "Lists features from any modules included in the package that
-          MUST NOT be supported by any server implementing the package.
+          "Lists any features, declared as mandatory-features
+          by any included packages (taking into account the
+          mandatory-feature include/exclude lists from descendent
+          included package), that are re-declared by this package as
+          being OPTIONAL to implement.
 
-          Features already specified in a 'supported-feature' list of
-          any included package MUST also be excluded by server
-          implementations and do not need to be repeated in this list.
-
-          All other features defined in modules included in the
-          package are OPTIONAL to implement.
+          It is an error to list a feature in both this list and the
+          mandatory-features include list.
 
           Features are identified using <module-name>:<feature-name>.";
       }
-
-      // leaf-list feature {
-      //   type scoped-feature;
-      //   description
-      //     "Lists features that were defined in the
-      //     'supported-feature' list of any included package that are
-      //     to be excluded from this package definition.
-
-      //     Implementations can still choose to implement features
-      //     listed here, but they are not mandated to do so.
-
-      //     Features are identified using <module-name>:<feature-name>.";
-      // }
     }
 
     list mounts {
