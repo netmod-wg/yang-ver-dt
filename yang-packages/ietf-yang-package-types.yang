@@ -109,6 +109,22 @@ module ietf-yang-package-types {
       "RFC XXXX, YANG Packages.";
   }
 
+  type mount-ypath {
+    type string;
+
+    description
+      "A path that identifies a set of data nodes in the schema tree.
+
+      This leaf is encoded as a JSON style encoded
+      instance-identifier (regardless of whether the format
+      used to encode the YANG instance data), as specified in
+      RFC 7951, section 6.11, except that keys are optional.
+
+      For optional keys, the name and value of the key is
+      excluded from the key list.
+
+      TODO - Check if this definition is sufficient.";
+  }
 
   /*
    * Groupings
@@ -446,32 +462,36 @@ module ietf-yang-package-types {
       leaf-list include {
         type scoped-feature;
         description
-          "Lists features from any modules included in the package that
-          MUST be supported by any server implementing the package.
+          "Lists features from any modules included in the package
+           that MUST be supported by any server implementing the
+           package.
 
-          Features already specified in a 'supported-feature' list of
-          any included package MUST also be supported by server
-          implementations and do not need to be repeated in this list.
+           Mandatory features specified by any directly included
+           packages MUST also be supported by server
+           implementations, unless excluded by an entry in the
+           'mandatory-features/excludes' list, and do not
+           need to be repeated in this list.
 
-          All other features defined in modules included in the
-          package are OPTIONAL to implement.
+           All other features defined in modules included in the
+           package are OPTIONAL to implement.
 
-          Features are identified using <module-name>:<feature-name>.";
+           Features are identified using
+           <module-name>:<feature-name>.";
       }
 
       leaf-list exclude {
         type scoped-feature;
         description
-          "Lists any features, declared as mandatory-features
-          by any included packages (taking into account the
-          mandatory-feature include/exclude lists from descendent
-          included package), that are re-declared by this package as
-          being OPTIONAL to implement.
+          "Lists features from the mandatory features exported by an
+          included package that are reclassified as being OPTIONAL
+          to support by any server implementing the package,
+          overriding the behavior specified by the included package.
 
-          It is an error to list a feature in both this list and the
-          mandatory-features include list.
+          Features MUST NOT be specified both in this list and also
+          the 'mandatory-features/includes' list.
 
-          Features are identified using <module-name>:<feature-name>.";
+          Features are identified using
+          <module-name>:<feature-name>.";
       }
     }
 
@@ -491,7 +511,7 @@ module ietf-yang-package-types {
          mounted packages without specific keys.";
 
       leaf "mount-path" {
-        type string;
+        type mount-ypath;
         description
           "This path identifies a mount point in the schema.
 
@@ -524,7 +544,15 @@ module ietf-yang-package-types {
         key "name";
         description
           "The packages that will be mounted at the specified mount
-           path.";
+           path.
+
+           The set of mounteed packages is the union of all packages
+           mounted at the given mount by any packages in the
+           'includes/package' list, except that each entry in this list
+           replaces any other versions of the same package at the
+           same mount point.  In addition, other package versions may
+           be omitted from the mount point via the 'replaces-package'
+           leaf-list.";
         uses yang-pkg-identification-leafs;
         uses yang-pkg-location;
 
@@ -539,7 +567,7 @@ module ietf-yang-package-types {
              or exclude the mounted package being replaced.
 
              Any packages or modules included by the replaced
-             package are also replaced by this mounted package
+             package are also removed by this mounted package
              unless they have also been explicitly mounted at the
              same mount point, in which case the replacing package
              MUST also explicitly include/exclude them.
@@ -552,7 +580,7 @@ module ietf-yang-package-types {
       }
 
       leaf-list parent-reference {
-        type string;
+        type mount-ypath;
         description
           "See Mount Point path and parent-reference in Schema Mount";
       }

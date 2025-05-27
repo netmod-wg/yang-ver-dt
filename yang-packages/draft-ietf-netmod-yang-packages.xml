@@ -271,7 +271,7 @@
 
       <t>Each YANG package defines: <list style="symbols">
         <t>YANG package meta-data, such as "name", "version",
-        "organization", "description", "complete" flag, etc.  <!--Any data nodes not
+        "organization", "description", "complete" flag, etc.</t>  <!--Any data nodes not
         listed in the bullets below are considered to be part of the YANG
         package meta-data.</t>-->
 
@@ -674,7 +674,7 @@
               in the packages defining the operational datastore schema, or in
               separate packages (which may be packages attached to the datastore, 
               or may be packages included by other packages). </t>
-              
+
               <t>The schema for a datastore MAY be represented using a single
               package or as the union of a set of compatible packages, i.e.,
               equivalently to a set of non-conflicting packages being included
@@ -759,24 +759,27 @@
         schema at "Implementation time" and "Run time", but does not cover mounting
         schema at "Design time".  YANG Package definitions do not give YANG languge
         level "Design time" gaurantees, but they able to give a stronger
-        "Implemnentation time" gaurantee, and also be used to report "Run time"
-        mounted schema behaviour, if the server is able to report the packages
-        implemented by the device.</t>
+        "Implementation time" guarantee through the use of offline YANG package
+        definitions.  They can also be used to report "Run time" mounted schema
+        behaviour, if the server is able to report the packages implemented by
+        the device.</t>
 
         <t>Each YANG package definition defines a set of packages that will be found
-        at a particular mount point, via two mechnaisms:
+        at a particular mount point, via two mechanisms:
           <list style="symbols">
             <t>All mounted packages that are exported from any included packages
             are also exported at the same mount point for this specific package,
-            unless explicitly overriden by a mount definition in this package.</t>
+            unless explicitly overridden by a mount definition in this package
+            with a 'replaces-package' statement.</t>
 
-            <t>Each package definition may also include a list of packages found
+            <t>Each package definition may include a list of packages found
             at each mount point.   Only a single version of a package can be found
-            at a given mount point, and hence the version within the 'mounts' list
-            replaces any mounted version exported from the included packages.  In,
-            addition, a mount in a package definiton may choose to replace an
-            included mounted package in its entirety.  Also see XXX, for
-            conformance. Examples of this are given in Appendix TODO.</t>
+            at a given mount point, and hence the version within the
+            'mounts/package' list
+            replaces any mounted version exported from the included packages.  In
+            addition, a mount in a package definiton may choose to replace
+            another package mounted at the same mount point in its entire.  Also
+            see XXX, for conformance. Examples of this are given in Appendix TODO.</t>
           </list>
         </t>
 
@@ -831,14 +834,14 @@
         <section title="Use of features in YANG modules and YANG packages">
           <t>The YANG language supports feature statements as the mechanism to
           make parts of a schema optional. Published standard YANG modules
-          SHOULD make use of appropriate feature statements to provide
+          make use of appropriate feature statements to provide
           flexibility in how YANG modules may be used by implementations and
           used by YANG modules published by other organizations.</t>
 
-          <t>YANG packages include the 'supported features' leaf-list, which
-          allow the package to specify features that MUST be implemented by any
-          conformant implementation of the package as a mechanism to simplify
-          and manage the schema represented by a YANG package.</t>
+          <t>YANG packages include the 'mandatory-features' list, which allow
+          the package to define a set of features that MUST be implemented
+          by any conformant implementation of the package as a mechanism to
+          simplify and manage the schema represented by a YANG package.</t>
         </section>
       </section>
 
@@ -861,8 +864,9 @@ module: ietf-yang-package-types
     +-- version    pkg-version
   grouping yang-pkg-exclusions:
     +-- excludes
-       +-- package*   pkg-name
-       +-- module*    pkg-name
+       +-- package*              pkg-name
+       +-- module*               pkg-name
+       +-- import-only-module*   pkg-name
   grouping yang-pkg-location:
     +-- location*   inet:uri
   grouping yang-pkg-instance:
@@ -897,19 +901,20 @@ module: ietf-yang-package-types
     |        +-- version     version-or-rev-date
     |        +-- location*   inet:uri
     +-- excludes
-    |  +-- package*   pkg-name
-    |  +-- module*    pkg-name
+    |  +-- package*              pkg-name
+    |  +-- module*               pkg-name
+    |  +-- import-only-module*   pkg-name
     +-- mandatory-features
-    |  +-- includes*   scoped-feature
-    |  +-- excludes*   scoped-feature
+    |  +-- include*   scoped-feature
+    |  +-- exclude*   scoped-feature
     +-- mounts* [mount-path]
-       +-- mount-path?         string
+       +-- mount-path?         mount-ypath
        +-- package* [name]
        |  +-- name                pkg-name
        |  +-- version             pkg-version
        |  +-- location*           inet:uri
        |  +-- replaces-package*   pkg-name
-       +-- parent-reference*   string
+       +-- parent-reference*   mount-ypath
         ]]></artwork>
         </figure>
       </section>
@@ -1183,6 +1188,22 @@ module ietf-yang-package-types {
       "RFC XXXX, YANG Packages.";
   }
 
+  type mount-ypath {
+    type string;
+
+    description
+      "A path that identifies a set of data nodes in the schema tree.
+
+      This leaf is encoded as a JSON style encoded
+      instance-identifier (regardless of whether the format
+      used to encode the YANG instance data), as specified in
+      RFC 7951, section 6.11, except that keys are optional.
+
+      For optional keys, the name and value of the key is
+      excluded from the key list.
+
+      TODO - Check if this definition is sufficient.";
+  }
 
   /*
    * Groupings
@@ -1228,25 +1249,41 @@ module ietf-yang-package-types {
 
           The behaviour is equivalent to the package definitions of
           any descendent included packages never having included
-          the excluded packages in the first place.
+          the excluded packages.
 
           Excluding a package also implicitly excludes any modules
-          and submodules (implemented or import-only) that were
-          only present due to the definition of the package being
-          excluded.";
+          submodules (implemented or import-only), mandatory-features
+          and mount-point definitions that were only present due to
+          the definition of the package being excluded.
+
+          It is an error to list a package in both this list and the
+          'includes/package' list.";
       }
 
       leaf-list module {
         type pkg-name;
         description
-          "Lists modules, implemented or import-only, of any
-          version, to exclude from all included package
-          definitions.
+          "Lists implemented modules, of any version, that may have
+           have been brought in by included packages, but are
+           explicitly excluded from this package definition.
 
-          The behaviour is equivalent to the package definitions of
-          the any included package and any descendent included
-          packages never having included the module in the first
-          place.";
+           Excluding a module can affect the compliance and
+           correctness of any included packages that expect that
+           module to be implemented.
+
+           It is an error to list a module in both this list and the
+           'includes/module' list.";
+      }
+
+      leaf-list import-only-module {
+        type pkg-name;
+        description
+          "Lists import-only modules, of any version, that may have
+           have been brought in by included packages, but are
+           explicitly excluded from this package definition.
+
+           It is an error to list a module in both this list and the
+           'includes/import-only-module' list.";
       }
     }
   }
@@ -1326,21 +1363,16 @@ module ietf-yang-package-types {
         key "name";
         description
           "An entry in this list represents a package that is included
-          as part of the package definition, or an indirectly included
-          package that is changed in a non backwards compatible way.
+          as part of the package definition, or to change the version
+          of a descendent included package.
 
-          It can be used to resolve inclusion of conflicting package
-          versions by explicitly specifying which package version is
-          used.
+          An entry in this list overrides any other package version
+          'included' by an included package, which can be used for
+          resolving conflicting package versions from included
+          packages.
 
-          If included packages implement different revisions
-          of the same module, then an explicit entry in the
-          module list MUST be provided to select the specific module
-          revision 'implemented' by this package definition.
-
-          For import-only modules, the 'replaces-revision' leaf-list
-          can be used to select the specific module revisions used by
-          this package.";
+          A package definition MUST resolve to including only a single
+          version of any YANG package.";
 
         uses yang-pkg-identification-leafs;
         uses yang-pkg-location;
@@ -1349,12 +1381,12 @@ module ietf-yang-package-types {
       list module {
         key "name";
         description
-          "An entry in this list represents a module that must be
+          "An entry in this list represents a module that MUST be
           implemented by a server implementing this package, as per
           RFC 7950 section 5.6.5.
 
           A entry in this list overrides any module version
-          'implemented' or 'import-only' by an included package.";
+          'implemented' by an included package.";
         reference
           "RFC 7950: The YANG 1.1 Data Modeling Language.";
 
@@ -1506,50 +1538,40 @@ module ietf-yang-package-types {
     uses yang-pkg-exclusions;
 
     container mandatory-features {
-      leaf-list includes {
+      leaf-list include {
         type scoped-feature;
         description
-          "Lists features from any modules included in the package that
-          MUST be supported by any server implementing the package.
+          "Lists features from any modules included in the package
+           that MUST be supported by any server implementing the
+           package.
 
-          Features already specified in a 'supported-feature' list of
-          any included package MUST also be supported by server
-          implementations and do not need to be repeated in this list.
+           Mandatory features specified by any directly included
+           packages MUST also be supported by server
+           implementations, unless excluded by an entry in the
+           'mandatory-features/excludes' list, and do not
+           need to be repeated in this list.
 
-          All other features defined in modules included in the
-          package are OPTIONAL to implement.
+           All other features defined in modules included in the
+           package are OPTIONAL to implement.
 
-          Features are identified using <module-name>:<feature-name>.";
+           Features are identified using
+           <module-name>:<feature-name>.";
       }
 
-      leaf-list excludes {
+      leaf-list exclude {
         type scoped-feature;
         description
-          "Lists features from any modules included in the package that
-          MUST NOT be supported by any server implementing the package.
+          "Lists features from the mandatory features exported by an
+          included package that are reclassified as being OPTIONAL
+          to support by any server implementing the package,
+          overriding the behavior specified by the included package.
 
-          Features already specified in a 'supported-feature' list of
-          any included package MUST also be excluded by server
-          implementations and do not need to be repeated in this list.
+          Features MUST NOT be specified both in this list and also
+          the 'mandatory-features/includes' list.
 
-          All other features defined in modules included in the
-          package are OPTIONAL to implement.
-
-          Features are identified using <module-name>:<feature-name>.";
+          Features are identified using
+          <module-name>:<feature-name>.";
       }
-
-      // leaf-list feature {
-      //   type scoped-feature;
-      //   description
-      //     "Lists features that were defined in the
-      //     'supported-feature' list of any included package that are
-      //     to be excluded from this package definition.
-
-      //     Implementations can still choose to implement features
-      //     listed here, but they are not mandated to do so.
-
-      //     Features are identified using <module-name>:<feature-name>.";
-      // }
     }
 
     list mounts {
@@ -1568,7 +1590,7 @@ module ietf-yang-package-types {
          mounted packages without specific keys.";
 
       leaf "mount-path" {
-        type string;
+        type mount-ypath;
         description
           "This path identifies a mount point in the schema.
 
@@ -1601,7 +1623,15 @@ module ietf-yang-package-types {
         key "name";
         description
           "The packages that will be mounted at the specified mount
-           path.";
+           path.
+
+           The set of mounteed packages is the union of all packages
+           mounted at the given mount by any packages in the
+           'includes/package' list, except that each entry in this list
+           replaces any other versions of the same package at the
+           same mount point.  In addition, other package versions may
+           be omitted from the mount point via the 'replaces-package'
+           leaf-list.";
         uses yang-pkg-identification-leafs;
         uses yang-pkg-location;
 
@@ -1616,7 +1646,7 @@ module ietf-yang-package-types {
              or exclude the mounted package being replaced.
 
              Any packages or modules included by the replaced
-             package are also replaced by this mounted package
+             package are also removed by this mounted package
              unless they have also been explicitly mounted at the
              same mount point, in which case the replacing package
              MUST also explicitly include/exclude them.
@@ -1629,7 +1659,7 @@ module ietf-yang-package-types {
       }
 
       leaf-list parent-reference {
-        type string;
+        type mount-ypath;
         description
           "See Mount Point path and parent-reference in Schema Mount";
       }
@@ -2741,6 +2771,40 @@ module ietf-yang-inst-data-pkg {
         ]]></artwork>
         </figure>
       </section>
+
+
+      <section anchor="mounted_package_example"
+               title="Example of package with a mounted package">
+        <t>This example illustrates a YANG package representing a network
+        device that mounts a routing package at the network-instance mount point.</t>
+
+        <t>TODO - Can we use example that is the same, or very similar, to the
+        network-instances example?</t>
+        <t>TODO - Indicate that this is a minimal example to illustrate a concept, 
+        and leaves out some optional elements that would be expected in a full
+        implementation.</t>
+        <figure>
+          <artwork><![CDATA[
+        ]]></artwork>
+        </figure>
+      </section>
+
+      <section anchor="replace_mounted_package_example"
+               title="Example of an package replacing the mounted schema">
+        <t>This example illustrates an implementation of the mounted package defined in XXX,
+           but that modifies the the mounted package.</t>
+        <t>Although this example illustrates applying deviations to the schema
+           of a mounted package, the same mechanism can be used to change the
+           implemented package version, remove a mounted package in its entirety,
+           remove modules from a mounted package, change mandatory features,
+           change the behaviour of recursive mounts, etc.</t>
+        <t>TODO - Probably need more than one example.</t>
+        <figure>
+          <artwork><![CDATA[
+        ]]></artwork>
+        </figure>
+      </section>
+
     </section>
   </back>
 </rfc>
