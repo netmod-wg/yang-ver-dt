@@ -2902,5 +2902,188 @@ module ietf-yang-inst-data-pkg {
       </section>
 
     </section>
+
+    <section anchor="exclusion_examples" title="Package Exclusion Examples">
+      <t>This section provides examples of how to exclude modules, and packages
+      in a package definition, and to remove mandatory features.
+
+      The examples are non-normative, and for brevity, some expected information
+      (e.g., locations) are omitted.</t>
+      <t>TODO, line wrapping in examples.</t>
+      <t>TODO, should we also remove the instance-data wrapper around the
+      examples in this section, that wwould potentially help minimize wrapping?</t>
+      <section anchor="module_and_feature_exclusion"
+               title="Example of excluding a module and feature">
+        <t>The following example defines two YANG packages.</t>
+        <t>The first package, "example-ab-pkg", implements two example modules,
+        "example-module-a" and "example-module-b", and related types modules,
+        and mandatory features.
+        </t>
+        <t>The second package, "example-c-pkg", imports the first package, but
+        excludes the implemented "example-module-a" module, the import-only
+        "example-module-b-types" module, and the "mandatory-feature" feature
+        "bar" from the "example-module-b" module.</t>
+        <t>TODO - Should that feature have been implicitly removed?</t>
+        <t>The third figure shows the resulting schema in YANG Libary format,
+        but with namespaces and locations elided for brevity.</t>
+        <figure>
+          <artwork><![CDATA[
+<CODE BEGINS> file "example-ab-pkg%0.1.0.json"
+{
+  "ietf-yang-instance-data:instance-data-set": {
+    "name": "example-ab-pkg",
+    "description": "YANG Package definition",
+    "content-data": {
+      "ietf-yang-package-instance:package": {
+        "name": "example-ab-pkg",
+        "version": "0.1.0",
+        "timestamp": "2025-05-29T05:55:55.774729Z",
+        "description": "Example package defining modules A, B and associated types",
+        "complete": false,
+        "includes": {
+          "module": [
+            {
+              "name": "example-module-a",
+              "version": "1.0.0"
+            },
+            {
+              "name": "example-module-b",
+              "version": "1.1.0"
+            }
+          ],
+          "import-only-module": [
+            {
+              "name": "example-module-a-types",
+              "version": "1.0.0"
+            },
+            {
+              "name": "example-module-b-types",
+              "version": "1.1.0"
+            }
+          ]
+        },
+        "mandatory-features": {
+          "include": [
+            "example-module-a:foo",
+            "example-module-b:bar"
+          ]
+        }
+      }
+    }
+  }
+}
+<CODE ENDS>
+        ]]></artwork>
+        </figure>
+        <t>The "example-c-pkg" Yang Package example illustrates exclusions of
+        modules, import-only-modules and features.</t>
+        <figure>
+          <artwork><![CDATA[
+<CODE BEGINS> file "example-c-pkg%0.1.0.json"
+{
+  "ietf-yang-instance-data:instance-data-set": {
+    "name": "example-c-pkg",
+    "description": "YANG Package definition",
+    "content-data": {
+      "ietf-yang-package-instance:package": {
+        "name": "example-c-pkg",
+        "version": "0.1.0",
+        "timestamp": "2025-05-29T05:55:55.817530Z",
+        "description": "Example package importing A, removing B and adding C",
+        "complete": false,
+        "includes": {
+          "package": [
+            {
+              "name": "example-ab-pkg",
+              "version": "0.1.0",
+              "location": [
+                "file:///Users/rwilton/git/netmod-wg/yang-ver-dt/yang-packages/out/ExampleAbPackage/makePackage.dest/yang-pkg.json"
+              ]
+            }
+          ],
+          "module": [
+            {
+              "name": "example-module-c",
+              "version": "2.0.0"
+            }
+          ]
+        },
+        "excludes": {
+          "module": [
+            "example-module-b"
+          ],
+          "import-only-module": [
+            "example-module-b-types"
+          ]
+        },
+        "mandatory-features": {
+          "exclude": [
+            "example-module-b:bar"
+          ]
+        }
+      }
+    }
+  }
+}
+<CODE ENDS>
+        ]]></artwork>
+        </figure>
+        <t>The following JSON illustrates what a resulting YANG library file
+        would look like once all dependencies in the "example-c-pkg" YANG
+        package have been resolved.</t>
+        <figure>
+          <artwork><![CDATA[
+<CODE BEGINS> file "example-c-library%0.1.0.json"
+{
+  "ietf-yang-instance-data:instance-data-set": {
+    "name": "Package example-c-pkg@0.1.0 schema",
+    "description": "YANG Package definition",
+    "content-data": {
+      "ietf-yang-library:library": {
+        "module-set": [
+          {
+            "name": "Package example-c-pkg@0.1.0",
+            "module": [
+              {
+                "name": "example-module-c",
+                "revision": "2.0.0",
+                "ietf-yang-library-semver:version": "2.0.0"
+              },
+              {
+                "name": "example-module-a",
+                "revision": "1.0.0",
+                "ietf-yang-library-semver:version": "1.0.0",
+                "feature": [
+                  "foo"
+                ]
+              }
+            ],
+            "import-only-module": [
+              {
+                "name": "example-module-a-types",
+                "revision": "1.0.0",
+                "ietf-yang-library-semver:version": "1.0.0"
+              }
+            ]
+          }
+        ],
+        "schema": [
+          {
+            "name": "Package example-c-pkg@0.1.0 schema",
+            "module-set": [
+              "Package example-c-pkg@0.1.0"
+            ]
+          }
+        ],
+        "content-id": "c826ea09"
+      }
+    }
+  }
+}
+<CODE ENDS>
+        ]]></artwork>
+        </figure>
+      </section>
+    </section> <!-- End of appendix-->
   </back>
 </rfc>
