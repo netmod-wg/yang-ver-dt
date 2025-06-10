@@ -13,8 +13,8 @@
 <!ENTITY RFC8174 SYSTEM "reference.RFC.8174.xml">
 <!ENTITY RFC8342 SYSTEM "reference.RFC.8342.xml">
 <!ENTITY RFC8528 SYSTEM "reference.RFC.8528.xml">
-<!ENTITY RFC8528 SYSTEM "reference.RFC.8529.xml">
-<!ENTITY RFC8528 SYSTEM "reference.RFC.9195.xml">
+<!ENTITY RFC8529 SYSTEM "reference.RFC.8529.xml">
+<!ENTITY RFC9195 SYSTEM "reference.RFC.9195.xml">
 
 ]>
 <?xml-stylesheet type="text/xsl" href="rfc2629.xslt" ?>
@@ -110,7 +110,8 @@
 
           <t>version (module): In the context of a YANG module, it is
           used as a short hand to reference a particular revision of a YANG
-          module, potentially identified by a YANG Semver.</t>
+          module, potentially identified by a YANG Semver version label or a
+          revision-date.</t>
 
           <t>version (package): In the context of a YANG package, it
           refers to a particular version of a YANG package
@@ -153,23 +154,27 @@
       schema. For example, a YANG package could define the set of YANG modules
       required to implement an L2VPN service on a network device.</t>
 
-      <t>Non-normative examples of YANG packages are provided in the
-      appendices.</t>
+      <t>YANG packages can be exported from a server, accessed as instance data
+      files <xref target="RFC9195"/>, augmented into YANG library
+      <xref target="RFC8525"/>, and used by tooling to compare and manage YANG
+      schema.</t>
+
+      <t>Examples of YANG packages are provided in the appendices.</t>
 
       <section anchor="objectives" title="Main Objectives">
         <t>The main goals of YANG package definitions include, but are not
         restricted to: <list style="symbols">
-            <t>To provide an alternative, simplified, YANG conformance
+            <t>Providing an alternative, simplified, YANG conformance
             mechanism. Rather than conformance being performed against a set of
             individual YANG module revisions, features, and deviations,
             conformance can be more simply stated in terms of YANG packages,
             with a set of modifications (e.g. additional modules, deviations, or
             features).</t>
 
-            <t>To allow datastore schema to be specified in a concise way rather
+            <t>Allowing datastore schema to be specified in a concise way rather
             than having each server explicitly list all modules, revisions, and
             features.  YANG package definitions can be defined in documents that
-            are available offline, and may be accessible via a URL, rather than
+            are available offline, and may be accessible via a URL rather than
             requiring explicit lists of modules to be shared between client and
             server.  Hence, a YANG package must contain sufficient information to
             allow a client or server to precisely construct the schema
@@ -182,7 +187,7 @@
             <t>YANG Packages should be flexible enough to provide usable
             definitions representing collections of IETF YANG modules, OpenConfig
             YANG modules, and other bespoke sets of YANG modules, e.g., covering
-            vendor native YANG models.</t>
+            sets of vendor native YANG models.</t>
 
             <t>YANG packages should be flexible enough to represent the
             conformance and server implementations of standard or industry defined
@@ -192,7 +197,7 @@
             modules have deviations applied.</t>
 
             <t>Tooling should be able to easily work with YANG package definitions
-            to compare package versions, and to compare server conformance against
+            to compare package versions and to compare server conformance against
             expected package definitions.</t>
           </list></t>
 
@@ -212,10 +217,10 @@
       <section anchor="alternatives" title="Potential Alternative Mechanisms">
         <t>There are several alternative approaches to managing YANG schema.
         These include: <list style="symbols">
-            <t>Using a YANG library, along with YANG Instance Data files
+            <t>Using  YANG library, along with YANG Instance Data files
             <xref target="RFC9195"/>,</t>
 
-            <t>Using git tags and version labels, for modules maintained on
+            <t>Using git tags and version labels for modules maintained on
             github,</t>
 
             <t>As collections of YANG modules in a zip file or at a directory
@@ -968,28 +973,37 @@ module: ietf-yang-package-types
           the package MUST be updated appropriately, taking into consideration
           the scope of the changes as defined by the rules below.</t>
 
+          <t>It is important to note that a non-backwards-compatible (NBC) change to a package definition (generally requiring a major version number increment) may not always result in an NBC change to the resolved schema. For example, if a package replaces a module version 1.0.0 with version 3.0.0, but the content of version 3.0.0 has been reverted to be functionally identical to version 1.0.0 (effectively backing out previous changes between the two), the schema difference between the package versions may be functionally compatible.  Nevertheless, such changes must still follow the versioning rules defined above based on the package definition changes, not the effective change before resolved schema.</t>
+
           <section anchor="nbc_package_change"
                    title="Non-Backwards-compatible changes">
             <t>The following changes classify as non-backwards-compatible
             changes to a package definition: <list style="symbols">
-                <t>Changing an 'included-package' list entry to select a
+                <t>Changing an 'includes/package' list entry to select a
                 package version that is non-backwards-compatible to the prior
                 package version, or removing a previously included
                 package.</t>
 
-                <t>Changing a 'module' or 'import-only-module' list entry to
-                select a module revision that is non-backwards-compatible to
-                the prior module revision, or removing a previously
+                <t>Changing an 'includes/module' or 'includes/import-only-module' 
+                list entry to select a module version that is non-backwards-compatible 
+                to the prior module version, or removing a previously
                 implemented module.</t>
 
-                <t>Removing a feature from the 'mandatory-feature'
-                leaf-list.</t>
+                <t>Removing a feature from the 'mandatory-features/include'
+                list.</t>
+                
+                <t>Adding a feature to the 'mandatory-features/exclude'
+                list.</t>
 
                 <t>Adding, changing, or removing a module containing one 
                 or more deviations, that when applied to the target module 
                 would create a change that is considered a 
                 non-backwards-compatible change to the affected data node 
                 in the schema associated with the prior package version.</t>
+                
+                <t>Removing a package from a mount point, or changing a mounted
+                package to a version that is non-backwards-compatible to the
+                prior package version.</t>
               </list></t>
           </section>
 
@@ -2550,7 +2564,7 @@ module ietf-yang-inst-data-pkg {
       </t>
 
       <t>TODO For brevity, most examples excluding the module and package
-      locations. Some examples use a shortened URL of "tiny.cc/ietf-yang" as a
+      locations. TODO - Probably should point to IANA instead. Some examples use a shortened URL of "tiny.cc/ietf-yang" as a
       replacement for
       "https://raw.githubusercontent.com/YangModels/yang/master/standard/ietf/RFC"</t>
 
