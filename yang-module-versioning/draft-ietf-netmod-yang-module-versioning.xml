@@ -115,7 +115,7 @@
       <t>For a given YANG module revision, revision B is defined as being derived from revision A, if revision A is listed in the revision history of revision B, or if revision A would have been listed had it not been removed (see <xref target="removing-revisions-history"/>).  Although this document allows for a branched revision history, a given YANG module revision history does not contain all revisions in all possible branches, it only lists those from which it was derived, i.e., the module revision's history describes a single path of derived revisions (or a subset of them if one or more have been removed) back to the root of the module's revision history.</t>
       <t>A corollary to the text above is that the ancestry (derived relationship) between two module or submodule revisions cannot be determined by comparing the module or submodule revision date or version identifier alone - the revision history must be consulted.</t>
       <t>A module's name and revision date identifies a specific immutable definition of that module within its revision history.  Hence, if a module includes submodules then to ensure that the module's content is uniquely defined, the module's "include" statements SHOULD use "revision-date" substatements to specify the exact revision date of each included submodule. When a module does not include its submodules by revision-date,  the revision of submodules used cannot be derived from the including module. Mechanisms such as YANG packages <xref target="I-D.ietf-netmod-yang-packages"/>, and YANG library <xref target="RFC8525"/>, could be used to specify the exact submodule revisions used when the submodule revision date is not constrained by the "include" statement.</t>
-      <t><xref target="RFC7950"/> section 11 and <xref target="RFC6020"/> section 10 require that all updates to a YANG module are backwards-compatible (BC) to the previous revision of the module.  This document introduces a method to indicate that an non-backwards-compatible (NBC) change has occurred between module revisions: this is done by using a new "non-backwards-compatible" YANG extension statement in the module revision history.</t>
+      <t><xref target="RFC7950"/> section 11 and <xref target="RFC6020"/> section 10 require that all updates to a YANG module are backwards-compatible (BC) to the previous revision of the module.  This document introduces a method to indicate that a non-backwards-compatible (NBC) change has occurred between module revisions: this is done by using a new "non-backwards-compatible" YANG extension statement in the module revision history.</t>
       <t>Two revisions of a module or submodule MAY have identical content except for the revision history. This could occur, for example, if a module or submodule has a branched history and identical changes are applied in multiple branches.</t>
       <section title="Updating a YANG module with a new revision" anchor="update_rules">
         <t>This section updates <xref target="RFC7950"/> section 11 and <xref target="RFC6020"/> section 10 to refine the rules for permissible changes when a new YANG module revision is created.</t>
@@ -135,7 +135,7 @@
             <list style="symbols">
               <t>A "status" "deprecated" statement MAY be added, or changed from "current" to "deprecated", but adding or
               changing "status" to "obsolete" is a non-backwards-compatible change.</t>
-              <t>YANG schema nodes with a "status" "obsolete" substatement MAY be removed from published modules, and the removal  is classified as a backwards-compatible change.  In some circumstances it may be helpful to retain the obsolete definitions since their identifiers may still be referenced by other modules and to ensure that their identifiers are not reused with a different meaning.</t>
+              <t>YANG schema nodes with a "status" "obsolete" substatement MAY be removed from published modules, and the removal  is classified as a backwards-compatible change.  In some circumstances it MAY be helpful to retain the obsolete definitions since their identifiers may still be referenced by other modules and to ensure that their identifiers are not reused with a different meaning.</t>
               <t>A statement that is defined using the YANG "extension" statement may be added, removed, or changed. While extensions may be ignored by some clients, other clients may support a given extension and thus be affected if a module adds, removes or changes how it uses the extension statement. Therefore, extension statement definitions SHOULD specify whether adding, removing, or changing statements defined by that extension are considered backwards-compatible or non-backwards-compatible.</t>
               <t>Any change made to the "revision-date" or "recommended-min-date" substatements of an "import" statement, including adding new "revision-date" or "recommended-min-date" substatements, changing the argument of any "revision-date" or "recommended-min-date" substatements, or removing any "revision-date" or "recommended-min-date" substatements, is classified as backwards-compatible.</t>
               <t>Any changes (including whitespace or formatting changes) that do not change the semantic meaning of the module are backwards-compatible.</t>
@@ -149,7 +149,7 @@
           </t>
         </section>
       </section>
-      <section anchor="revision_nbc_marker" title="non-backwards-compatible extension statement">
+      <section anchor="revision_nbc_marker" title="Non-backwards-compatible extension statement">
         <t>The "rev:non-backwards-compatible" extension statement is used to indicate YANG module revisions that contain NBC changes.</t>
         <t>If a revision of a YANG module contains changes, relative to its parent revision, that do not conform to the module update rules defined in <xref target="bc_update_rules"/>, then a "rev:non-backwards-compatible" extension statement MUST be added as a substatement to the "revision" statement.
         </t>
@@ -157,7 +157,7 @@
       </section>
       <section anchor="removing-revisions-history" title="Removing revisions from the revision history">
         <t>Authors may wish to remove revision statements from a module or submodule. Removal of revision information may be desirable for a number of reasons including reducing the size of a large revision history, or removing a revision that should no longer be used or imported. Removing revision statements is allowed, but can cause issues and SHOULD NOT be done without careful analysis of the potential impact to users of the module or submodule since it may cause loss of visibility of when non-backwards-compatible changes were introduced.</t>
-        <t> An author MAY remove a contiguous sequence of entries from the end (i.e., oldest entries) of the revision history.  This is acceptable even if the first remaining (oldest) revision entry in the revision history contains a rev:non-backwards-compatible substatement.</t>
+        <t> An author MAY remove a contiguous sequence of entries from the end (i.e., the oldest entries) of the revision history.  This is acceptable even if the first remaining (oldest) revision entry in the revision history contains a rev:non-backwards-compatible substatement.</t>
         <t>An author MAY remove a contiguous sequence of entries in the revision history as long as the presence or absence of any existing rev:non-backwards-compatible substatements on all remaining entries still accurately reflect the compatibility relationship to their preceding entries remaining in the revision history.</t>
         <t>The author MUST NOT remove the first (i.e., newest) revision entry in the revision history.</t>
         <figure>
@@ -309,7 +309,7 @@ module example-module {
         </t>
         <t>The ietf-revisions module defines the "recommended-min-date" extension statement, a substatement to the YANG "import" statement, to allow for a "minimum recommended date" to be documented:
           <list>
-            <t>The argument to the "recommended-min-date" extension statement is a revision date.</t>
+            <t>The argument to the "recommended-min-date" extension statement is a revision date which uses the "date-no-zone" type defined in <xref target="I-D.ietf-netmod-rfc6991-bis"/>.</t>
             <t>A particular revision of an imported module adheres to an import's "recommended-min-date" extension statement if the imported module's revision date is equal to or later than the revision date argument of the "recommended-min-date" extension statement in the importing module.
             </t>
             <t>Zero or one "recommended-min-date" extension statement is allowed for each parent "import" statement.</t>
@@ -385,7 +385,7 @@ module: ietf-yang-library-status
             </list>
           </t>
           <t>Servers SHOULD set both the "deprecated-nodes-implemented" and "obsolete-nodes-absent" leafs to "true", which allows clients to determine the exact schema used by the server.</t>
-          <t>If a server does not set the "deprecated-nodes-implemented" leaf to "true", then clients MUST NOT rely solely on the "rev:non-backwards-compatible" statements to determine whether two module revisions are backwards-compatible, and MUST also consider whether the status of any nodes has changed to "deprecated" and whether those nodes are implemented by the server. An implementation may choose to add deviations to more clearly indicate to the clients that these deprecated nodes are not supported.</t>
+          <t>If a server does not set the "deprecated-nodes-implemented" leaf to "true", then clients MUST NOT rely solely on the "rev:non-backwards-compatible" statements to determine whether two module revisions are backwards-compatible, and MUST also consider whether the status of any nodes have changed to "deprecated" and whether those nodes are implemented by the server. An implementation may choose to add deviations to more clearly indicate to the clients that these deprecated nodes are not supported.</t>
         </section>
     </section>
     <section anchor="guidelines" title="Guidelines for using the YANG module update rules">
@@ -406,7 +406,7 @@ module: ietf-yang-library-status
           </list>
         </t>
         <section anchor="guidelines_making_changes" title="Making non-backwards-compatible changes to a YANG module">
-          <t>There are various valid situations where a YANG module has to be modified in an NBC way. Here are some guidelines on how non-backwards-compatible changes can be made incrementally, with the assumption that deprecated nodes are implemented by the server, and obsolete nodes are not:
+          <t>There are various valid situations where a YANG module has to be modified in a NBC way. Here are some guidelines on how non-backwards-compatible changes can be made incrementally, with the assumption that deprecated nodes are implemented by the server, and obsolete nodes are not:
             <list style ="numbers">
               <t>The changes should be made gradually, e.g., a data node's status SHOULD NOT be changed directly from
              "current" to "obsolete" (see Section 4.7 of
@@ -416,7 +416,7 @@ module: ietf-yang-library-status
               <t>For deprecated data nodes the "description" statement SHOULD also indicate until when support for the node is guaranteed (if known). If there is a replacement data node, rpc, action or notification for the deprecated node, this SHOULD be stated in the "description". The reason for deprecating the node can also be included in the "description" if it is deemed to be of potential interest to the user.</t>
               <t>For obsolete data nodes, it is RECOMMENDED to keep the above information, from when the node had status "deprecated", which is still relevant.</t>
               <t>When obsoleting or deprecating data nodes, the "deprecated" or "obsolete" status SHOULD be applied at the highest possible level in the data tree. For clarity, the "status" statement SHOULD also be applied to all descendent data nodes, but the additional status related information does not need to be repeated if it does not introduce any additional information.</t>
-              <t>NBC changes which can break imports SHOULD be avoided because of the impact on the importing module. The importing modules could get broken, e.g., if an augmented node in the importing module has been removed from the imported module. Alternatively, the schema of the importing modules could undergo an NBC change due to the NBC change in the
+              <t>NBC changes which can break imports SHOULD be avoided because of the impact on the importing module. The importing modules could get broken, e.g., if an augmented node in the importing module has been removed from the imported module. Alternatively, the schema of the importing modules could undergo a NBC change due to the NBC change in the
              imported module, e.g., if a node in a grouping has been removed. As described in
                 <xref target="remove_node"/>, instead of removing a node, 
              that node  SHOULD first be deprecated and then obsoleted.
@@ -449,9 +449,9 @@ module: ietf-yang-library-status
       <section title="Module ietf-yang-revisions">
         <figure>
           <preamble> YANG module with extension statements for annotating NBC changes and importing by revision.</preamble>
-          <artwork name="ietf-yang-revisions@2025-08-18.yang">
+          <artwork name="ietf-yang-revisions@2025-09-16.yang">
             <![CDATA[
-<CODE BEGINS> file "ietf-yang-revisions@2025-08-18.yang"
+<CODE BEGINS> file "ietf-yang-revisions@2025-09-16.yang"
 module ietf-yang-revisions {
   yang-version 1.1;
   namespace "urn:ietf:params:xml:ns:yang:ietf-yang-revisions";
@@ -487,7 +487,7 @@ module ietf-yang-revisions {
     "This YANG 1.1 module contains definitions and extensions to
      support updated YANG revision handling.
 
-     Copyright (c) 2024 IETF Trust and the persons identified as
+     Copyright (c) 2025 IETF Trust and the persons identified as
      authors of the code.  All rights reserved.
 
      Redistribution and use in source and binary forms, with or
@@ -513,7 +513,7 @@ module ietf-yang-revisions {
   // RFC Ed.: replace YYYY-draft-ietf-netmod-rfc6991-bis (inc above) with actual RFC number and
   // remove this note.
 
-  revision 2025-08-18 {
+  revision 2025-09-16 {
     description
       "Initial version.";
     reference
@@ -604,9 +604,9 @@ module ietf-yang-revisions {
       <section title="Module ietf-yang-library-status">
         <figure>
           <preamble>YANG module for status conformance.</preamble>
-          <artwork name="ietf-yang-library-status@2025-01-24.yang">
+          <artwork name="ietf-yang-library-status@2025-09-16.yang">
             <![CDATA[
-<CODE BEGINS> file "ietf-yang-library-status@2025-01-24.yang"
+<CODE BEGINS> file "ietf-yang-library-status@2025-09-16.yang"
 module ietf-yang-library-status {
   yang-version 1.1;
   namespace
@@ -643,7 +643,7 @@ module ietf-yang-library-status {
      indication of how deprecated and obsolete nodes are handled by
      the server.
 
-     Copyright (c) 2024 IETF Trust and the persons identified as
+     Copyright (c) 2025 IETF Trust and the persons identified as
      authors of the code.  All rights reserved.
 
      Redistribution and use in source and binary forms, with or
@@ -667,7 +667,7 @@ module ietf-yang-library-status {
   // RFC Ed.: replace XXXX (including in the imports above) with
   // actual RFC number and remove this note.
 
-  revision 2025-01-24 {
+  revision 2025-09-16 {
     description
       "Initial revision";
     reference
@@ -792,7 +792,6 @@ module ietf-yang-library-status {
       <?rfc include='reference.RFC.3688'?>
       <?rfc include='reference.RFC.6020'?>
       <?rfc include='reference.RFC.6241'?>
-      <?rfc include='reference.RFC.6242'?>
       <?rfc include='reference.RFC.7950'?>
       <?rfc include='reference.RFC.8040'?>
       <?rfc include='reference.RFC.8174'?>
@@ -878,7 +877,7 @@ module ietf-yang-library-status {
         <t>Removing a leaf or container from the data tree, e.g., because support for the corresponding feature is being removed:
           <list style="numbers">
             <t>The schema node's status is changed to "deprecated" and the node is supported for some period of time (e.g. one year). This is a BC change.</t>
-            <t>When the schema node is not supported anymore, its status is changed to "obsolete" and the "description" updated. This is an NBC change.</t>
+            <t>When the schema node is not supported anymore, its status is changed to "obsolete" and the "description" updated. This is a NBC change.</t>
           </list>
         </t>
       </section>
@@ -887,20 +886,20 @@ module ietf-yang-library-status {
           <list style="numbers">
             <t>The status of schema node "vpn-id" is changed to "deprecated" and the node is supported for some period of time (e.g. one year). This is a BC change. The description is updated to indicate that “vpn-name” is replacing this node.</t>
             <t>A new schema node, e.g., "vpn-name", of type string is added to the same location as the existing node "vpn-id". This new node has status "current" and its description explains that it is replacing node "vpn-id".</t>
-            <t>During the period of time when both schema nodes are supported, the interactions between the two nodes is outside the scope of this document and will vary on a case by case basis. One possible option is to have the server prevent the new node from being set if the old node is already set (and vice-versa). The new node could have a "when" statement added to it to achieve this. The old node, however, must not have a "when" statement added, or an existing "when" modified to be more restrictive, since this would be an NBC change. In any case, the server could reject the old node from being set if the new node is already set.</t>
-            <t>When the schema node "vpn-id" is not supported anymore, its status is changed to "obsolete" and the "description" is updated. This is an NBC change.</t>
+            <t>During the period of time when both schema nodes are supported, the interactions between the two nodes is outside the scope of this document and will vary on a case by case basis. One possible option is to have the server prevent the new node from being set if the old node is already set (and vice versa). The new node could have a "when" statement added to it to achieve this. The old node, however, must not have a "when" statement added, or an existing "when" modified to be more restrictive, since this would be a NBC change. In any case, the server could reject the old node from being set if the new node is already set.</t>
+            <t>When the schema node "vpn-id" is not supported anymore, its status is changed to "obsolete" and the "description" is updated. This is a NBC change.</t>
           </list>
         </t>
       </section>
       <section anchor="range_reduction" title="Reducing the range of a leaf node">
         <t>Reducing the range of values of a leaf-node, e.g., consider a "vpn-id" schema node of type uint32 being changed from range 1..5000 to range 1..2000:
           <list style="numbers">
-            <t>If all values which are being removed were never supported, e.g., if a vpn-id of 2001 or higher was never accepted, this is a BC change for the functionality (no functionality change).  Even if it is an NBC change for the YANG model, there should be no impact for clients using that YANG model. </t>
-            <t>If one or more values being removed was previously supported, e.g., if a vpn-id of 3333 was accepted previously, this is an NBC change for the YANG model. Clients using the old YANG model will be impacted, so a change of this nature should be done carefully, e.g., by using the steps described in
+            <t>If all values which are being removed were never supported, e.g., if a vpn-id of 2001 or higher was never accepted, this is a BC change for the functionality (no functionality change).  Even if it is a NBC change for the YANG model, there should be no impact for clients using that YANG model. </t>
+            <t>If one or more values being removed was previously supported, e.g., if a vpn-id of 3333 was accepted previously, this is a NBC change for the YANG model. Clients using the old YANG model will be impacted, so a change of this nature should be done carefully, e.g., by using the steps described in
               <xref target="type_change"/>
             </t>
           </list>
-          In both cases above, the "rev:non-backwards-compatible" extension statement is used to indicate that the YANG module contains an NBC change.
+          In both cases above, the "rev:non-backwards-compatible" extension statement is used to indicate that the YANG module contains a NBC change.
         </t>
       </section>
       <section anchor="key_change" title="Changing the key of a list">
@@ -908,8 +907,8 @@ module ietf-yang-library-status {
           <list style="numbers">
             <t>The status of list "sessions" is changed to "deprecated" and the list is supported for some period of time (e.g. one year). This is a BC change. The description is updated to indicate the new list that is replacing this list.</t>
             <t>A new list is created in the same location with the same descendant schema nodes but with "dest-address" as key. Finding an appropriate name for the new list can be difficult. In this case the new list is called "sessions-address", has status "current" and its description should explain that it is replacing list "session".</t>
-            <t>During the period of time when both lists are supported, the interactions between the two lists is outside the scope of this document and will vary on a case by case basis. One possible option is to have the server prevent entries in the new list from being created if the old list already has entries (and vice-versa).</t>
-            <t>When list "sessions" is not available anymore, its status is changed to "obsolete" and the "description" is updated. This is an NBC change.</t>
+            <t>During the period of time when both lists are supported, the interactions between the two lists is outside the scope of this document and will vary on a case by case basis. One possible option is to have the server prevent entries in the new list from being created if the old list already has entries (and vice versa).</t>
+            <t>When list "sessions" is not available anymore, its status is changed to "obsolete" and the "description" is updated. This is a NBC change.</t>
           </list>
         </t>
       </section>
@@ -918,8 +917,8 @@ module ietf-yang-library-status {
           <list style="numbers">
             <t>The status of the existing node "ip-adress" is changed to "deprecated" and is supported for some period of time (e.g. one year). This is a BC change. The description is updated to indicate the node that is replacing this node.</t>
             <t>The new schema node "ip-address" is added to the same location as the existing node "ip-adress". This new node has status "current" and its description should explain that it is replacing node "ip-adress".</t>
-            <t>During the period of time when both nodes are available, the interactions between the two nodes is outside the scope of this document and will vary on a case by case basis. One possible option is to have the server prevent the new node from being set if the old node is already set (and vice-versa). The new node could have a "when" statement added to it to achieve this. The old node, however, must not have a "when" statement added, or an existing "when" modified to be more restrictive, since this would be an NBC change. In any case, the server could reject the old node from being set if the new node is already set.</t>
-            <t>When node "ip-adress" is not available anymore, its status is changed to "obsolete" and the "description" is updated. This is an NBC change.</t>
+            <t>During the period of time when both nodes are available, the interactions between the two nodes is outside the scope of this document and will vary on a case by case basis. One possible option is to have the server prevent the new node from being set if the old node is already set (and vice versa). The new node could have a "when" statement added to it to achieve this. The old node, however, must not have a "when" statement added, or an existing "when" modified to be more restrictive, since this would be a NBC change. In any case, the server could reject the old node from being set if the new node is already set.</t>
+            <t>When node "ip-adress" is not available anymore, its status is changed to "obsolete" and the "description" is updated. This is a NBC change.</t>
           </list>
         </t>
       </section>
@@ -932,12 +931,12 @@ module ietf-yang-library-status {
       <section anchor="remove_node_immediate" title="Removing a data node">
         <t>Removing a leaf or container immediately from the data tree, e.g., because the corresponding functionality can not be supported anymore:
           <list style="numbers">
-            <t>The schema node's status is changed to "obsolete" and the "description" updated. This is an NBC change.</t>
+            <t>The schema node's status is changed to "obsolete" and the "description" updated. This is a NBC change.</t>
           </list>
         </t>
       </section>
       <section anchor="type_change_immediate" title="Changing the type of a leaf node">
-        <t>Changing the type of a leaf node. e.g., a "vpn-id" node of type integer being changed to a string. The change can not be made incrementally because the system can not support both types simultaneously. The following changes are made (this is an NBC change):
+        <t>Changing the type of a leaf node. e.g., a "vpn-id" node of type integer being changed to a string. The change can not be made incrementally because the system can not support both types simultaneously. The following changes are made (this is a NBC change):
           <list style="numbers">
             <t>The status of the "vpn-id" node is changed to "obsolete" and the "description" is updated.</t>
             <t>A new schema node, e.g., "vpn-name", of type string is added to the same location as the existing node "vpn-id". This new node has status "current" and its description explains that it is replacing node "vpn-id".</t>
