@@ -32,14 +32,22 @@
         <email>rwilton@cisco.com</email>
       </address>
     </author>
+    <author initials="M." surname="Vaško" fullname="Michal Vaško">
+      <organization abbrev="CESNET">
+        CESNET
+      </organization>
+      <address>
+        <email>mvasko@cesnet.cz</email>
+      </address>
+    </author>
     <date/>
     <abstract>
-      <t>This document specifies an algorithm for comparing two revisions of a YANG
-  schema to determine the scope of changes, and a list of changes, between the
-  revisions.  The output of the algorithm can be used to help select an
-  appropriate revision-label or YANG semantic version number for a new revision.
-  This document defines a YANG extension that provides YANG annotations to help
-  the tool accurately determine the scope of changes between two revisions.</t>
+        <t>This document specifies an algorithm for comparing two revisions of a
+            YANG schema to determine the scope of changes, and a list of
+            changes, between the revisions. The output of the algorithm can be
+            used to help select an appropriate revision-label or YANG semantic
+            version number for a new revision. Included is also a YANG module
+            describing the output of this algorithm.</t>
     </abstract>
   </front>
   <middle>
@@ -56,12 +64,6 @@
         <t>Should one algorithm be used or two? The consesus reached was to
             define two separate algorithms, one for on-wire format and one for
             schema.</t>
-        <t>On the wire: the focus is on what types of changes affect the
-            client requests and server responses for YANG driven protocols,
-            e.g. NETCONF, RESTCONF, gNMI. If the same requests and responses
-            occur, then there is no "on the wire" impact of the change. For
-            example, changing the name of a "choice" has no impact "on the
-            wire". For many clients, this level of compatiblity is enough.</t>
         <t>Schema: any changes that affect the YANG schema in an NBC manner
             according to the full rules of
             <xref target="I-D.ietf-netmod-yang-module-versioning" format="default"/>.
@@ -90,65 +92,6 @@
             <li>XPath, must, when: don't normalize XPath expressions</li>
             <li>presence statements</li>
         </ul>
-		<section><name>Transparent vs non-transparent changes for Algorithm #1</name>
-		    <t>This section captures some thoughts on changes between two revisions of a YANG blob that may be 'transparent' wrt on-the-wire exchanges (NETCONF, etc) for a client using the old revision and a server using the new revision. By transparent we mean:</t>
-		    <ol>
-		        <li>For 'success cases', an 'old' client can't really tell that the YANG modules on the 'new' server have changed (as long as only 'old' clients are interacting with the server, e.g.. no 'new' client is setting configuration values in the expanded value space of the new server)</li>
-		    	<li>All protocol messages that would have been accepted before, are still accepted by the server (note this doesn't mean that all messages that were previously rejected are still rejected)</li>
-		    </ol>
-		    <t>The transparency of a YANG change depends on the protocol and encoding being used on-the-wire (NETCONF XML, RESTCONF JSON, etc). The tool has an 'encoding' input parameter.</t>
-		    <t>The following changes to the following properties are transparent to at least one type of common encoding:
-		    </t>
-		    <ol>
-		        <li>typedef name change</li>
-				<li>grouping name change (implictly transparent? i.e. not even checked by algorithm #1?)</li>
-                <li>moving elements from one grouping to another (as long as the ultimate schema path and namespace remains the same) (implictly transparent? i.e. not even checked by algorithm #1?)</li>
-                <li>Changing the name of a choice or case statement</li>
-                <li>adding a pre-existing leaf/leaf-list/subtree into a new choice statement
-                    <ul>
-                    <li>only if leaf was non-mandatory, or the leaf is mandatory and the choice is also mandatory</li>
-                    <li>need to be careful about defaults as well</li>
-                    <li>we have questions around this one (a new client could set the leaf in the new case... Does 7950 only work for a set of old clients? only for data going into the server?)</li>
-				    </ul>
-				</li>
-				<li>increasing the size of an int (uint8 -> uint16, but only sending a value less than 256).  For XML and JSON_IETF. TBD gRPC. TBD CBOR. CBOR encoder/decoder *may* make this transparent (at least just above the wire). JSON only encodes to 53 bits, then changes to string</li>
-                <li>changing the base type from X to a union of X and other members (and sending a value of type X). For XML and JSON_IETF.  Not for all gRPC encodings. Not CBOR (uses 'value' for bits/enum, but in a union uses the name of the bit/enum)</li>
-                <li>top level module metadata:
-				    <ul>
-					<li>yang-version</li>
-					<li>prefix  [TBD: any cases? identities somehow?]</li>
-					<li>import statements</li>
-					<li>organization</li>
-					<li>contact</li>
-					<li>description (can this have semantic meaning at the module level?) - yes, it could</li>
-					<li>revision?</li>
-				    </ul>
-			    </li>
-                <li>organization of elements across sub-modules</li>
-                <li>TBD: reordering elements (outside of 'input' and 'output' sections) - TBD for some gRPC encodings (depends on YANG->proto conversion). CBOR (SID numbers refer to previous versions, permanent assignment somehow. TBD how this can work for branching.). But maybe algorithm #1 won't check ordering at all? (even for input/output ?)</li>
-            </ol>
-			<t>The following changes are considered non-transparent (at least for XML, JSON IETF, gNMI and CBOR). Note that this list is not intended to be complete. It only highlights a subset of non-transparent changes of particular interest. Anything not in the 'transparent' list above, and is considered NBC in Module Versioning, is non-transparent:</t>
-            <ol>
-                <li>leaf, leaf-list, presence container descriptions (could change semantics, e.g. only odd numbers)</li>
-				<li>non-presence container and list descriptions</li>
-                <li>the presence statement (i.e the \presence' argument string)</li>
-                <li>removing a 'choice' structure and instead enforcing the same constraints via a 'must' statement (and vice-versa). Can't be done because of the edit-time auto-clearing behavior of 'choice' (other cases a cleared from the candidate when one case is configured)</li>
-                <li>error-app-tag or error-message changes (must sub statements) - like an error code on the API (clients/apps may parse these)</li>
-                <li>removing a default statement (even if the server continues to use the same default, the YANG doesn't know it)</li>
-			</ol>
-		</section>
-      </section>
-      <section>
-        <name>error-tags, error messages, and other error statements</name>
-        <t>Error tags and messages might be relied on verbatim by users.</t>
-        <ul>
-            <li>error-tag: standardized in <xref target="RFC6241"/></li>
-            <li>error-app-tag: arbitrary text (<xref target="RFC6241"/> but
-                also model)</li>
-            <li>error-message: arbitrary</li>
-        </ul>
-        <t>Failed must statement, error-message, assumed NBC</t>
-        <t>Default behaviour is changes to error tags, messages etc are NBC.</t>
       </section>
       <section>
         <name>Comparison on module or full schema (YANG artifact, arbitrary blob.
@@ -209,76 +152,52 @@
       <section>
           <name>Only for YANG 1.1?</name>
       </section>
-      <section>
-          <name>renamed-from</name>
-      </section>
-    </section>
-    <section anchor="tool-options">
-      <name>Tool options</name>
-      <t>{ This section is only to present the current ongoing work, not part of
-      the final draft. }</t>
-      <t>During the work a list of useful tool options are identified for
-      later discussion and publication in an appendix.</t>
-      <ul>
-        <li>An option for how to interpret description changes (for the on-wire
-            algorithm) by default, e.g. treat them as editorial or nbc.</li>
-        <li>Option: --skip-error-tags, etc</li>
-      </ul>
     </section>
     <section anchor="intro" numbered="true" toc="default">
       <name>Introduction</name>
-      <t>Warning, this is an early (-00) draft with the intention of scoping the
-   outline of the solution, hopefully for the WG to back the direction of the
-   solution.  Refinement of the solution details is expected, if this approach
-   is accepted by the WG.</t>
-      <t>This document defines a solution to Requirement 2.2 in <xref target="I-D.ietf-netmod-yang-versioning-reqs" format="default"/>.  Complementary documents
-   provide a complete solution to the YANG versioning requirements, with the
-   overall relationship of the solution drafts described in <xref target="I-D.ietf-netmod-yang-solutions" format="default"/>.</t>
-      <t>YANG module 'revision-labels' <xref target="I-D.ietf-netmod-yang-module-versioning" format="default"/> and the use of YANG
-   semantic version numbers <xref target="I-D.ietf-netmod-yang-semver" format="default"/> can
-   be used to help manage and report changes between revisions of individual
-   YANG modules.</t>
-      <t>YANG packages <xref target="I-D.ietf-netmod-yang-packages" format="default"/> along with
-   YANG semantic version numbers can be used to help manage and report changes
-   between revisions of YANG schema.</t>
-      <t><xref target="I-D.ietf-netmod-yang-module-versioning" format="default"/> and <xref target="I-D.ietf-netmod-yang-packages" format="default"/> define how to classify changes
-   between two module or package revisions, respectively, as backwards
-   compatible or non-backwards-compatible. <xref target="I-D.ietf-netmod-yang-semver" format="default"/> refines the definition, to allow
-   backwards compatible changes to be classified as 'minor changes' or
-   'editorial changes'.</t>
-      <t>'Revision-label's and YANG semantic version numbers, whilst being
-   generally simple and helpful in the mainline revision history case, are not
-   sufficient in all scenarios.  For example, when comparing two
-   revisions/versions on independent revision branches, without a direct
-   ancestor relationship between the two revisions/versions.  In this cases, an
-   algorithmic comparison approach is beneficial.</t>
-      <t>In addition, the module revision history's 'nbc-changes' extension
-   statement, and YANG semantic version numbers, effectively declare the worst
-   case scenario.  If any non-backwards-compatible changes are restricted to
-   only parts of the module/schema that are not used by an operator, then the
-   operator is able to upgrade, and effectively treat the differences between
-   the two revisions/versions as backwards compatible because they are not
-   materially impacted by the non-backwards-compatible changes.</t>
-      <t>Hence, this document defines algorithms that can be applied to revisions
-   of YANG modules or versions of YANG schema (e.g., as represented by YANG
-   packages), to determine the changes, and scope of changes between the
-   revisions/versions.</t>
-      <t>For many YANG statements, programmatic tooling can determine whether the
-   changes between the statements constitutes a backwards-compatible or
-   non-backwards-compatible change.  However, for some statements, it is not
-   feasible for current tooling to determine whether the changes are
-   backwards-compatible or not.  For example, in the general case, tooling
-   cannot determine whether the change in a YANG description statement causes a
-   change in the semantics of a YANG data node.  If the change is to fix a typo
-   or spelling mistake then the change can be classified as an editorial
-   backwards-compatible change.  Conversely, if the change modifies the
-   behavioral specification of the data node then the change would need to be
-   classified as either a non editorial backwards-compatible change or a
-   non-backwards-compatible change.  Hence, extension statements are defined to
-   annotate a YANG module with additional information to clarify the scope of
-   changes in cases that cannot be determined by algorithmic comparison.</t>
-      <t>Open issues are tracked at <eref target="https://github.com/netmod-wg/yang-ver-dt/issues"/>, tagged with
-   'schema-comparison'.</t>
+        <t>
+            This document defines the algorithm for comparing two revisions of a
+            YANG schema. There are two kinds of YANG schemas: on-the-wire or
+            compiled schema and text or parsed schema.
+        </t>
+        <t>
+            The compiled schema is what tools use when working with any kinds of
+            YANG data. Generally, in all the YANG modules, all the schema nodes
+            need to be fully resolved and have their final form. For example,
+            every "uses" statement is replaced with the nodes from the
+            corresponding "grouping", every type referencing a "typedef" is
+            replaced with the type of the "typedef" and so on. On the other
+            hand, the parsed schema is comprised of all the YANG modules
+            together as they are. That means no statements are resolved and they
+            remain in exactly the same text form as present in the YANG modules.
+        </t>
+        <t>
+            For determining whether a new revision of a YANG 1.1 module is or is
+            not backwards-compatible based on all the rules
+            in
+            <xref target="RFC7950" format="default"/>
+            and <xref target="I-D.ietf-netmod-yang-module-versioning" format="default"/>
+            ,
+            both of these schemas would be required. Similarly for YANG 1.0,
+            the rules in
+            <xref target="RFC6020" format="default"/>
+            .
+            This document defines only the algorithm for comparing the compiled
+            schema. The output of this algorithm can be utilized by tools
+            processing YANG instance data to determine what exact changes
+            should they expect and even how to transform instance data valid for
+            an old revision of a YANG module to be valid for a newer revision
+            of the same YANG module. Such tools are typically clients or
+            servers of YANG-driven protocols, e.g.
+            NETCONF, RESTCONF, or gNMI.
+        </t>
+        <t>
+            In addition, the comparison algorithm can assist YANG module authors
+            with updating their modules and be used to
+            verify the semantic version of the new revision of the YANG module
+            based on the
+            <xref target="I-D.ietf-netmod-yang-semver" format="default"/>
+            document.</t>
     </section>
     <section anchor="terminology" numbered="true" toc="default">
       <name>Terminology and Conventions</name>
@@ -305,568 +224,961 @@
       </t>
       <ul spacing="normal">
         <li>Change scope: Whether a change between two revisions is classified as
-        non-backwards-compatible, backwards-compatible, or editorial.</li>
+        non-backwards-compatible or backwards-compatible.</li>
         <li>Node compatibility statement: An extension statements (e.g. nbc-change-at)
         that can be used to indicate the backwards compatibility of individual schema nodes and specific YANG statements.</li>
       </ul>
     </section>
+    <section anchor="compiled_schema" numbered="true" toc="default">
+      <name>Compiled YANG schema tree</name>
+      <t>
+          The compiled schema tree resolves all the statements used for
+          syntactic abstraction and simplification to
+          obtain one schema node tree with only data definition statements.
+          Textual fields are kept as well because they may
+          affect backwards compatibility of the whole YANG module.
+      </t>
+      <t>The steps taken when compiling a schema:</t>
+      <ul spacing="normal">
+          <li>
+              'Import' statements are resolved by finding the referenced
+              YANG modules and making their contents available.
+          </li>
+          <li>
+              All submodules of a single module are merged to create one
+              large YANG module.
+          </li>
+          <li>
+              'Uses' statements are replaced by the referenced 'groupings'
+              and the YANG nodes they define.
+          </li>
+          <li>
+              'Types' referencing any 'typedef' statements are replaced
+              with the actual type details.
+          </li>
+          <li>
+              'Augments' are resolved by placing the included YANG nodes
+              in their targets.
+          </li>
+          <li>
+              'Deviation' and 'refine' statements are applied by changing
+              the appropriate schema nodes.
+          </li>
+          <li>
+              All the 'if-feature' statements are evaluated based on the
+              enabled 'features' of implemented YANG modules
+              and the disabled schema nodes are removed.
+          </li>
+        </ul>
+      <t>
+          After the compilation the result is still a valid YANG module
+          without the following statements:
+      </t>
+      <ul spacing="normal">
+          <li>import</li>
+          <li>include</li>
+          <li>revision</li>
+          <li>typedef</li>
+          <li>grouping</li>
+          <li>augment</li>
+          <li>deviation</li>
+          <li>feature</li>
+          <li>if-feature</li>
+          <li>refine</li>
+          <li>extension</li>
+      </ul>
+    </section>
     <section anchor="generic_comparison_algorithm" numbered="true" toc="default">
-      <name>Generic YANG schema tree comparison algorithm</name>
-      <t>The generic schema comparison algorithm works on any YANG schema.  This
-   could be a schema associated with an individual YANG module, or a YANG schema
-   represented by a set of modules, e.g., specified by a YANG package.</t>
-      <t>The algorithm performs a recursive tree wise comparison of two revisions
-   of a YANG schema, with the following behavior:
-      </t>
-      <ul empty="true" spacing="normal">
-        <li>The comparison algorithm primarily acts on the parts of the schema
-     defined by unique identifiers.</li>
-        <li>Each identifier is qualified with the name of the module that
-     defines the identifier.</li>
-        <li>Identifiers in different namespaces (as defined in 6.2.1 or RFC 7950)
-     are compared separately.  E.g., 'features' are compared separately from
-     'identities'.</li>
-        <li>Within an identifier namespace, the identifiers are compared between the
-     two schema revisions by qualified identifier name.  The 'renamed-from'
-     extension allow for a meaningful comparison where the name of the identifier
-     has changed between revisions.  The 'renamed-from' identifier parameter is
-     only used when an identifier in the new schema revision cannot be found in
-     the old schema revision.</li>
-        <li>YANG extensions, features, identities, typedefs are checked by comparing
-     the properties defined by their YANG sub-statements between the two
-     revisions.</li>
-        <li>YANG groupings, top-level data definition statements, rpcs, and
-     notifications are checked by comparing the top level properties defined by
-     their direct child YANG sub-statements, and also by recursively checking the
-     data definition statements.</li>
-        <li>The rules specified in section 3 of <xref target="I-D.ietf-netmod-yang-module-versioning" format="default"/> determine whether the
-     changes are backwards-compatible or non-backwards-compatible.</li>
-        <li>The rules specified in section 3.2 of <xref target="I-D.ietf-netmod-yang-packages" format="default"/> determine whether
-     backwards-compatible changes are 'minor' or 'editorial'.</li>
-        <li>For YANG "description", "must", and "when" statements, the
-     "backwards-compatible" and "editorial" extension statements can be used to
-     mark instances when the statements have changed in a backwards-compatible
-     or editorial way.  Since by default the comparison algorithm assumes that
-     any changes in these statements are non-backwards-compatible.  XXX, more
-     info required here, since the revisions in the module history probably need
-     to be available for this to work in the general branched revisions
-     case.</li>
-        <li>Submodules are not relevant for schema comparison purposes, i.e. the
-     comparison is performed after submodule resolution has been completed.</li>
-      </ul>
-      <section anchor="change_scope_statements" numbered="true" toc="default">
-        <name>YANG module revision scope extension annotations</name>
-        <t/>
-      </section>
-     <section anchor="node-tags" title="Node compatibility extension statements">
-        <t>In addition to the revision extension statement in
-        <xref target="I-D.ietf-netmod-yang-module-versioning" format="default"/>,
-        this document defines YANG extension statements to indicate
-        compatibility information for individual schema nodes and certain
-        YANG statements.
-        </t>
-        <t>The node compatibility extension statements are applicable to schema nodes
-        (e.g. leaf, rpc, choice) as defined in <xref target="RFC7950"/>, as well as
-        a set of YANG statements (e.g. typedef) as listed in the YANG definition of
-        the nbc-change-at extension in the ietf-yang-revisions module in this document.
-        </t>
-        <t>While the top level non-backwards-compatible-revision statement is mandatory when there
-        is a non-backwards-compatible change, the node compatibility statements are optional.
-        </t>
-        <t>For many YANG statements, programmatic tooling can determine whether
-        the changes to a statement between two module revisions constitutes a backwards-compatible
-        or non-backwards-compatible change.  However, for some statements, it
-        may be impractical for tooling to determine whether the changes
-        are backwards-compatible or not.  For example, in the general case,
-        tooling cannot determine whether the change in a YANG description
-        statement causes a change in the semantics of a YANG schema node.  If
-        the change is to fix a typo or spelling mistake then the change can
-        be classified as an editorial backwards-compatible change.
-        Conversely, if the change modifies the behavioral specification of
-        the data node then the change would need to be classified as either a
-        non editorial backwards-compatible change or a
-        non-backwards-compatible change. Hence, extension statements are
-        defined to annotate a YANG module with additional information to clarify
-        the scope of changes in cases that cannot be determined by algorithmic
-        comparison.
-        </t>
-        <t>Three extensions are defined for schema node compatibility information:
-        <list style="hanging">
-            <t hangText="nbc-change-at:">Indicates a specific YANG statement
-            had a non-backwards-compatible change at a particular module
-            or sub-module revision</t>
-            <t hangText="bc-change-at:">Indicates a specific YANG statement
-            had a backwards-compatible change at a particular module or sub-module revision</t>
-            <t hangText="editorial-change-at:">Indicates a specific YANG statement
-            had an editorial change at a particular module or sub-module revision. 
-            The meaning of an editorial change is as per YANG Semver 
-            <xref target="I-D.ietf-netmod-yang-semver"/></t>
-        </list>
-        </t>
-        <t>When a node compatibility statement is added to a schema node in a sub-module,
-        the revision indicated for the compatibility statement is that of the sub-module.
-        </t>
-        <t>Adding, modifying or removing any of the node compatibility
-          statements is considered to be a BC change.
-        </t>
-        <t>The following example illustrates the node compatibility statements:
-          <figure>
-            <artwork>
-              container some-stuff {
-                leaf used-to-be-a-string {
-                  rev:nbc-change-at "3.0.0" {
-                    description "Changed from a string to a uint32.";
-                  }
-                  type uint32;
-                }
-                leaf fixed-my-description-typo {
-                  rev:editorial-change-at "2022-06-03";
-                  type string;
-                  description "This description used to have a typo."
-                }
-                list sir-changed-a-lot {
-                  rev:editorial-change-at "3.0.0";
-                  rev:bc-change-at "2.3.0";
-                  rev:bc-change-at "1.2.1_non_compatible";
-                  description "a list of stuff";
-                  ordered-by user;
-                  key "foo";
-                  leaf foo {
-                    type string;
-                  }
-                  leaf thing {
-                    type uint8;
-                  }
-                }
-            </artwork>
-          </figure>
-        </t>
-        <t>Note that an individual YANG statement may have a backwards-compatible change
-        in a revision that is non-backwards-compatible (e.g. some other node changed
-        in a non-backwards-compatible fashion in that particular revision).
-        </t>
-        <t>If changes are ported from one branch of YANG model revisions to another
-        branch, care must be taken with any node compatibilty statements. 
-        A simple copy-n-paste should not be used. The node compatibilty statements 
-        may incorrectly reference a revision that is not in the history of the 
-        new revision. Further, the statements might not apply depending on what 
-        the history is like in that new branch (e.g., an NBC change
-        that is ported might not be an NBC change in the new branch).
-        Node compatiblity statements should not be copied over to the new 
-        branch. Instead, the changes should be 
-        considered as completely new on the new branch, and any compatibility information
-        should be generated from scratch.
-        </t>
-        <t>When a node compatibility  statement is present, that compatibilty
-        statement is the authoritative classification of the backwards compatibility
-        of the change to the schema node in the specifed revision. This allows a human
-        author to explicitly communicate the compatibilty and potentially override
-        the rules specified in this document. This is useful in a number of situations
-        including:
-        <list style="symbols">
-          <t>When a tool may not be able to accurately determine the compatibilty of a change. For example, a change in a 'pattern' or 'must' statement can be difficult for a user or tool to determine if it is a compatible change.</t>
-          <t>When a pattern, range or other statement is changed to more correctly define the server constraint. An example is correcting a pattern that incorrectly included 355.xxx.xxx.xxx as a possible IPv4 address to make it only accept up to 255.xxx.xxx.xxx.</t>
-        </list>
-        </t>    
-        <t>Nothing about the backwards compatibility of a schema node is implied by the absence of a node compatibility statement. Hence, the schema node definition must be compared between the two revisions to determine the backwards compatibility.
-        </t>
-        <t>If any nbc-change-at extension statements exists in a module or sub-module, then the module or sub-module MUST have non-backwards-compatible-revision
-        substatements in each revision statement of the module or sub-module history where the 
-        revision matches the argument of any nbc-change-at statements. If any revision statements are removed, then all node compatibiilty statements that reference that revision MUST also be removed. Conversely, node compatibilty statements MUST NOT be removed unless the
-        associated revision statement in the revision history is removed.
-        </t>
-        <t>If a node compatiblity statement is added to a grouping,
-        then all instances where the grouping is used in the module or
-        by an importing module are also impacted by the compatibilty information. 
-        Similarly for a 'typedef', all 
-        leafs and leaf-lists that use that typedef share the specified
-        compatibility classification. A non-backwards-compatible change 
-        to a typedef or grouping defined in one module that is used by 
-        an importing module, does not cause the importing module to add a
-        non-backwards-compatible-revision statement to the revision history.
-        Non-backwards-compatible marking does not carry through import statements.
-        </t>
-        <t>A node compatibility statement at a leaf, leaf-list, or typedef context
-        takes precedence over a node compatibility statement in a typedef
-        used by the leaf, leaf-list, or typedef. If multiple typedefs with
-        compatibility statements are used by a leaf, leaf-list, or typedef (e.g. a union), and there
-        is no compatibility statement at the top leaf, leaf-list, or typedef context, then
-        the order of precedence used to classify the compatibility of the top level leaf, 
-        leaf-list, or typedef is as follows: nbc-change-at, bc-change-at, and finally
-        editorial-change-at. That is, the leaf, leaf-list, or typedef takes the most
-        impactful change classification of all the underlying typedefs.</t>
-        <t>Node compatibility statements are not supported on YANG
-        statements such as 'pattern' or 'range'. The compatibility statement
-        instead goes against the leaf, leaf-list, or typedef context.
-        </t>
-        <t>Node compatibility statements that refer to pre-release revisions of a module
-        MUST be removed when a full release revision of the module is published.
-        </t>
-        <t>Node compatibilty statements SHOULD NOT be used when it isn't clear which
-        change the statement is referring to. For example: If a leaf is reordered 
-        within a container, a node compatibility statement SHOULD NOT be used against
-        the parent container nor against the reordered leaf. Similarly, if a leaf
-        is renamed or moved to another context without keeping the old leaf present
-        in the model and marked obsolete, a node compatibilty statement SHOULD not
-        be used.
-        </t>       
-      </section>
-    </section>
-    <section anchor="module_comparison_algorithm" numbered="true" toc="default">
-      <name>YANG module comparison algorithm</name>
-      <t>The schema comparison algorithm defined in <xref target="generic_comparison_algorithm" format="default"/> can be used to compare the schema for
-   individual modules, but with the following modifications:
-      </t>
-      <ul empty="true" spacing="normal">
-        <li>Changes to the module's metadata information (i.e. module level
-     description, contact, organization, reference) should be checked (as
-     potential editorial changes).</li>
-        <li>The module's revision history should be ignored from the comparison.</li>
-        <li>Changes to augmentations and deviations should be sorted by path and
-     compared.</li>
-      </ul>
-    </section>
-    <section anchor="schema_comparison_algorithm" numbered="true" toc="default">
-      <name>YANG schema comparison algorithms</name>
-      <section anchor="standard_schema_comparison_algorithm" numbered="true" toc="default">
-        <name>Standard YANG schema comparison algorithm</name>
-        <t>The standard method for comparing two YANG schema versions is to individually
-     compare the module revisions for each module implemented by the schema
-     using the algorithm defined in <xref target="module_comparison_algorithm" format="default"/>
-     and then aggregating the results together: 
+        <name>Compiled YANG schema tree comparison algorithm</name>
+        <t>
+            This algorithm is defined for separate compiled YANG modules. It
+            first compares all the non data-definition
+            statements in the module and then all the data-definition statements
+            recursively. These schema-only statements are
+            skipped:
         </t>
         <ul spacing="normal">
-          <li>If all implemented modules in the schema have only changed in an editorial way then the schema 
-           is changed in an editorial way</li>
-          <li>If all implemented modules in the schema have only been changed in an editorial or backwards-compatible 
-           way then the schema is changed in a backwards-compatible way</li>
-          <li>Otherwise if any implemented module in the schema has been changed in a non-backwards-compatible way then the
-           schema is changed in a non-backwards-compatible way.</li>
+            <li>choice</li>
+            <li>case</li>
         </ul>
-        <t>The standard schema comparison method is the RECOMMENDED scheme to
-     calculate the version number change for new versions of YANG packages,
-     because it allows the package version to be calculated based on changes to
-     implemented modules revision history (or YANG semantic version number if
-     used to identify module revisions).</t>
-      </section>
-      <section anchor="advanced_schema_comparison_algorithm" numbered="true" toc="default">
-        <name>Filtered YANG schema comparison algorithm</name>
-        <t>Another method to compare YANG schema, that is less likely to report inconsequential differences, is to
-     construct full schema trees for the two schema versions, directly apply a version of the comparison
-     algorithm defined in <xref target="generic_comparison_algorithm" format="default"/>.  This may be
-     particular useful when the schema represents a complete datastore schema for a server because it allows various
-     filtered to the comparison algorithm to provide a more specific answer about what changes may impact a
-     particular client.</t>
-        <t>The full schema tree can easily be constructed from a YANG package
-     definition, or alternative YANG schema definition.</t>
-        <t>Controlled by input parameters to the comparison algorithm, the
-     following parts of the schema trees can optionally be filtered during the
-     comparison:
+        <t>
+            The non data-definition statements are considered modified when
+            their content is changed or any of their substatements are changed.
+            If a statement is present in the old revision of a module and
+            missing in the new revision, it is considered removed. Vice-versa,
+            if missing in the old revision but present in the new revision,
+            it is considered added.
         </t>
-        <ul empty="true" spacing="normal">
-          <li>All "grouping" statements can be ignored (after all "use" statements
-       have been processed when constructing the schema).</li>
-          <li>All module and submodule metadata information (i.e. module level
-       description, contact, organization, reference) can be ignored.</li>
-          <li>The comparison can be restricted to the set of features that are of
-       interest (different sets of features may apply to each schema
-       versions).</li>
-          <li>The comparison can be restricted to the subset of data nodes, RPCs,
-       notifications and actions, that are of interest (e.g., the subset
-       actually used by a particular client), providing a more meaningful
-       result.</li>
-          <li>The comparison could filter out backwards-compatible 'editorial'
-       changes.</li>
-        </ul>
-        <t>In addition to reporting the overall scope of changes at the schema
-     level, the algorithm output can also optionally generate a list of specific
-     changes between the two schema, along with the classification of those
-     individual changes.</t>
+        <t>
+            Data-definition statements are compared similarly except that a
+            change in a descendant data-definition
+            statement is not considered a change of the parent data-definition
+            statement but a separate change instead.
+        </t>
+        <t>
+            Only statements with any changes are reported and included in the
+            algorithm output.
+        </t>
+
+        <section anchor="module_identification" numbered="true" toc="default">
+            <name>Module identification</name>
+            <t>
+                When generating the comparison output of two compiled YANG
+                modules, it includes unique identification of the
+                modules in question. For both the old and the new revision
+                of the module, its name, revision, list of submodules,
+                and a leaf-list of enabled features is included. In
+                addition, the same information is reported for all the
+                imported YANG modules, recursively. This ensures that if
+                any other output is produced with a different set of
+                changes for two YANG modules, their identification information
+                must also differ.
+            </t>
+      </section>
+      <section anchor="change_content" numbered="true" toc="default">
+          <name>Change content</name>
+          <t>
+              Non-data-definition statements are uniquely identified with
+              their YANG identifier and data-definition statements
+              with their absolute schema data node-ids.
+          </t>
+          <t>
+              For every change, the changed statement and the parent of the
+              changed statement are included. While
+              redundant in many cases, it allows to uniquely report changes in
+              nested statements, e.g. an extension instance change in the
+              type of a leaf statement. Also, all the substatements with their
+              value or content are included for every changed statement, for
+              both older and newer revision of the YANG module, if applicable.
+              This ensures that the output includes all the possibly required
+              information without relying on learning it from the YANG modules
+              themselves.
+          </t>
+      </section>
+      <section anchor="change_conformance" numbered="true" toc="default">
+          <name>Change conformance</name>
+          <t>
+              Every change is classified as either backwards-compatible or
+              non-backwards-compatible based on sections 3.1.1 and 3.1.2 in
+              <xref target="I-D.ietf-netmod-yang-module-versioning"
+              format="default"/>.  But, there are cases when it is impossible
+              for tooling to determine whether a change is backwards-compatible
+              or not. The affected statements are:
+          </t>
+          <ul spacing="normal">
+              <li>pattern</li>
+              <li>when</li>
+              <li>must</li>
+              <li>description</li>
+              <li>extension instance</li>
+          </ul>
+          <t>
+              Normally, any change in these statement is reported as
+              non-backwards-compatible. However, if the author
+              of the new revision of a YANG module determines that the change of
+              an aforementioned statement is backwards-compatible based on
+              the compatibility rules for the specific statement, they can decide
+              to use the 'schema-cmp:backwards-compatible' extension to
+              signify this fact. Then, this change must be reported as
+              backwards-compatible.
+          </t>
       </section>
     </section>
     <section anchor="comparison_tooling" numbered="true" toc="default">
-      <name>Comparison tooling</name>
-      <t>'pyang' has some support for comparison two module revisions, but this is
-   currently limited to a linear module history.</t>
-      <t>TODO, it would be helpful if there is reference tooling for schema
-   comparison.</t>
+        <name>Comparison tooling</name>
+        <t>
+            The `yanglint` tool from the libyang library is able to generate the
+            `ietf-schema-comparison` YANG data of two revisions of a YANG
+            module.
+        </t>
     </section>
     <section anchor="yang_modules" numbered="true" toc="default">
-      <name>Module Versioning Extension YANG Modules</name>
-      <t keepWithNext="true"> YANG module with extension statements for annotating NBC changes, revision label, status description,
-      and importing by version.</t>
-      <sourcecode name="ietf-yang-rev-annotations@2023-02-14.yang" type="" markers="true"><![CDATA[
-module ietf-yang-rev-annotations {
+        <name>Schema Comparison YANG Module</name>
+        <t keepWithNext="true">
+            YANG module with nodes describing the differences between two
+            revisions of compiled YANG modules. The "ietf-schema-comparison"
+            YANG module imports definitions from the "ietf-yang-types" module
+            defined in <xref target="RFC6991" format="default"/> and
+            "ietf-yang-library" module defined in
+            <xref target="RFC8525" format="default"/>.
+        </t>
+        <sourcecode name="ietf-schema-comparison@2025-10-09.yang" type=""
+            markers="true"><![CDATA[
+module ietf-schema-comparison {
   yang-version 1.1;
-  namespace "urn:ietf:params:xml:ns:yang:ietf-yang-rev-annotations";
-  prefix rev-ext;
+  namespace "urn:ietf:params:xml:ns:yang:ietf-schema-comparison";
+  prefix schema-cmp;
 
-  import ietf-yang-revisions {
-    prefix rev;
+  import ietf-yang-types {
+    prefix yang;
+    reference
+      "RFC 6991: Common YANG Data types";
   }
+  import ietf-yang-library {
+    prefix yanglib;
+    reference
+      "RFC 8525: YANG Library";
+  }
+
 
   organization
     "IETF NETMOD (Network Modeling) Working Group";
-  contact
-    "WG Web:   <https://datatracker.ietf.org/wg/netmod/>
-     WG List:  <mailto:netmod@ietf.org>
 
-     Author:   Robert Wilton
-               <mailto:rwilton@cisco.com>";
+  contact
+    "WG List: NETCONF WG list <mailto:netmod@ietf.org>
+     WG Web:  https://datatracker.ietf.org/wg/netmod
+
+     Author:  Michal Vaško
+              <mailto:mvasko@cesnet.cz>
+
+     Author:  Rob Wilton
+              <mailto:rwilton@cisco.com>
+
+     Author:  Per Andersson
+              <mailto:per.ietf@ionio.se>";
 
   description
-    "This YANG 1.1 module contains extensions to annotation to YANG
-     module with additional metadata information on the nature of
-     changes between two YANG module revisions.
+    "This YANG 1.1 module contains definitions and extensions to
+     support comparison between different versions of YANG modules. The
+     output of the comparison algorithm is described in this YANG module.
 
-     XXX, maybe these annotations could also be included in
-     ietf-yang-revisions?
-
-     Copyright (c) 2019 IETF Trust and the persons identified as
+     Copyright (c) 2025 IETF Trust and the persons identified as
      authors of the code.  All rights reserved.
 
-     Redistribution and use in source and binary forms, with or
-     without modification, is permitted pursuant to, and subject
-     to the license terms contained in, the Simplified BSD License
-     set forth in Section 4.c of the IETF Trust's Legal Provisions
-     Relating to IETF Documents
-     (http://trustee.ietf.org/license-info).
+     Redistribution and use in source and binary forms, with
+     or without modification, is permitted pursuant to, and
+     subject to the license terms contained in, the Revised
+     BSD License set forth in Section 4.c of the IETF Trust's
+     Legal Provisions Relating to IETF Documents
+     (https://trustee.ietf.org/license-info).
 
-     This version of this YANG module is part of RFC XXXX; see
-     the RFC itself for full legal notices.
+     This version of this YANG module is part of RFC XXXX
+     (https://www.rfc-editor.org/info/rfcXXXX); see the RFC
+     itself for full legal notices.
 
-     The key words 'MUST', 'MUST NOT', 'REQUIRED', 'SHALL', 'SHALL
-     NOT', 'SHOULD', 'SHOULD NOT', 'RECOMMENDED', 'NOT RECOMMENDED',
-     'MAY', and 'OPTIONAL' in this document are to be interpreted as
-     described in BCP 14 (RFC 2119) (RFC 8174) when, and only when,
-     they appear in all capitals, as shown here.";
-
+     The key words 'MUST', 'MUST NOT', 'REQUIRED', 'SHALL',
+     'SHALL NOT', 'SHOULD', 'SHOULD NOT', 'RECOMMENDED',
+     'NOT RECOMMENDED', 'MAY', and 'OPTIONAL' in this document
+     are to be interpreted as described in BCP 14 (RFC 2119)
+     (RFC 8174) when, and only when, they appear in all
+     capitals, as shown here.";
   // RFC Ed.: update the date below with the date of RFC publication
   // and remove this note.
   // RFC Ed.: replace XXXX (inc above) with actual RFC number and
   // remove this note.
 
-  revision 2023-03-11 {
-    rev:revision-label 1.0.0-draft-ietf-netmod-yang-schema-comparison-02;
+  revision 2025-10-09 {
     description
-      "Draft revision";
+      "Initial revision.";
     reference
-      "XXXX: YANG Schema Comparison";
+      "RFC XXXX: YANG Schema Comparison";
   }
 
-  extension nbc-change-at {
-    argument revision-date-or-label;
-    description
-      "A node compatibility statement that identifies a revision 
-      (by revision-label, or revision date if a revision-label is
-      not available) where a non-backwards-compatible change has 
-      occurred in a particular YANG statement relative to the
-      previous revision listed in the revision history.
- 
-      The format of the revision-label argument MUST conform to the
-      pattern defined for the ietf-yang-revisions
-      revision-date-or-label typedef.
-
-      The following YANG statements MAY have zero or more 
-      nbc-change-at substatements:
-        - all schema node statements (leaf, rpc, choice, etc)
-        - 'feature' statements
-        - 'grouping' statements
-        - 'identity' statements
-        - 'must' statements
-        - 'refine' statements
-        - 'typedef' statements
-        - YANG extensions
-                          
-      Each YANG statement MUST only a have a single node
-      compatibilty statement (one of nbc-change-at, bc-change-at,
-      or editorial-change-at) for a particular revision. When a node
-      has more than one of the node compatibilty statements (for 
-      different revisions), they must be ordered from most recent
-      to least recent.
-       
-      An nbc-change-at statement can have 0 or 1 'description' 
-      substatements.
-       
-      The nbc-change-at statement in not inherited by descendants
-      in the schema tree. It only applies to the specific YANG 
-      statement with which it is associated.   
-      ";
-       
-    reference
-      "XXXX: YANG Schema Comparison;
-       Section XXX, XXX";
-      
-  }
-
-  extension bc-change-at {
-    argument revision-date-or-label;
-    description
-      "A node compatibility statement that identifies a revision 
-      (by revision-label, or revision date if a revision-label is
-      not available) where a backwards-compatible change has 
-      occurred in a particular YANG statement relative to the
-      previous revision listed in the revision history.
- 
-      The format of the revision-label argument MUST conform to the
-      pattern defined for the ietf-yang-revisions
-      revision-date-or-label typedef.
-
-      The following YANG statements MAY have zero or more 
-      bc-change-at substatements:
-        - all schema node statements (leaf, rpc, choice, etc)
-        - 'feature' statements
-        - 'grouping' statements
-        - 'identity' statements
-        - 'must' statements
-        - 'refine' statements
-        - 'typedef' statements
-        - YANG extensions
-                          
-      Each YANG statement MUST only a have a single node
-      compatibilty statement (one of nbc-change-at, bc-change-at,
-      or editorial-change-at) for a particular revision. When a node
-      has more than one of the node compatibilty statements (for 
-      different revisions), they must be ordered from most recent
-      to least recent.
-       
-      An bc-change-at statement can have 0 or 1 'description' 
-      substatements.
-       
-      The bc-change-at statement in not inherited by descendants
-      in the schema tree. It only applies to the specific YANG 
-      statement with which it is associated.   
-      ";
-       
-    reference
-      "XXXX: YANG Schema Comparison;
-       Section XXX, XXX";
-      
-  }
-
-  extension editorial-change-at {
-    argument revision-date-or-label;
-    description
-      "A node compatibility statement that identifies a revision 
-      (by revision-label, or revision date if a revision-label is
-      not available) where an editorial change has 
-      occurred in a particular YANG statement relative to the
-      previous revision listed in the revision history.
- 
-      The format of the revision-label argument MUST conform to the
-      pattern defined for the ietf-yang-revisions
-      revision-date-or-label typedef.
-
-      The following YANG statements MAY have zero or more 
-      editorial-change-at substatements:
-        - all schema node statements (leaf, rpc, choice, etc)
-        - 'feature' statements
-        - 'grouping' statements
-        - 'identity' statements
-        - 'must' statements
-        - 'refine' statements
-        - 'typedef' statements
-        - YANG extensions
-                          
-      Each YANG statement MUST only a have a single node
-      compatibilty statement (one of nbc-change-at, bc-change-at,
-      or editorial-change-at) for a particular revision. When a node
-      has more than one of the node compatibilty statements (for 
-      different revisions), they must be ordered from most recent
-      to least recent.
-       
-      An editorial-change-at statement can have 0 or 1 'description' 
-      substatements.
-       
-      The editorial-change-at statement in not inherited by descendants
-      in the schema tree. It only applies to the specific YANG 
-      statement with which it is associated.   
-      ";
-       
-    reference
-      "XXXX: YANG Schema Comparison;
-       Section XXX, XXX";
-      
-  }
-  
   extension backwards-compatible {
-    argument revision-date-or-label;
     description
-      "Identifies a revision (by revision-label, or revision date if
-       a revision-label is not available) where a
-       backwards-compatible change has occurred relative to the
-       previous revision listed in the revision history.
+      "Marks statements in a new revision of a module
+       that were changed but in a backwards-compatible
+       manner according to YANG 1.1 and 1.0 rules for
+       updating a module.
 
-       The format of the revision-label argument MUST conform to the
-       pattern defined for the ietf-yang-revisions
-       revision-date-or-label typedef.
+       When used as a substatement of a 'pattern'
+       statement, it means its allowed value space has
+       been expanded.
 
-       The following YANG statements MAY have zero or more
-       'rev-ext:non-backwards-compatible' statements:
-           description
-           must
-           when
+       When used as a substatement of a 'when' or
+       'must' statement, it means their constraint has
+       been relaxed.
 
-       Each YANG statement MUST only a have a single
-       non-backwards-compatible, backwards-compatible, or editorial
-       extension statement for a particular revision-label, or
-       corresponding revision-date.";
+       When used as a substatement of a 'description'
+       statement, it means it has been changed in a
+       backwards-compatible way.
 
+       When used as a substatement of an extension
+       instance, it means adding, modifying, or removing
+       it is a backwards-compatible change.
+
+       Not allowed to be instiantiated for any other
+       statements.";
     reference
-      "XXXX: YANG Schema Comparison;
-       Section XXX, XXX";
+      "RFC 7950: The YANG 1.1 Data Modeling Language, section 11;
+       RFC 6020: YANG - A Data Modeling Language for the Network
+       Configuration Protocol (NETCONF), section 10";
   }
 
-  extension editorial {
-    argument revision-date-or-label;
+  typedef data-path {
+    type string;
     description
-      "Identifies a revision (by revision-label, or revision date if
-       a revision-label is not available) where an editorial change
-       has occurred relative to the previous revision listed in the
-       revision history.
-
-       The format of the revision-label argument MUST conform to the
-       pattern defined for the ietf-yang-revisions
-       revision-date-or-label typedef.
-
-       The following YANG statements MAY have zero or more
-       'rev-ext:non-backwards-compatible' statements:
-           description
-
-       Each YANG statement MUST only a have a single
-       non-backwards-compatible, backwards-compatible, or editorial
-       extension statement for a particular revision-label, or
-       corresponding revision-date.";
-
-    reference
-      "XXXX: YANG Schema Comparison;
-       Section XXX, XXX";
+      "Used for any data paths and XPath expressions in the compared YANG
+       modules. A generic type is used to not enforce their evaluation or
+       validation in this context.";
   }
 
-  extension renamed-from {
-    argument yang-identifier;
+  typedef stmt-type {
+    type enumeration {
+      enum "base";
+      enum "bit";
+      enum "config";
+      enum "contact";
+      enum "default";
+      enum "description";
+      enum "enum";
+      enum "error-app-tag";
+      enum "error-message";
+      enum "extension-instance";
+      enum "fraction-digits";
+      enum "identity";
+      enum "length";
+      enum "mandatory";
+      enum "max-elements";
+      enum "min-elements";
+      enum "must";
+      enum "node";
+      enum "ordered-by";
+      enum "organization";
+      enum "path";
+      enum "pattern";
+      enum "presence";
+      enum "range";
+      enum "reference";
+      enum "require-instance";
+      enum "status";
+      enum "type";
+      enum "units";
+      enum "unique";
+      enum "when";
+    }
     description
-      "Specifies a previous name for this identifier.
- 
-       This can be used when comparing schema to optimize handling
-       for data nodes that have been renamed rather than naively
-       treated them as data nodes that have been deleted and
-       recreated.
+      "Type of the statement that a change affects.";
+  }
 
-       The argument 'yang-identifier' MUST take the form of a YANG
-       identifier, as defined in section 6.2 of RFC 7950.
+  typedef revision-or-empty {
+    type union {
+      type empty;
+      type yanglib:revision-identifier;
+    }
+    description
+      "Module or submodule revision. If it has none, an empty value is
+       used.";
+  }
 
-       Any YANG statement that takes a YANG identifier as its
-       argument MAY have a single 'rev-ext:renamed-from'
-       sub-statement.
+  grouping ext-instance-changes {
+    description
+      "Describes an extension-instance statement change.";
+    leaf module {
+      type yang:yang-identifier;
+      mandatory true;
+      description
+        "Module with the extension definition of an extension instance.";
+    }
+    leaf name {
+      type yang:yang-identifier;
+      mandatory true;
+      description
+        "Name of the extension defition of an extension instance.";
+    }
+    leaf argument {
+      type string;
+      description
+        "Argument used of an extension definition.";
+    }
+    anydata substatements {
+      description
+        "Any substatements of the extension instance.";
+    }
+  }
 
-       TODO, we should also facilitate identifiers being moved into
-       other modules, e.g. by supporting a module-name qualified
-       identifier.";
+  grouping status-changes {
+    description
+      "Describes a status statement change.";
+    leaf status {
+      type enumeration {
+        enum "current";
+        enum "deprecated";
+        enum "obsolete";
+      }
+      mandatory true;
+      description
+        "Status substatement value.";
+    }
+  }
 
-    reference
-      "XXXX: YANG Schema Comparison;
-       Section XXX, XXX";
+  grouping must-changes {
+    description
+      "Describes a must statement change.";
+    leaf condition {
+      type data-path;
+      description
+        "Condition substatement value.";
+    }
+    leaf description {
+      type string;
+      description
+        "Description substatement value.";
+    }
+    leaf reference {
+      type string;
+      description
+        "Reference substatement value.";
+    }
+    leaf error-message {
+      type string;
+      description
+        "Error-message substatement value.";
+    }
+    leaf error-app-tag {
+      type string;
+      description
+        "Error-app-tag substatement value.";
+    }
+    list ext-instance {
+      description
+        "List of extension-instance substatements.";
+      uses ext-instance-changes;
+    }
+  }
+
+  grouping when-changes {
+    description
+      "Describes a when statement change.";
+    leaf condition {
+      type data-path;
+      description
+        "Condition substatement value.";
+    }
+    leaf description {
+      type string;
+      description
+        "Description substatement value.";
+    }
+    leaf reference {
+      type string;
+      description
+        "Reference substatement value.";
+    }
+    uses status-changes;
+    list ext-instance {
+      description
+        "List of extension-instance substatements.";
+      uses ext-instance-changes;
+    }
+  }
+
+  grouping restriction-substmts {
+    description
+      "Common substatements shared by all restriction statements.";
+    leaf description {
+      type string;
+      description
+        "Description substatement value.";
+    }
+    leaf reference {
+      type string;
+      description
+        "Reference substatement value.";
+    }
+    leaf error-message {
+      type string;
+      description
+        "Error-message substatement value.";
+    }
+    leaf error-app-tag {
+      type string;
+      description
+        "Error-app-tag substatement value.";
+    }
+    list ext-instance {
+      description
+        "List of extension-instance substatements.";
+      uses ext-instance-changes;
+    }
+  }
+
+  grouping type-changes {
+    description
+      "Describes a type statement change.";
+    leaf base-type {
+      type enumeration {
+        enum "int8";
+        enum "int16";
+        enum "int32";
+        enum "int64";
+        enum "uint8";
+        enum "uint16";
+        enum "uint32";
+        enum "uint64";
+        enum "decimal64";
+        enum "string";
+        enum "boolean";
+        enum "enumeration";
+        enum "bits";
+        enum "binary";
+        enum "leafref";
+        enum "identityref";
+        enum "empty";
+        enum "union";
+        enum "instance-identifier";
+      }
+      description
+        "Type substatement value.";
+    }
+    container range {
+      description
+        "Range statement substatements.";
+      list interval {
+        description
+          "Intervals of a range statement.";
+        leaf min {
+          type int64;
+          description
+            "Lower boundary of an interval of a range statement.";
+        }
+        leaf max {
+          type int64;
+          description
+            "Upper boundary of an interval of a range statement.";
+        }
+      }
+      uses restriction-substmts;
+    }
+    container length {
+      description
+        "Length statement substatements.";
+      list interval {
+        description
+          "Intervals of a length statement.";
+        leaf min {
+          type uint64;
+          description
+            "Lower boundary of an interval of a length statement.";
+        }
+        leaf max {
+          type uint64;
+          description
+            "Upper boundary of an interval of a length statement.";
+        }
+      }
+      uses restriction-substmts;
+    }
+    leaf fraction-digits {
+      type uint8;
+      description
+        "Fraction-digits substatement value.";
+    }
+    list pattern {
+      leaf expression {
+        type string;
+        description
+          "Pattern substatement value.";
+      }
+      leaf inverted {
+        type boolean;
+        description
+          "Inverted substatement value.";
+      }
+      uses restriction-substmts;
+    }
+    list enum {
+      key "name";
+      description
+        "List of enum statements.";
+      leaf name {
+        type yang:yang-identifier;
+        description
+          "Enum statement name.";
+      }
+      leaf description {
+        type string;
+        description
+          "Description substatement value.";
+      }
+      leaf reference {
+        type string;
+        description
+          "Reference substatement value.";
+      }
+      leaf value {
+        type int32;
+        description
+          "Value substatement value.";
+      }
+      uses status-changes;
+      list ext-instance {
+        description
+          "List of extension-instance substatements.";
+        uses ext-instance-changes;
+      }
+    }
+    list bit {
+      key "name";
+      leaf name {
+        type yang:yang-identifier;
+      }
+      leaf description {
+        type string;
+        description
+          "Description substatement value.";
+      }
+      leaf reference {
+        type string;
+        description
+          "Reference substatement value.";
+      }
+      leaf position {
+        type uint32;
+        description
+          "Position substatement value.";
+      }
+      uses status-changes;
+      list ext-instance {
+        description
+          "List of extension-sintance substatements.";
+        uses ext-instance-changes;
+      }
+    }
+    leaf path {
+      type data-path;
+      description
+        "Path substatement value.";
+    }
+    leaf require-instance {
+      type boolean;
+      description
+        "Require-instance substatement value.";
+    }
+    leaf-list base {
+      type yang:yang-identifier;
+      description
+        "List of base substatement values.";
+    }
+    list ext-instance {
+      description
+        "List of extension-instance substatements.";
+      uses ext-instance-changes;
+    }
+  }
+
+  grouping node-changes {
+    leaf config {
+      type boolean;
+      description
+        "Config substatement value.";
+    }
+    leaf description {
+      type string;
+      description
+        "Description substatement value.";
+    }
+    leaf mandatory {
+      type boolean;
+      description
+        "Mandatory substatement value.";
+    }
+    list must {
+      description
+        "List of must substatements.";
+      uses must-changes;
+    }
+    leaf presence {
+      type boolean;
+      description
+        "Presence substatement existence.";
+    }
+    leaf reference {
+      type string;
+      description
+        "Reference substatement value.";
+    }
+    uses status-changes;
+    list when {
+      description
+        "List of when substatements.";
+      uses when-changes;
+    }
+    container type {
+      description
+        "Type substatement.";
+      uses type-changes;
+      list union-type {
+        description
+          "List of a union type substatements.";
+        uses type-changes;
+      }
+    }
+    leaf units {
+      type string;
+      description
+        "Units substatement value.";
+    }
+    leaf ordered-by {
+      type enumeration {
+        enum "system";
+        enum "user";
+      }
+      description
+        "Ordered-by substatement value.";
+    }
+    leaf-list default {
+      type string;
+      description
+        "List of default substatement values.";
+    }
+    leaf min-elements {
+      type uint32;
+      description
+        "Min-elements substatement value.";
+    }
+    leaf max-elements {
+      type uint32;
+      description
+        "Max-elements substatement value.";
+    }
+    list unique {
+      description
+        "List of unique substatements.";
+      leaf-list node {
+        type yang:yang-identifier;
+        description
+          "List of nodes referenced by a unique substatement.";
+      }
+    }
+    list ext-instance {
+      description
+        "List of extension-instance substatements.";
+      uses ext-instance-changes;
+    }
+  }
+
+  grouping module-changes {
+    leaf organization {
+      type string;
+      description
+        "Organization substatement value.";
+    }
+    leaf contact {
+      type string;
+      description
+        "Contact substatement value.";
+    }
+    leaf description {
+      type string;
+      description
+        "Description substatement value.";
+    }
+    leaf reference {
+      type string;
+      description
+        "Reference substatement value.";
+    }
+    list identity {
+      key "name";
+      description
+        "List of identity substatements.";
+      leaf name {
+        type yang:yang-identifier;
+        description
+          "Identity statement name.";
+      }
+      list ext-instance {
+        description
+          "List of extension-instance substatements.";
+        uses ext-instance-changes;
+      }
+    }
+    list ext-instance {
+      description
+        "List of extension-instance substatements.";
+      uses ext-instance-changes;
+    }
+  }
+
+  grouping conformance-type {
+    leaf conformance {
+      type enumeration {
+        enum "backwards-compatible";
+        enum "non-backwards-compatible";
+      }
+      mandatory true;
+      description
+        "Conformance information of a change in the compared YANG modules.";
+    }
+  }
+
+  grouping change-info {
+    list changed {
+      key "stmt";
+      min-elements 1;
+      description
+        "List of changes.";
+      leaf stmt {
+        type stmt-type;
+        description
+          "Changed statement.";
+      }
+      leaf parent-stmt {
+        type stmt-type;
+        description
+          "Parent statement of the changed statement.";
+      }
+      leaf change {
+        type enumeration {
+          enum "modified" {
+            description
+              "Statement existed and was modified.";
+          }
+          enum "added" {
+            description
+              "Statement was added.";
+          }
+          enum "removed" {
+            description
+              "Statement was removed.";
+          }
+          enum "moved" {
+            description
+              "Statement was moved and the position affects the meaning.";
+          }
+        }
+        mandatory true;
+        description
+          "Type of change of the statement.";
+      }
+      uses conformance-type;
+    }
+  }
+
+  grouping module-params {
+    leaf module {
+      type yang:yang-identifier;
+      mandatory true;
+      description
+        "Compared module name.";
+    }
+    leaf revision {
+      type revision-or-empty;
+      mandatory true;
+      description
+        "Compared module revision.";
+    }
+    list submodule {
+      key "name revision";
+      leaf name {
+        type yang:yang-identifier;
+        mandatory true;
+        description
+          "Submodule name.";
+      }
+      leaf revision {
+        type revision-or-empty;
+        mandatory true;
+        description
+          "Submodule revision.";
+      }
+      description
+        "Submodule of the main module.";
+    }
+    leaf-list enabled-feature {
+      type yang:yang-identifier;
+      description
+        "All the enabled features of the module.";
+    }
+  }
+
+  container schema-comparison {
+    config false;
+    description
+      "Schema comparison details.";
+    list compiled-diff {
+      description
+        "Instance of a schema comparison of two YANG modules in different
+         revisions with all their imports.";
+      container source {
+        description
+          "Source module information.";
+        uses module-params;
+      }
+      list source-import {
+        key "module revision";
+        description
+          "List of source module imported modules information.";
+        uses module-params;
+      }
+      container target {
+        description
+          "Target module information.";
+        uses module-params;
+      }
+      list target-import {
+        key "module revision";
+        description
+          "List of target module imported modules information.";
+        uses module-params;
+      }
+      uses conformance-type;
+      container module-diff {
+        description
+          "Information about direct module statement substatement changes.";
+        uses change-info;
+        container old {
+          description
+            "Changed statements in the older revision of the YANG module.";
+          uses module-changes;
+        }
+        container new {
+          description
+            "Changed statements in the newer revision of the YANG module.";
+          uses module-changes;
+        }
+      }
+      list node-diff {
+        key "node";
+        description
+          "Information about data-definition (node) statement substatement
+           changes.";
+        leaf node {
+          type data-path;
+          description
+            "Path to the changed data-definition statement.";
+        }
+        leaf node-type {
+          type enumeration {
+            enum "container";
+            enum "leaf";
+            enum "leaf-list";
+            enum "list";
+            enum "anydata";
+            enum "anyxml";
+            enum "rpc";
+            enum "action";
+            enum "notification";
+          }
+          mandatory true;
+          description
+            "Type of the changed data-definition statement.";
+        }
+        leaf in-rpc-action {
+          type enumeration {
+            enum "input";
+            enum "output";
+          }
+          description
+            "Present if the changed data-definition statement is a
+             descendant of an action or rpc statement.";
+        }
+        uses change-info;
+        container old {
+          description
+            "All the node substatements in the older revision of the YANG
+             module.";
+          uses node-changes;
+        }
+        container new {
+          description
+            "All the node substatements in the newer revision of the YANG
+             module.";
+          uses node-changes;
+        }
+      }
+    }
   }
 }
 ]]></sourcecode>
@@ -898,31 +1210,93 @@ module ietf-yang-rev-annotations {
     </section>
     <section anchor="security" numbered="true" toc="default">
       <name>Security Considerations</name>
-      <t>The document does not define any new protocol or data model.  There
-  are no security impacts.</t>
+      <t>This section follows the template defined in Section 3.7.1 of
+        <xref target="RFC8407"/>.</t>
+
+      <t>The YANG module specified in this document defines a schema for data
+        that is designed to be used by offline tooling to generate output for
+        differences in supplied YANG modules.</t>
+
+      <t>The YANG module specifiod in this document MAY be accessed via network
+        management protocols such as NETCONF <xref target="RFC6241"/> or
+        RESTCONF <xref target="RFC8040"/>. The lowest NETCONF layer is the
+        secure transport layer, and the mandatory-to-implement secure transport
+        is Secure Shell (SSH) <xref target="RFC6242"/>. The lowest RESTCONF
+        layer is HTTPS, and the mandatory-to-implement secure transport is TLS
+        <xref target="RFC8446"/>.</t>
+
+      <t>The Network Configuration Access Control Model (NACM)
+        <xref target="RFC8341"/> provides the means to restrict access for
+        particular NETCONF or RESTCONF users to a preconfigured subset of all
+        available NETCONF or RESTCONF protocol operations and content.</t>
+
+      <t>When the module is used for offline tooling there are no security
+        considerations, since the user has full access to all YANG modules
+        used.</t>
+
+      <t>The container "schema-comparison" contains all the groupings reflecting
+        the changes between YANG modules. If this data node is published in
+        online tooling, care needs to be taken so that knowledge of YANG modules
+        are not leaked.</t>
+
+      <t>Since the modules does not define any RPCs or actions or notifications,
+        and thus the security considerations for such are not provided here.</t>
     </section>
     <section anchor="iana" numbered="true" toc="default">
       <name>IANA Considerations</name>
+      <section anchor="xml-registry" numbered="true" toc="default">
+        <name>The "IETF XML" Registry</name>
+        <t>This document register one URI in the "ns" subregistry of
+          the IETF XML Registry <xref target="RFC3688" format="default"/>
+          maintained at <eref target="https://www.iana.org/assignments/xml-registry/xml-registry.xhtml#ns"/>.
+          Following the format in <xref target="RFC3688" format="default"/>,
+          the following registration is requested:</t>
+        <t>
+          <figure align="center">
+            <artwork>
+URI: urn:ietf:params:xml:ns:yang:ietf-schema-comparison
+Registrant Contact: The IESG.
+XML: N/A, the requested URI is an XML namespace.
+            </artwork>
+          </figure>
+        </t>
+      </section>
+
       <section anchor="yang-module-registrations" numbered="true" toc="default">
-        <name>YANG Module Registrations</name>
-        <t>The following YANG module is requested to be registered in the "IANA
-  Module Names" registry:</t>
-        <t>The ietf-yang-rev-annotations module:</t>
-        <ul empty="true" spacing="normal">
-          <li>Name: ietf-yang-rev-annotations</li>
-          <li>XML Namespace: urn:ietf:params:xml:ns:yang:ietf-yang-rev-annotations</li>
-          <li>Prefix: rev-ext</li>
-          <li>Reference: [RFCXXXX]</li>
-        </ul>
+        <name>The "YANG Module Names" Registry</name>
+        <t>This document registers one YANG module in the YANG Module Names
+          registry <xref target="RFC6020" format="default"/> maintained at
+          <eref target="https://www.iana.org/assignments/yang-parameters/yang-paramaters.xhtml"/>.
+          Following the format defined in <xref target="RFC6020"/>, the below
+          registration is requested:</t>
+        <t>
+          <figure align="center">
+            <artwork>
+Name: ietf-schema-comparison
+XML Namespace: urn:ietf:params:xml:ns:yang:ietf-schema-comparison
+Prefix: schema-cmp
+Reference: RFC XXXX
+            </artwork>
+          </figure>
+        </t>
       </section>
     </section>
   </middle>
   <back>
     <references title="Normative References">
         <?rfc include='reference.RFC.2119'?>
+        <?rfc include='reference.RFC.3688'?>
+        <?rfc include='reference.RFC.6020'?>
         <?rfc include='reference.RFC.6241'?>
+        <?rfc include='reference.RFC.6242'?>
+        <?rfc include='reference.RFC.6991'?>
         <?rfc include='reference.RFC.7950'?>
+        <?rfc include='reference.RFC.8040'?>
         <?rfc include='reference.RFC.8174'?>
+        <?rfc include='reference.RFC.8341'?>
+        <?rfc include='reference.RFC.8407'?>
+        <?rfc include='reference.RFC.8446'?>
+        <?rfc include='reference.RFC.8525'?>
         <?ref include='reference.I-D.ietf-netmod-yang-solutions'?>
         <?ref include='reference.I-D.ietf-netmod-yang-versioning-reqs'?>
         <?ref include='reference.I-D.ietf-netmod-yang-packages'?>
