@@ -558,9 +558,18 @@ module: ietf-yang-package-types
             both the 'mandatory-features/include' and
             'mandatory-features/exclude' lists.</t>
 
-            <t>Finally, standard rules for YANG instance data apply.  In
-            particular entries in the various lists MUST be unique by any list
-            key.</t>
+            <t>A package definition MUST NOT exclude a module and list features
+            defined by that module in the 'mandatory-features/include' list.</t>
+
+            <t>A package definition MAY include redundant information, e.g.,
+            including a module or package version that is already present by an
+            included package, or excluding a module that is not included by any
+            included package.  However, such redundant information might be
+            confusing to readers, and although the resolved package definition
+            is unambiguous, it is best to minimize it where possible.</t>
+
+            <t>Finally, standard rules for YANG instance data apply.  E.g.,
+            entries in the various lists MUST be unique by any list key.</t>
           </list></t>
       </section>
 
@@ -1411,7 +1420,7 @@ This section has already been covered in the resolution section.
       <section title="ietf-yang-package-types">
         <figure>
           <artwork><![CDATA[
-<CODE BEGINS> file "ietf-yang-package-types#0.6.0.yang"
+<CODE BEGINS> file "ietf-yang-package-types#0.7.0.yang"
 module ietf-yang-package-types {
   yang-version 1.1;
   namespace "urn:ietf:params:xml:ns:yang:ietf-yang-package-types";
@@ -1476,8 +1485,8 @@ module ietf-yang-package-types {
   // and remove this note.
   // RFC Ed.: replace XXXX with actual RFC number and remove this
   // note.
-  revision 2025-04-23 {
-    ys:version 0.6.0;
+  revision 2025-11-18 {
+    ys:version 0.7.0;
     description
       "Initial revision";
     reference
@@ -1498,7 +1507,7 @@ module ietf-yang-package-types {
   typedef pkg-version {
     type ys:version;
     description
-      "Packages are versioning used YANG Semver version labels.";
+      "Packages are versioning using YANG Semver version labels.";
   }
 
   typedef version-or-rev-date {
@@ -1523,7 +1532,7 @@ module ietf-yang-package-types {
       "RFC XXXX, YANG Packages.";
   }
 
-  type mount-ypath {
+  typedef mount-ypath {
     type string;
 
     description
@@ -1586,6 +1595,9 @@ module ietf-yang-package-types {
            Excluding a module can affect the compliance and
            correctness of any included packages that expect that
            module to be implemented.
+
+           Excluding a module also implicitly excludes any submodules
+           and mandatory-features defined in the excluded module.
 
            It is an error to list a module in both this list and the
            'includes/module' list.";
@@ -1850,6 +1862,10 @@ module ietf-yang-package-types {
     uses yang-pkg-exclusions;
 
     container mandatory-features {
+      description
+        "Contains parameters for specifying the features that MUST
+         be supported by any server implementing the package.";
+
       leaf-list include {
         type scoped-feature;
         description
@@ -1951,11 +1967,12 @@ module ietf-yang-package-types {
           type pkg-name;
           description
             "Lists other packages that have been explicitly mounted
-             at the same mount point by included package, that are
-             replaced by this mounted package.
+             at the same mount point by the included package, that
+             are replaced by this mounted package.
 
-             The replacing mounted package MUST explicitly include
-             or exclude the mounted package being replaced.
+             The replacing mounted package MUST include the mounted
+             package being replaced, but it may choose a different
+             version that SHOULD be a later version or revision.
 
              Any packages or modules included by the replaced
              package are also removed by this mounted package
@@ -1966,7 +1983,7 @@ module ietf-yang-package-types {
              replaces-package is expected to be used if an
              implementation does not fully implement a mounted
              package and needs to apply deviations or remove
-             included packages or modules.";
+             included modules or mandatory-features.";
         }
       }
 
