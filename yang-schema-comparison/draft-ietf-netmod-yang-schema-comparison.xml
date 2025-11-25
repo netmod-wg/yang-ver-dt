@@ -1,0 +1,1881 @@
+<?xml version='1.0' encoding='utf-8'?>
+<!DOCTYPE rfc SYSTEM "rfc2629-xhtml.ent">
+<?xml-stylesheet type="text/xsl" href="rfc2629.xslt" ?>
+<?rfc toc="yes"?>
+<?rfc tocompact="yes"?>
+<?rfc tocdepth="4"?>
+<?rfc tocindent="yes"?>
+<?rfc symrefs="yes"?>
+<?rfc sortrefs="yes"?>
+<?rfc comments="yes"?>
+<?rfc inline="yes"?>
+<?rfc compact="yes"?>
+<?rfc subcompact="no"?>
+<rfc category="std" ipr="trust200902"
+    docName="draft-ietf-netmod-yang-schema-comparison-05" updates="7950"
+    submissionType="IETF" consensus="true">
+  <front>
+    <title abbrev="YANG Schema Comparison">YANG Schema Comparison</title>
+    <author initials="P." role="editor" surname="Andersson"
+        fullname="Per Andersson">
+      <organization abbrev="Ionio Systems">
+        Ionio Systems
+      </organization>
+      <address>
+        <email>per.ietf@ionio.se</email>
+      </address>
+    </author>
+    <author initials="R." surname="Wilton" fullname="Robert Wilton">
+      <organization abbrev="Cisco Systems, Inc.">
+        Cisco Systems, Inc.
+      </organization>
+      <address>
+        <email>rwilton@cisco.com</email>
+      </address>
+    </author>
+    <author initials="M." surname="Vaško" fullname="Michal Vaško">
+      <organization abbrev="CESNET">
+        CESNET
+      </organization>
+      <address>
+        <email>mvasko@cesnet.cz</email>
+      </address>
+    </author>
+    <date/>
+    <abstract>
+        <t>This document specifies an algorithm for comparing two revisions of a
+            YANG schema to determine the scope of changes, and a list of
+            changes, between the revisions. The output of the algorithm can be
+            used to help select an appropriate revision-label or YANG semantic
+            version number for a new revision. Included is also a YANG module
+            describing the output of this algorithm.</t>
+    </abstract>
+  </front>
+  <middle>
+    <section anchor="open-issues">
+      <name>Open Issues</name>
+      <t>{ This section is only to present the current ongoing work, not part of
+      the final draft. }</t>
+      <t>The following issues have not ben discussed in any wider extent yet.</t>
+      <section>
+          <name>Override/per-node tags</name>
+      </section>
+      <section>
+          <name>Separate rules for config vs state</name>
+      </section>
+    </section>
+    <section anchor="intro" numbered="true" toc="default">
+      <name>Introduction</name>
+        <t>
+            This document defines the algorithm for comparing two revisions of a
+            YANG schema. There are two kinds of YANG schemas: on-the-wire or
+            compiled schema and text or parsed schema.
+        </t>
+        <t>
+            The compiled schema is what tools use when working with any kinds of
+            YANG data. Generally, in all the YANG modules, all the schema nodes
+            need to be fully resolved and have their final form. For example,
+            every "uses" statement is replaced with the nodes from the
+            corresponding "grouping", every type referencing a "typedef" is
+            replaced with the type of the "typedef" and so on. On the other
+            hand, the parsed schema is comprised of all the YANG modules
+            together as they are. That means no statements are resolved and they
+            remain in exactly the same text form as present in the YANG modules.
+        </t>
+        <t>
+            For determining whether a new revision of a YANG 1.1 module is or is
+            not backwards-compatible based on all the rules
+            in
+            <xref target="RFC7950" format="default"/>
+            and <xref target="I-D.ietf-netmod-yang-module-versioning" format="default"/>
+            ,
+            both of these schemas would be required. Similarly for YANG 1.0,
+            the rules in
+            <xref target="RFC6020" format="default"/>
+            .
+            This document defines an algorithm for comparing either only the
+            compiled schema or both the parsed and compiled schema.
+        </t>
+        <t>
+            The output of this algorithm can be utilized by tools processing
+            YANG instance data to determine what exact changes should they
+            expect and even how to transform instance data valid for an old
+            revision of a YANG module to be valid for a newer revision of the
+            same YANG module. Such tools are typically clients or servers of
+            YANG-driven protocols, e.g. NETCONF, RESTCONF, or gNMI.
+        </t>
+        <t>
+            But, the generated data can also be used by YANG module authors to
+            check all the changes made between 2 revisions. Additionally, it
+            can assist with deciding what semantic version should the new
+            revision of the module use based on the
+            <xref target="I-D.ietf-netmod-yang-semver" format="default"/>
+            document.
+        </t>
+    </section>
+    <section anchor="terminology" numbered="true" toc="default">
+      <name>Terminology and Conventions</name>
+      <t>The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
+   "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and
+   "OPTIONAL" in this document are to be interpreted as described in BCP 14
+   <xref target="RFC2119" format="default"/> <xref target="RFC8174" format="default"/> when, and only when, they
+   appear in all capitals, as shown here.</t>
+    <t>This document makes use of the following terminology introduced in
+      the YANG 1.1 Data Modeling Language <xref target="RFC7950"/>: <list
+          style="symbols">
+          <t>schema node</t>
+        </list>
+    </t>
+    <t>This document uses terminology introduced in the YANG versioning
+   requirements document <xref target="I-D.ietf-netmod-yang-versioning-reqs" format="default"/>.</t>
+      <t>This document makes of the following terminology introduced in the
+   YANG Packages <xref target="I-D.ietf-netmod-yang-packages" format="default"/>:
+      </t>
+      <ul spacing="normal">
+        <li>YANG schema</li>
+      </ul>
+      <t>In addition, this document defines the terminology:
+      </t>
+      <ul spacing="normal">
+        <li>TODO</li>
+      </ul>
+    </section>
+    <section anchor="compiled_schema" numbered="true" toc="default">
+      <name>Compiled YANG schema tree</name>
+      <t>
+          The compiled schema tree resolves all the statements used for
+          syntactic abstraction and simplification to
+          obtain one schema node tree with only data definition statements.
+          Textual fields are kept as well because they may
+          affect backwards compatibility of the whole YANG module.
+      </t>
+      <t>
+          The steps taken when compiling a schema:
+      </t>
+      <ul spacing="normal">
+          <li>
+              'Import' statements are resolved by finding the referenced
+              YANG modules and making their contents available.
+          </li>
+          <li>
+              All submodules of a single module are merged to create one
+              large YANG module.
+          </li>
+          <li>
+              'Uses' statements are replaced by the referenced 'groupings'
+              and the YANG nodes they define.
+          </li>
+          <li>
+              'Types' referencing any 'typedef' statements are replaced
+              with the actual type details.
+          </li>
+          <li>
+              'Augments' are resolved by placing the included YANG nodes
+              in their targets.
+          </li>
+          <li>
+              'Deviation' and 'refine' statements are applied by changing
+              the appropriate schema nodes.
+          </li>
+          <li>
+              All the 'if-feature' statements are evaluated based on the
+              enabled 'features' of implemented YANG modules
+              and the disabled schema nodes are removed.
+          </li>
+        </ul>
+      <t>
+          After the compilation the result is still a valid YANG module
+          without the following statements:
+      </t>
+      <ul spacing="normal">
+          <li>import</li>
+          <li>include</li>
+          <li>revision</li>
+          <li>typedef</li>
+          <li>grouping</li>
+          <li>augment</li>
+          <li>deviation</li>
+          <li>feature</li>
+          <li>if-feature</li>
+          <li>refine</li>
+          <li>extension</li>
+      </ul>
+    </section>
+    <section anchor="generic_comparison_algorithm" numbered="true" toc="default">
+        <name>YANG schema tree comparison algorithm</name>
+        <t>
+            This algorithm is defined for separate YANG modules. When comparing
+            the compiled schema, all the non data-definition statements are
+            first considered and then all the data-definition statements,
+            recursively. These schema-only statements are
+            skipped:
+        </t>
+        <ul spacing="normal">
+            <li>choice</li>
+            <li>case</li>
+        </ul>
+        <t>
+            When comparing the parsed schema, the algorithm operates in the
+            same fashion but compares all the YANG statements. However, only
+            in the selected YANG module ignoring imported and included modules.
+        </t>
+        <t>
+            The non data-definition statements are considered modified when
+            their content is changed or any of their substatements are changed.
+            If a statement is present in the old revision of a module and
+            missing in the new revision, it is considered removed. Vice-versa,
+            if missing in the old revision but present in the new revision,
+            it is considered added.
+        </t>
+        <t>
+            Data-definition statements are compared similarly except that a
+            change in a descendant data-definition
+            statement is not considered a change of the parent data-definition
+            statement but a separate change instead.
+        </t>
+        <t>
+            Only statements with any changes are reported and included in the
+            algorithm output.
+        </t>
+        <section anchor="module_identification" numbered="true" toc="default">
+            <name>Module identification</name>
+            <t>
+                When generating the comparison output of two compiled schemas,
+                unique identification of the modules in question in included.
+                For both the old and the new revision
+                of the module, its name, revision, list of submodules,
+                and a leaf-list of enabled features is included. In
+                addition, the same information is reported for all the
+                imported YANG modules, recursively. This ensures that if
+                any other output is produced with a different set of
+                changes for two YANG modules, their identification information
+                must also differ.
+            </t>
+      </section>
+      <section anchor="change_content" numbered="true" toc="default">
+          <name>Change content</name>
+          <t>
+              Non-data-definition statements are uniquely identified with
+              their YANG identifier and data-definition statements
+              with their absolute schema data node-ids.
+          </t>
+          <t>
+              For every change, the changed statement and the parent of the
+              changed statement are included. While
+              redundant in many cases, it allows to uniquely report changes
+              in nested statements, e.g. an extension instance change in the
+              type of a leaf statement. Also, all the unchanged substatements
+              with their value or content are included for every changed
+              statement, for both older and newer revision of the YANG
+              module, if applicable.
+              This ensures that the output includes all the possibly required
+              information without relying on learning it from the YANG modules
+              themselves.
+          </t>
+      </section>
+      <section anchor="change_conformance" numbered="true" toc="default">
+          <name>Change conformance</name>
+          <t>
+              Every change is classified as either backwards-compatible or
+              non-backwards-compatible based on sections 3.1.1 and 3.1.2 in
+              <xref target="I-D.ietf-netmod-yang-module-versioning"
+              format="default"/>.  But, there are cases when it is impossible
+              for tooling to determine whether a change is backwards-compatible
+              or not. The affected statements are:
+          </t>
+          <ul spacing="normal">
+              <li>pattern</li>
+              <li>when</li>
+              <li>must</li>
+              <li>description</li>
+              <li>extension instance</li>
+          </ul>
+          <t>
+              Normally, any change in these statement is reported as
+              non-backwards-compatible. However, if the author
+              of the new revision of a YANG module determines that the change of
+              an aforementioned statement is backwards-compatible based on
+              the compatibility rules for the specific statement, they can decide
+              to use the 'schema-cmp:backwards-compatible' extension to
+              signify this fact. Then, this change must be reported as
+              backwards-compatible.
+          </t>
+      </section>
+    </section>
+    <section anchor="comparison_tooling" numbered="true" toc="default">
+        <name>Comparison tooling</name>
+        <t>
+            The `yanglint` tool from the libyang library (in separate Git
+            branch schema_comparison) is able to generate the
+            `ietf-yang-schema-comparison` YANG data of two revisions of a YANG
+            module.
+        </t>
+    </section>
+    <section anchor="yang_modules" numbered="true" toc="default">
+        <name>Schema Comparison YANG Module</name>
+        <t keepWithNext="true">
+            YANG module with nodes describing the differences between two
+            revisions of YANG schemas. The "ietf-yang-schema-comparison"
+            YANG module imports definitions from the "ietf-yang-types" module
+            defined in <xref target="RFC6991" format="default"/> and
+            "ietf-yang-library" module defined in
+            <xref target="RFC8525" format="default"/>, and
+            "ietf-yang-structure-ext" module defined in
+            <xref target="RFC8791" format="default"/>.
+        </t>
+        <sourcecode name="ietf-yang-schema-comparison@2025-10-20.yang" type=""
+            markers="true"><![CDATA[
+module ietf-yang-schema-comparison {
+  yang-version 1.1;
+  namespace "urn:ietf:params:xml:ns:yang:ietf-yang-schema-comparison";
+  prefix schema-cmp;
+
+  import ietf-yang-types {
+    prefix yang;
+    reference
+      "RFC 6991: Common YANG Data types";
+  }
+  import ietf-yang-library {
+    prefix yanglib;
+    reference
+      "RFC 8525: YANG Library";
+  }
+  import ietf-yang-structure-ext {
+    prefix sx;
+    reference
+      "RFC 8791: YANG Data Structure Extensions";
+  }
+
+  organization
+    "IETF NETMOD (Network Modeling) Working Group";
+
+  contact
+    "WG List: NETCONF WG list <mailto:netmod@ietf.org>
+     WG Web:  https://datatracker.ietf.org/wg/netmod
+
+     Author:  Michal Vaško
+              <mailto:mvasko@cesnet.cz>
+
+     Author:  Rob Wilton
+              <mailto:rwilton@cisco.com>
+
+     Author:  Per Andersson
+              <mailto:per.ietf@ionio.se>";
+
+  description
+    "This YANG 1.1 module contains definitions and extensions to
+     support comparison between different versions of YANG schemas. The
+     output of the comparison algorithm is described in this YANG module.
+     The base schema nodes describe changes in a compiled YANG module
+     with all of its included submodules and imported modules. The rest
+     of the schema nodes are optional and describe changes in all the
+     statements of a single YANG module.
+
+     Copyright (c) 2025 IETF Trust and the persons identified as
+     authors of the code.  All rights reserved.
+
+     Redistribution and use in source and binary forms, with
+     or without modification, is permitted pursuant to, and
+     subject to the license terms contained in, the Revised
+     BSD License set forth in Section 4.c of the IETF Trust's
+     Legal Provisions Relating to IETF Documents
+     (https://trustee.ietf.org/license-info).
+
+     This version of this YANG module is part of RFC XXXX
+     (https://www.rfc-editor.org/info/rfcXXXX); see the RFC
+     itself for full legal notices.
+
+     The key words 'MUST', 'MUST NOT', 'REQUIRED', 'SHALL',
+     'SHALL NOT', 'SHOULD', 'SHOULD NOT', 'RECOMMENDED',
+     'NOT RECOMMENDED', 'MAY', and 'OPTIONAL' in this document
+     are to be interpreted as described in BCP 14 (RFC 2119)
+     (RFC 8174) when, and only when, they appear in all
+     capitals, as shown here.";
+  // RFC Ed.: update the date below with the date of RFC publication
+  // and remove this note.
+  // RFC Ed.: replace XXXX (inc above) with actual RFC number and
+  // remove this note.
+
+  revision 2025-10-20 {
+    description
+      "Initial revision.";
+    reference
+      "RFC XXXX: YANG Schema Comparison";
+  }
+
+  extension backwards-compatible {
+    description
+      "Marks statements in a new revision of a module
+       that were changed but in a backwards-compatible
+       manner according to YANG 1.1 and 1.0 rules for
+       updating a module.
+
+       When used as a substatement of a 'pattern'
+       statement, it means its allowed value space has
+       been expanded.
+
+       When used as a substatement of a 'when' or
+       'must' statement, it means their constraint has
+       been relaxed.
+
+       When used as a substatement of a 'description'
+       statement, it means it has been changed in a
+       backwards-compatible way.
+
+       When used as a substatement of an extension
+       instance, it means adding, modifying, or removing
+       it is a backwards-compatible change.
+
+       Not allowed to be instiantiated for any other
+       statements.";
+    reference
+      "RFC 7950: The YANG 1.1 Data Modeling Language, section 11;
+       RFC 6020: YANG - A Data Modeling Language for the Network
+       Configuration Protocol (NETCONF), section 10";
+  }
+
+  feature parsed-schema {
+    description
+      "Compare also the statements removed from the compiled schema to get all
+       the backwards-compatible and non-backwards-compatible changes possible
+       for a YANG module.";
+    reference
+      "RFC 7950: The YANG 1.1 Data Modeling Language, section 11;
+       RFC 6020: YANG - A Data Modeling Language for the Network
+       Configuration Protocol (NETCONF), section 10";
+  }
+
+  typedef schema-path {
+    type string;
+    description
+      "Node schema path (node-id). A generic type is used to not enforce their
+       evaluation or validation in this context.";
+  }
+
+  typedef stmt-type {
+    type enumeration {
+      enum "base" {
+        description
+          "YANG statement 'base'.";
+      }
+      enum "bit" {
+        description
+          "YANG statement 'bit'.";
+      }
+      enum "config" {
+        description
+          "YANG statement 'config'.";
+      }
+      enum "contact" {
+        description
+          "YANG statement 'contact'.";
+      }
+      enum "default" {
+        description
+          "YANG statement 'default'.";
+      }
+      enum "description" {
+        description
+          "YANG statement 'description'.";
+      }
+      enum "enum" {
+        description
+          "YANG statement 'enum'.";
+      }
+      enum "error-app-tag" {
+        description
+          "YANG statement 'error-app-tag'.";
+      }
+      enum "error-message" {
+        description
+          "YANG statement 'error-message'.";
+      }
+      enum "extension-instance" {
+        description
+          "Any extension instance YANG statement.";
+      }
+      enum "fraction-digits" {
+        description
+          "YANG statement 'fraction-digits'.";
+      }
+      enum "identity" {
+        description
+          "YANG statement 'identity'.";
+      }
+      enum "length" {
+        description
+          "YANG statement 'length'.";
+      }
+      enum "mandatory" {
+        description
+          "YANG statement 'mandatory'.";
+      }
+      enum "max-elements" {
+        description
+          "YANG statement 'max-elements'.";
+      }
+      enum "min-elements" {
+        description
+          "YANG statement 'min-elements'.";
+      }
+      enum "must" {
+        description
+          "YANG statement 'must'.";
+      }
+      enum "node" {
+        description
+          "YANG statement 'container', 'leaf', 'leaf-list', 'list', 'anydata',
+           'anyxml', 'rpc', 'action', or 'notification'. If the parsed schema
+           is also compared, it can additionally be 'choice', 'case', 'uses' or
+           'grouping'.";
+      }
+      enum "ordered-by" {
+        description
+          "YANG statement 'ordered-by'.";
+      }
+      enum "organization" {
+        description
+          "YANG statement 'organization'.";
+      }
+      enum "path" {
+        description
+          "YANG statement 'path'.";
+      }
+      enum "pattern" {
+        description
+          "YANG statement 'pattern'.";
+      }
+      enum "presence" {
+        description
+          "YANG statement 'presence'.";
+      }
+      enum "range" {
+        description
+          "YANG statement 'range'.";
+      }
+      enum "reference" {
+        description
+          "YANG statement 'reference'.";
+      }
+      enum "require-instance" {
+        description
+          "YANG statement 'require-instance'.";
+      }
+      enum "status" {
+        description
+          "YANG statement 'status'.";
+      }
+      enum "type" {
+        description
+          "YANG statement 'type'.";
+      }
+      enum "units" {
+        description
+          "YANG statement 'units'.";
+      }
+      enum "unique" {
+        description
+          "YANG statement 'unique'.";
+      }
+      enum "when" {
+        description
+          "YANG statement 'when'.";
+      }
+    }
+    description
+      "Type of the statement that a change affects.";
+  }
+
+  typedef revision-or-empty {
+    type union {
+      type empty;
+      type yanglib:revision-identifier;
+    }
+    description
+      "Module or submodule revision. If it has none, an empty value is
+       used.";
+  }
+
+  grouping if-feature-stmts {
+    description
+      "Describes changes of all the if-features on a statement.";
+    leaf-list if-feature {
+      type string;
+      description
+        "Value of an if-feature statement.";
+    }
+  }
+
+  grouping typedef-stmts {
+    description
+      "Describes changes of all the typedefs on a specific level and parent.";
+    list typedef {
+      key "name";
+      description
+        "List of typedefs.";
+      leaf name {
+        type yang:yang-identifier;
+        description
+          "Name of the typedef.";
+      }
+      leaf default {
+        type string;
+        description
+          "List of default substatement values.";
+      }
+      leaf description {
+        type string;
+        description
+          "Description substatement value.";
+      }
+      leaf reference {
+        type string;
+        description
+          "Reference substatement value.";
+      }
+      uses status-stmt;
+      container type {
+        description
+          "Type substatement.";
+        uses type-substmts;
+        list union-type {
+          description
+            "List of a union type substatements.";
+          uses type-substmts;
+        }
+      }
+      leaf units {
+        type string;
+        description
+          "Units substatement value.";
+      }
+    }
+  }
+
+  grouping augment-stmts {
+    description
+      "Describes changes of all the augment statements on a specific level and
+       parent.";
+    list augment {
+      if-feature parsed-schema;
+      description
+        "List of augment substatements.";
+      leaf target {
+        type string;
+        mandatory true;
+        description
+          "Augment target argument.";
+      }
+      uses node-info;
+    }
+  }
+
+  grouping ext-instance-stmts {
+    description
+      "Describes changes of all the extension instances.";
+    list ext-instance {
+      description
+        "List of extension-instance substatements.";
+      leaf module {
+        type yang:yang-identifier;
+        mandatory true;
+        description
+          "Module with the extension definition of an extension instance.";
+      }
+      leaf name {
+        type yang:yang-identifier;
+        mandatory true;
+        description
+          "Name of the extension defition of an extension instance.";
+      }
+      leaf argument {
+        type string;
+        description
+          "Argument used of an extension definition.";
+      }
+      anydata substatements {
+        description
+          "Any substatements of the extension instance.";
+      }
+    }
+  }
+
+  grouping status-stmt {
+    description
+      "Describes a status statement change.";
+    leaf status {
+      type enumeration {
+        enum "current" {
+          description
+            "Current effective status of a statement.";
+        }
+        enum "deprecated" {
+          description
+            "Deprecated effective status of a statement.";
+        }
+        enum "obsolete" {
+          description
+            "Obsolete effective status of a statement.";
+        }
+      }
+      mandatory true;
+      description
+        "Status substatement value.";
+    }
+  }
+
+  grouping must-stmts {
+    description
+      "Describes changes of all the must statements of a specific parent
+       statement.";
+    list must {
+      description
+        "List of must substatements.";
+      leaf condition {
+        type string;
+        description
+          "Condition substatement value.";
+      }
+      leaf description {
+        type string;
+        description
+          "Description substatement value.";
+      }
+      leaf reference {
+        type string;
+        description
+          "Reference substatement value.";
+      }
+      leaf error-message {
+        type string;
+        description
+          "Error-message substatement value.";
+      }
+      leaf error-app-tag {
+        type string;
+        description
+          "Error-app-tag substatement value.";
+      }
+      uses ext-instance-stmts;
+    }
+  }
+
+  grouping when-stmts {
+    description
+      "Describes changes of all the must statements of a specific parent
+       statement.";
+    list when {
+      description
+        "List of when substatements.";
+      leaf condition {
+        type string;
+        description
+          "Condition substatement value.";
+      }
+      leaf description {
+        type string;
+        description
+          "Description substatement value.";
+      }
+      leaf reference {
+        type string;
+        description
+          "Reference substatement value.";
+      }
+      uses status-stmt;
+      uses ext-instance-stmts;
+    }
+  }
+
+  grouping restriction-substmts {
+    description
+      "Common substatements shared by all restriction statements.";
+    leaf description {
+      type string;
+      description
+        "Description substatement value.";
+    }
+    leaf reference {
+      type string;
+      description
+        "Reference substatement value.";
+    }
+    leaf error-message {
+      type string;
+      description
+        "Error-message substatement value.";
+    }
+    leaf error-app-tag {
+      type string;
+      description
+        "Error-app-tag substatement value.";
+    }
+    uses ext-instance-stmts;
+  }
+
+  grouping type-substmts {
+    description
+      "Describes a type statement change.";
+    leaf base-type {
+      type enumeration {
+        enum "int8" {
+          description
+            "YANG built-in type 'int8'.";
+        }
+        enum "int16" {
+          description
+            "YANG built-in type 'int16'.";
+        }
+        enum "int32" {
+          description
+            "YANG built-in type 'int32'.";
+        }
+        enum "int64" {
+          description
+            "YANG built-in type 'int64'.";
+        }
+        enum "uint8" {
+          description
+            "YANG built-in type 'uint8'.";
+        }
+        enum "uint16" {
+          description
+            "YANG built-in type 'uint16'.";
+        }
+        enum "uint32" {
+          description
+            "YANG built-in type 'uint32'.";
+        }
+        enum "uint64" {
+          description
+            "YANG built-in type 'uint64'.";
+        }
+        enum "decimal64" {
+          description
+            "YANG built-in type 'decimal64'.";
+        }
+        enum "string" {
+          description
+            "YANG built-in type 'string'.";
+        }
+        enum "boolean" {
+          description
+            "YANG built-in type 'boolean'.";
+        }
+        enum "enumeration" {
+          description
+            "YANG built-in type 'enumeration'.";
+        }
+        enum "bits" {
+          description
+            "YANG built-in type 'bits'.";
+        }
+        enum "binary" {
+          description
+            "YANG built-in type 'binary'.";
+        }
+        enum "leafref" {
+          description
+            "YANG built-in type 'leafref'.";
+        }
+        enum "identityref" {
+          description
+            "YANG built-in type 'identityref'.";
+        }
+        enum "empty" {
+          description
+            "YANG built-in type 'empty'.";
+        }
+        enum "union" {
+          description
+            "YANG built-in type 'union'.";
+        }
+        enum "instance-identifier" {
+          description
+            "YANG built-in type 'instance-identifier'.";
+        }
+      }
+      description
+        "Type substatement value.";
+    }
+    container range {
+      description
+        "Range statement substatements.";
+      list interval {
+        description
+          "Intervals of a range statement.";
+        leaf min {
+          type int64;
+          description
+            "Lower boundary of an interval of a range statement.";
+        }
+        leaf max {
+          type int64;
+          description
+            "Upper boundary of an interval of a range statement.";
+        }
+      }
+      uses restriction-substmts;
+    }
+    container length {
+      description
+        "Length statement substatements.";
+      list interval {
+        description
+          "Intervals of a length statement.";
+        leaf min {
+          type uint64;
+          description
+            "Lower boundary of an interval of a length statement.";
+        }
+        leaf max {
+          type uint64;
+          description
+            "Upper boundary of an interval of a length statement.";
+        }
+      }
+      uses restriction-substmts;
+    }
+    leaf fraction-digits {
+      type uint8;
+      description
+        "Fraction-digits substatement value.";
+    }
+    list pattern {
+      description
+        "List of pattern statements.";
+      leaf expression {
+        type string;
+        description
+          "Pattern substatement value.";
+      }
+      leaf inverted {
+        type boolean;
+        description
+          "Inverted substatement value.";
+      }
+      uses restriction-substmts;
+    }
+    list enum {
+      key "name";
+      ordered-by user;
+      description
+        "List of enum statements. Keeps the same order of the statements as in
+         the module.";
+      leaf name {
+        type yang:yang-identifier;
+        description
+          "Enum statement name.";
+      }
+      uses if-feature-stmts {
+        if-feature parsed-schema;
+      }
+      leaf description {
+        type string;
+        description
+          "Description substatement value.";
+      }
+      leaf reference {
+        type string;
+        description
+          "Reference substatement value.";
+      }
+      leaf value {
+        type int32;
+        description
+          "Value substatement value.";
+      }
+      uses status-stmt;
+      uses ext-instance-stmts;
+    }
+    list bit {
+      key "name";
+      ordered-by user;
+      description
+        "List of bit statements. Keeps the same order of the statements as in
+         the module.";
+      leaf name {
+        type yang:yang-identifier;
+        description
+          "Bit statement name.";
+      }
+      uses if-feature-stmts {
+        if-feature parsed-schema;
+      }
+      leaf description {
+        type string;
+        description
+          "Description substatement value.";
+      }
+      leaf reference {
+        type string;
+        description
+          "Reference substatement value.";
+      }
+      leaf position {
+        type uint32;
+        description
+          "Position substatement value.";
+      }
+      uses status-stmt;
+      uses ext-instance-stmts;
+    }
+    leaf path {
+      type string;
+      description
+        "Path substatement value.";
+    }
+    leaf require-instance {
+      type boolean;
+      description
+        "Require-instance substatement value.";
+    }
+    leaf-list base {
+      type yang:yang-identifier;
+      description
+        "List of base substatement values.";
+    }
+    uses ext-instance-stmts;
+  }
+
+  grouping refine-deviate-node-substmts {
+    description
+      "All substatements of a data-definition node that can be changed by both
+       a refine and deviate statement.";
+    uses must-stmts;
+    leaf-list default {
+      type string;
+      description
+        "List of default substatement values.";
+    }
+    leaf config {
+      type boolean;
+      description
+        "Config substatement value.";
+    }
+    leaf mandatory {
+      type boolean;
+      description
+        "Mandatory substatement value.";
+    }
+    leaf min-elements {
+      type uint32;
+      description
+        "Min-elements substatement value.";
+    }
+    leaf max-elements {
+      type uint32;
+      description
+        "Max-elements substatement value.";
+    }
+  }
+
+  grouping refine-node-substmts {
+    description
+      "All substatements of a data-definition node that can be changed by a
+       refine statement.";
+    uses if-feature-stmts {
+      if-feature parsed-schema;
+    }
+    leaf presence {
+      type boolean;
+      description
+        "Presence substatement existence.";
+    }
+    leaf description {
+      type string;
+      description
+        "Description substatement value.";
+    }
+    leaf reference {
+      type string;
+      description
+        "Reference substatement value.";
+    }
+    uses refine-deviate-node-substmts;
+    uses ext-instance-stmts;
+  }
+
+  grouping deviate-only-node-substmts {
+    description
+      "All substatements of a data-definition node that can be changed only by
+       a deviate statement.";
+    container type {
+      description
+        "Type substatement.";
+      uses type-substmts;
+      list union-type {
+        description
+          "List of a union type substatements.";
+        uses type-substmts;
+      }
+    }
+    leaf units {
+      type string;
+      description
+        "Units substatement value.";
+    }
+    list unique {
+      description
+        "List of unique substatements.";
+      leaf-list node {
+        type yang:yang-identifier;
+        description
+          "List of nodes referenced by a unique substatement.";
+      }
+    }
+  }
+
+  grouping node-substmts {
+    description
+      "All substatements of a data-definition node.";
+    uses when-stmts;
+    leaf-list key {
+      type yang:yang-identifier;
+      description
+        "Leaf-list of nodes referenced by a key statement.";
+    }
+    leaf ordered-by {
+      type enumeration {
+        enum "system" {
+          description
+            "System-ordered list or leaf-list of items.";
+        }
+        enum "user" {
+          description
+            "User-ordered list or leaf-list of items.";
+        }
+      }
+      description
+        "Ordered-by substatement value.";
+    }
+    uses status-stmt;
+    uses refine-node-substmts;
+    uses deviate-only-node-substmts;
+    uses typedef-stmts {
+      if-feature parsed-schema;
+    }
+    anydata groupings {
+      if-feature parsed-schema;
+      description
+        "Describes changes of all the augment statement on a specific level and
+         parent. Follows the exact same YANG schema node structure as the
+         grouping 'node-info'. There is no 'uses' statement to break a cyclic
+         uses-grouping.";
+    }
+    anydata augments {
+      if-feature parsed-schema;
+      description
+        "Describes changes of all the augment statement on a specific level and
+         parent. Follows the exact same YANG schema node structure as the
+         grouping 'augment-stmts'. There is no 'uses' statement to break a
+         cyclic uses-grouping.";
+    }
+    list refine {
+      if-feature parsed-schema;
+      description
+        "List of refine substatements.";
+      leaf target {
+        type string;
+        mandatory true;
+        description
+          "Refine target path.";
+      }
+      uses refine-node-substmts;
+    }
+  }
+
+  grouping module-substmts {
+    description
+      "All compiled non-data-definition substatements of a module.";
+    leaf prefix {
+      if-feature parsed-schema;
+      type string;
+      description
+        "Prefix substatement value.";
+    }
+    leaf organization {
+      type string;
+      description
+        "Organization substatement value.";
+    }
+    leaf contact {
+      type string;
+      description
+        "Contact substatement value.";
+    }
+    leaf description {
+      type string;
+      description
+        "Description substatement value.";
+    }
+    leaf reference {
+      type string;
+      description
+        "Reference substatement value.";
+    }
+    list extension {
+      if-feature parsed-schema;
+      key "name";
+      description
+        "List of extension substatements.";
+      leaf name {
+        type yang:yang-identifier;
+        description
+          "Extension name.";
+      }
+      leaf argument {
+        type yang:yang-identifier;
+        description
+          "Argument substatement value.";
+      }
+      uses status-stmt;
+      leaf description {
+        type string;
+        description
+          "Description substatement value.";
+      }
+      leaf reference {
+        type string;
+        description
+          "Reference substatement value.";
+      }
+    }
+    list feature {
+      if-feature parsed-schema;
+      key "name";
+      description
+        "List of feature substatements.";
+      leaf name {
+        type yang:yang-identifier;
+        description
+          "Feature name.";
+      }
+      uses if-feature-stmts;
+      uses status-stmt;
+      leaf description {
+        type string;
+        description
+          "Description substatement value.";
+      }
+      leaf reference {
+        type string;
+        description
+          "Reference substatement value.";
+      }
+    }
+    list identity {
+      key "name";
+      description
+        "List of identity substatements.";
+      leaf name {
+        type yang:yang-identifier;
+        description
+          "Identity statement name.";
+      }
+      uses if-feature-stmts {
+        if-feature parsed-schema;
+      }
+      leaf-list base {
+        if-feature parsed-schema;
+        type yang:yang-identifier;
+        description
+          "List of bases of an identity.";
+      }
+      uses ext-instance-stmts;
+    }
+    uses augment-stmts;
+    list deviation {
+      if-feature parsed-schema;
+      description
+        "List of deviation substatements.";
+      leaf target {
+        type string;
+        mandatory true;
+        description
+          "Deviation target argument.";
+      }
+      list deviate {
+        min-elements 1;
+        description
+          "List of deviate substatements.";
+        leaf argument {
+          type enumeration {
+            enum not-supported {
+              description
+                "Deviate 'not-supported' argument value.";
+            }
+            enum add {
+              description
+                "Deviate 'add' argument value.";
+            }
+            enum replace {
+              description
+                "Deviate 'replace' argument value.";
+            }
+            enum delete {
+              description
+                "Deviate 'delete' argument value.";
+            }
+          }
+          mandatory true;
+          description
+            "Deviate argument value.";
+        }
+        uses refine-deviate-node-substmts;
+        uses deviate-only-node-substmts;
+      }
+      leaf description {
+        type string;
+        description
+          "Description substatement value.";
+      }
+      leaf reference {
+        type string;
+        description
+          "Reference substatement value.";
+      }
+    }
+    uses typedef-stmts {
+      if-feature parsed-schema;
+    }
+    uses ext-instance-stmts;
+  }
+
+  grouping conformance-type {
+    description
+      "Conformance type of a change.";
+    leaf conformance {
+      type enumeration {
+        enum "backwards-compatible" {
+          description
+            "Backwards-compatible or editorial change.";
+        }
+        enum "non-backwards-compatible" {
+          description
+            "Non-backwards-compatible change.";
+        }
+      }
+      mandatory true;
+      description
+        "Conformance information of a change in the compared YANG modules.";
+    }
+  }
+
+  grouping change-info {
+    description
+      "Details of a single change.";
+    list changed {
+      key "stmt";
+      min-elements 1;
+      description
+        "List of changes.";
+      leaf stmt {
+        type stmt-type;
+        description
+          "Changed statement.";
+      }
+      leaf parent-stmt {
+        type stmt-type;
+        description
+          "Parent statement of the changed statement.";
+      }
+      leaf change {
+        type enumeration {
+          enum "modified" {
+            description
+              "Statement existed and was modified.";
+          }
+          enum "added" {
+            description
+              "Statement was added.";
+          }
+          enum "removed" {
+            description
+              "Statement was removed.";
+          }
+          enum "moved" {
+            description
+              "Statement was moved and the position affects the meaning.";
+          }
+        }
+        mandatory true;
+        description
+          "Type of change of the statement.";
+      }
+      uses conformance-type;
+    }
+  }
+
+  grouping module-params {
+    description
+      "Identification details of a processed YANG module.";
+    leaf module {
+      type yang:yang-identifier;
+      mandatory true;
+      description
+        "Compared module name.";
+    }
+    leaf revision {
+      type revision-or-empty;
+      mandatory true;
+      description
+        "Compared module revision.";
+    }
+    list submodule {
+      key "name revision";
+      leaf name {
+        type yang:yang-identifier;
+        mandatory true;
+        description
+          "Submodule name.";
+      }
+      leaf revision {
+        type revision-or-empty;
+        mandatory true;
+        description
+          "Submodule revision.";
+      }
+      description
+        "Submodule of the main module.";
+    }
+    leaf-list enabled-feature {
+      type yang:yang-identifier;
+      description
+        "All the enabled features of the module.";
+    }
+  }
+
+  grouping node-info {
+    description
+      "Information about all the changed nodes.";
+    list node-comparison {
+      key "node";
+      ordered-by user;
+      description
+        "Information about data-definition (node) statement substatement
+         changes. Keeps the traversed order of the nodes by the algorithm.
+         It SHOULD follow the depth-first search order.";
+      leaf node {
+        type schema-path;
+        description
+          "Path to the changed data-definition statement.";
+      }
+      leaf node-type {
+        type enumeration {
+          enum "container" {
+            description
+              "YANG statement 'container' node.";
+          }
+          enum "leaf" {
+            description
+              "YANG statement 'leaf' node.";
+          }
+          enum "leaf-list" {
+            description
+              "YANG statement 'leaf-list' node.";
+          }
+          enum "list" {
+            description
+              "YANG statement 'list' node.";
+          }
+          enum "anydata" {
+            description
+              "YANG statement 'anydata' node.";
+          }
+          enum "anyxml" {
+            description
+              "YANG statement 'anyxml' node.";
+          }
+          enum "rpc" {
+            description
+              "YANG statement 'rpc' node.";
+          }
+          enum "action" {
+            description
+              "YANG statement 'action' node.";
+          }
+          enum "notification" {
+            description
+              "YANG statement 'notification' node.";
+          }
+          enum "choice" {
+            if-feature parsed-schema;
+            description
+              "YANG statement 'choice' node.";
+          }
+          enum "case" {
+            if-feature parsed-schema;
+            description
+              "YANG statement 'case' node.";
+          }
+          enum "uses" {
+            if-feature parsed-schema;
+            description
+              "YANG statement 'uses' node.";
+          }
+          enum "grouping" {
+            if-feature parsed-schema;
+            description
+              "YANG statement 'grouping' node.";
+          }
+        }
+        mandatory true;
+        description
+          "Type of the changed data-definition statement.";
+      }
+      uses change-info;
+      container old {
+        description
+          "All the node substatements in the older revision of the YANG
+           module.";
+        uses node-substmts;
+      }
+      container new {
+        description
+          "All the node substatements in the newer revision of the YANG
+           module.";
+        uses node-substmts;
+      }
+    }
+  }
+
+  sx:structure schema-comparison {
+    description
+      "Schema comparison details.";
+    list schema {
+      description
+        "Instance of a schema comparison of 2 YANG modules in different
+         revisions with all their imports.";
+      container source {
+        description
+          "Source module information.";
+        uses module-params;
+      }
+      list source-import {
+        key "module revision";
+        description
+          "List of source module imported modules information.";
+        uses module-params;
+      }
+      container target {
+        description
+          "Target module information.";
+        uses module-params;
+      }
+      list target-import {
+        key "module revision";
+        description
+          "List of target module imported modules information.";
+        uses module-params;
+      }
+      uses conformance-type;
+      container module-comparison {
+        description
+          "Information about direct module statement substatement changes.";
+        uses change-info;
+        container old {
+          description
+            "Changed statements in the older revision of the YANG module.";
+          uses module-substmts;
+        }
+        container new {
+          description
+            "Changed statements in the newer revision of the YANG module.";
+          uses module-substmts;
+        }
+      }
+      uses node-info;
+    }
+  }
+}
+]]></sourcecode>
+    </section>
+    <section anchor="contributor" numbered="true" toc="default">
+      <name>Contributors</name>
+      <t>This document grew out of the YANG module versioning design team that
+  started after IETF 101.  The following individuals are (or have been) members
+  of the design team and have worked on the YANG versioning project:</t>
+      <ul spacing="normal">
+        <li>Balazs Lengyel</li>
+        <li>Benoit Claise</li>
+        <li>Bo Wu</li>
+        <li>Ebben Aries</li>
+        <li>Jason Sterne</li>
+        <li>Joe Clarke</li>
+        <li>Juergen Schoenwaelder</li>
+        <li>Mahesh Jethanandani</li>
+        <li>Michael Wang</li>
+        <li>Qin Wu</li>
+        <li>Reshad Rahman</li>
+        <li>Rob Wilton</li>
+        <li>Jan Lindblad</li>
+        <li>Per Andersson</li>
+      </ul>
+      <t>The ideas for a tooling based comparison of YANG module revisions was
+   first described in <xref target="I-D.clacla-netmod-yang-model-update" format="default"/>.
+   This document extends upon those initial ideas.</t>
+    </section>
+    <section anchor="security" numbered="true" toc="default">
+      <name>Security Considerations</name>
+      <t>This section follows the template defined in Section 3.7.1 of
+        <xref target="RFC8407"/>.</t>
+
+      <t>The YANG module specified in this document defines a schema for data
+        that is designed to be used by offline tooling to generate output for
+        differences in supplied YANG modules.</t>
+
+      <t>The YANG module specified in this document MAY be accessed via network
+        management protocols such as NETCONF <xref target="RFC6241"/> or
+        RESTCONF <xref target="RFC8040"/>. The lowest NETCONF layer is the
+        secure transport layer, and the mandatory-to-implement secure transport
+        is Secure Shell (SSH) <xref target="RFC6242"/>. The lowest RESTCONF
+        layer is HTTPS, and the mandatory-to-implement secure transport is TLS
+        <xref target="RFC8446"/>.</t>
+
+      <t>The Network Configuration Access Control Model (NACM)
+        <xref target="RFC8341"/> provides the means to restrict access for
+        particular NETCONF or RESTCONF users to a preconfigured subset of all
+        available NETCONF or RESTCONF protocol operations and content.</t>
+
+      <t>When the module is used for offline tooling there are no security
+        considerations, since the user has full access to all YANG modules
+        used.</t>
+
+      <t>The structure "schema-comparison" contains all the groupings reflecting
+        the changes between YANG modules. If the data of this structure are
+        published in online tooling, care needs to be taken so that knowledge of
+        YANG modules is not leaked.</t>
+
+      <t>Since the module does not define any RPCs, actions, or notifications,
+        the security considerations for such statements are not provided here.</t>
+    </section>
+    <section anchor="iana" numbered="true" toc="default">
+      <name>IANA Considerations</name>
+      <section anchor="xml-registry" numbered="true" toc="default">
+        <name>The "IETF XML" Registry</name>
+        <t>This document register one URI in the "ns" subregistry of
+          the IETF XML Registry <xref target="RFC3688" format="default"/>
+          maintained at <eref target="https://www.iana.org/assignments/xml-registry/xml-registry.xhtml#ns"/>.
+          Following the format in <xref target="RFC3688" format="default"/>,
+          the following registration is requested:</t>
+        <t>
+          <figure align="center">
+            <artwork>
+URI: urn:ietf:params:xml:ns:yang:ietf-yang-schema-comparison
+Registrant Contact: The IESG.
+XML: N/A, the requested URI is an XML namespace.
+            </artwork>
+          </figure>
+        </t>
+      </section>
+
+      <section anchor="yang-module-registrations" numbered="true" toc="default">
+        <name>The "YANG Module Names" Registry</name>
+        <t>This document registers one YANG module in the YANG Module Names
+          registry <xref target="RFC6020" format="default"/> maintained at
+          <eref target="https://www.iana.org/assignments/yang-parameters/yang-paramaters.xhtml"/>.
+          Following the format defined in <xref target="RFC6020"/>, the below
+          registration is requested:</t>
+        <t>
+          <figure align="center">
+            <artwork>
+Name: ietf-yang-schema-comparison
+XML Namespace: urn:ietf:params:xml:ns:yang:ietf-yang-schema-comparison
+Prefix: schema-cmp
+Reference: RFC XXXX
+            </artwork>
+          </figure>
+        </t>
+      </section>
+    </section>
+  </middle>
+  <back>
+    <references title="Normative References">
+        <?rfc include='reference.RFC.2119'?>
+        <?rfc include='reference.RFC.3688'?>
+        <?rfc include='reference.RFC.6020'?>
+        <?rfc include='reference.RFC.6241'?>
+        <?rfc include='reference.RFC.6242'?>
+        <?rfc include='reference.RFC.6991'?>
+        <?rfc include='reference.RFC.7950'?>
+        <?rfc include='reference.RFC.8040'?>
+        <?rfc include='reference.RFC.8174'?>
+        <?rfc include='reference.RFC.8341'?>
+        <?rfc include='reference.RFC.8407'?>
+        <?rfc include='reference.RFC.8446'?>
+        <?rfc include='reference.RFC.8525'?>
+        <?rfc include='reference.RFC.8791'?>
+        <?ref include='reference.I-D.ietf-netmod-yang-versioning-reqs'?>
+        <?ref include='reference.I-D.ietf-netmod-yang-packages'?>
+        <?ref include='reference.I-D.ietf-netmod-yang-semver'?>
+        <?ref include='reference.I-D.ietf-netmod-yang-module-versioning'?>
+    </references>
+    <references title="Informative References">
+        <?ref include='reference.I-D.clacla-netmod-yang-model-update'?>
+    </references>
+    <section anchor="examples" title="Comparison Examples">
+        <t>
+            This section provides various examples of the output of the
+            comparison algorithm defined in this document to illustrate it on
+            actual YANG modules.
+        </t>
+        <section anchor="compiled_examples" title="Compiled Comparison Examples">
+            <t>
+                This section provides examples of comparing only compiled
+                schema trees of YANG modules.
+            </t>
+            <section anchor="simple_compiled_module" title="Simple Example Module">
+                <t>
+                    An example simple module comparison with a typedef change
+                    and a new leaf addition.
+                </t>
+                <sourcecode name="mod@2025-01-01.yang" type=""
+                        markers="true"><![CDATA[
+module mod {
+    namespace "urn:mod";
+    prefix m;
+    yang-version 1.1;
+
+    revision 2025-01-01;
+
+    typedef my-string {
+        type string {
+            length "1..10";
+        }
+    }
+
+    container cont {
+        leaf l {
+            type my-string;
+        }
+    }
+}
+]]></sourcecode>
+                <sourcecode name="mod@2025-06-01.yang" type=""
+                        markers="true"><![CDATA[
+module mod {
+    namespace "urn:mod";
+    prefix m;
+    yang-version 1.1;
+
+    revision 2025-06-01;
+    revision 2025-01-01;
+
+    typedef my-string {
+        type string {
+            length "1..20";
+        }
+    }
+
+    container cont {
+        leaf l {
+            type my-string;
+        }
+
+        leaf l2 {
+            type int32;
+        }
+    }
+}
+]]></sourcecode>
+                <sourcecode name="mod_comparison.json" type=""
+                        markers="true"><![CDATA[
+{
+  "ietf-yang-schema-comparison:schema-comparison": {
+    "schema": [
+      {
+        "source": {
+          "module": "mod",
+          "revision": "2025-01-01"
+        },
+        "target": {
+          "module": "mod",
+          "revision": "2025-06-01"
+        },
+        "conformance": "backwards-compatible",
+        "node-comparison": [
+          {
+            "node": "/mod:cont/l",
+            "node-type": "leaf",
+            "changed": [
+              {
+                "stmt": "length",
+                "change": "modified",
+                "conformance": "backwards-compatible"
+              }
+            ],
+            "old": {
+              "status": "current",
+              "config": true,
+              "mandatory": false,
+              "type": {
+                "base-type": "string",
+                "length": {
+                  "interval": [
+                    {
+                      "min": "1",
+                      "max": "10"
+                    }
+                  ]
+                }
+              }
+            },
+            "new": {
+              "status": "current",
+              "config": true,
+              "mandatory": false,
+              "type": {
+                "base-type": "string",
+                "length": {
+                  "interval": [
+                    {
+                      "min": "1",
+                      "max": "20"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "node": "/mod:cont/l",
+            "node-type": "leaf",
+            "changed": [
+              {
+                "stmt": "node",
+                "change": "added",
+                "conformance": "backwards-compatible"
+              }
+            ],
+            "new": {
+              "status": "current",
+              "config": true,
+              "mandatory": false,
+              "type": {
+                "base-type": "string",
+                "length": {
+                  "interval": [
+                    {
+                      "min": "1",
+                      "max": "20"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        ]
+      }
+    ]
+  }
+}
+]]></sourcecode>
+            </section>
+        </section>
+    </section>
+  </back>
+</rfc>
+<!-- Local Variables: -->
+<!-- fill-column:120 -->
+<!-- End: -->
