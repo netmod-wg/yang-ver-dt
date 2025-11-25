@@ -28,7 +28,7 @@
 <?rfc inline="yes"?>
 <?rfc compact="yes"?>
 <?rfc subcompact="no"?>
-<rfc category="std" docName="draft-ietf-netmod-yang-packages-06"
+<rfc category="std" docName="draft-ietf-netmod-yang-packages-07"
      ipr="trust200902">
   <front>
     <title abbrev="YANG Packages">YANG Packages</title>
@@ -148,6 +148,10 @@
           <xref target="resolution"/>.  The resolved schema identifies the
           implemented modules (with any deviations applied), import-only
           modules, enabled features, and schema mount points.</t>
+
+          <t>mandatory-feature: A YANG module feature, declared by a package
+           definition as being mandatory to implement for all implementations
+           that conform to the package definition.</t>
         </list></t>
     </section>
 
@@ -353,21 +357,17 @@
       <t>Each YANG package defines: <list style="symbols">
         <t>YANG package meta-data, such as "name", "version",
         "organization", "description", "complete" flag, etc.</t>
-        
+
         <t>An "includes" container holding a list of included packages.  It
         also contains lists of any implemented modules and import-only modules
         that are used in addition to, or with different version/revisions to,
-        the modules defined in the included packages.</t>
+        the modules defined in the included packages.  Finally, it list 
+        required features in addition to those defined in included packages.</t>
 
-        <t>An "excludes" container comprising packages and modules that are
-        implicitly included by entries in the "includes/packages" list, but are
-        excluded from this package definition.</t>
-
-        <t>A "mandatory-features" container with two lists of YANG module
-        features. The "include" list contains the features required in addition
-        to those defined in included packages. The "exclude" list contains the
-        features that have been defined as being mandatory in the directly
-        included packages, but are excluded from this package definition.</t>
+        <t>An "excludes" container comprising modules, and features that are
+        included via the resolved packages of entries in the
+        "includes/packages" list, but that are excluded from this package
+        definition.</t>
 
         <t>Lists of YANG packages that will be found at particular mount
         points by any server implementing this package, used in conjunction with
@@ -465,14 +465,14 @@
 module: ietf-yang-package-types
 
   grouping yang-pkg-instance:
-    +-- name                  pkg-name
-    +-- version               pkg-version
-    +-- timestamp?            yang:date-and-time
-    +-- organization?         string
-    +-- contact?              string
-    +-- description?          string
-    +-- reference?            string
-    +-- complete?             boolean
+    +-- name            pkg-name
+    +-- version         pkg-version
+    +-- timestamp?      yang:date-and-time
+    +-- organization?   string
+    +-- contact?        string
+    +-- description?    string
+    +-- reference?      string
+    +-- complete?       boolean
     +-- includes
     |  +-- package* [name]
     |  |  +-- name        pkg-name
@@ -483,26 +483,25 @@ module: ietf-yang-package-types
     |  |  +-- version      version-or-rev-date
     |  |  +-- location*    inet:uri
     |  |  +-- submodule* [name]
-    |  |     +-- name?       yang:yang-identifier
+    |  |     +-- name        yang:yang-identifier
     |  |     +-- version     version-or-rev-date
     |  |     +-- location*   inet:uri
     |  +-- import-only-module* [name version]
-    |     +-- name                yang:yang-identifier
-    |     +-- version             version-or-rev-date
-    |     +-- replaces-version*   version-or-rev-date
-    |     +-- location*           inet:uri
-    |     +-- submodule* [name]
-    |        +-- name?       yang:yang-identifier
-    |        +-- version     version-or-rev-date
-    |        +-- location*   inet:uri
+    |  |  +-- name                yang:yang-identifier
+    |  |  +-- version             version-or-rev-date
+    |  |  +-- replaces-version*   version-or-rev-date
+    |  |  +-- location*           inet:uri
+    |  |  +-- submodule* [name]
+    |  |     +-- name        yang:yang-identifier
+    |  |     +-- version     version-or-rev-date
+    |  |     +-- location*   inet:uri
+    |  +-- features*             scoped-feature
     +-- excludes
     |  +-- module*               pkg-name
     |  +-- import-only-module*   pkg-name
-    +-- mandatory-features
-    |  +-- include*   scoped-feature
-    |  +-- exclude*   scoped-feature
+    |  +-- features*             scoped-feature
     +-- mounts* [mount-path]
-       +-- mount-path?         mount-ypath
+       +-- mount-path          mount-ypath
        +-- package* [name]
        |  +-- name                pkg-name
        |  +-- version             pkg-version
@@ -555,18 +554,19 @@ module: ietf-yang-package-types
             'excludes/import-only-module' lists.</t>
 
             <t>A package definition MUST NOT include the same feature name in
-            both the 'mandatory-features/include' and
-            'mandatory-features/exclude' lists.</t>
+            both the 'includes/features' and
+            'excludes/features' lists.</t>
 
             <t>A package definition MUST NOT exclude a module and list features
-            defined by that module in the 'mandatory-features/include' list.</t>
+            defined by that module in the 'includes/feature' list.</t>
 
             <t>A package definition MAY include redundant information, e.g.,
             including a module or package version that is already present by an
             included package, or excluding a module that is not included by any
             included package.  However, such redundant information might be
-            confusing to readers, and although the resolved package definition
-            is unambiguous, it is best to minimize it where possible.</t>
+            confusing to readers.  Although the resolved package definition
+            is unambiguous, it is best to minimize redundant information where
+            possible.</t>
 
             <t>Finally, standard rules for YANG instance data apply.  E.g.,
             entries in the various lists MUST be unique by any list key.</t>
@@ -628,8 +628,19 @@ module: ietf-yang-package-types
             unless explicitly overridden by a mount definition in this package
             with a 'replaces-package' statement.</t>
 
+            <t>A package definition CANNOT remove a package from a mount point,
+            but it MAY replace it a different package version, which SHOULD be
+            newer version of the package.  A package definition MAY also remove
+            modules or mandatory features.  In all cases, this is achieved by
+            listing the replacement package in the 'mounts/package' list, which MUST import a version of the package to be replaced.
+            </t>
+
+
             <t>Each package definition may include a list of packages found
-            at each mount point.   Only a single version of any package found at
+            at each mount point.
+            
+            
+               Only a single version of any package found at
             a given mount point is allowed, and hence the version within the
             'mounts/package' list replaces any mounted version exported from
             included packages, as defined in <xref target="resolution"/>.  In
@@ -687,8 +698,8 @@ module: ietf-yang-package-types
             any entries in "excludes/import-only-modules" list.</t>
             <t>The set of mandatory-features is the union of the mandatory 
             features in the resolved included packages, with any
-            "mandatory-features/include" entries added, and any
-            "mandatory-features/exclude" entries removed.  If a module is
+            "includes/features" entries added, and any
+            "excludes/features" entries removed.  If a module is
             excluded by "excludes/modules" then all features associated with
             that module are also implicitly removed.</t>
             <t>The set of mounts is the union of the mounts in the resolved
@@ -1010,13 +1021,11 @@ module: ietf-yang-inst-data-pkg
                 'excludes/import-only-module' list, which in either case causes
                 a module to be removed from an included package.</t>
 
-                <t>Removing a feature from the 'mandatory-features/include'
-                list unless the feature was not mandatory in any included
-                packages.</t>
+                <t>Removing a feature from the 'includes/features' list unless
+                the feature was not mandatory in any included packages.</t>
 
-                <t>Adding a feature to the 'mandatory-features/exclude'
-                list unless the feature was not mandatory in any included
-                package.</t>
+                <t>Adding a feature to the 'excludes/features' list unless the
+                feature was not mandatory in any included package.</t>
 
                 <t>Adding, changing, or removing a module containing one 
                 or more deviations, that when applied to the target module 
@@ -1242,7 +1251,7 @@ This section has already been covered in the resolution section.
         flexibility in how YANG modules may be used by implementations and
         used by YANG modules published by other organizations.</t>
 
-        <t>YANG packages include the 'mandatory-features' list, which allow
+        <t>YANG packages include the 'features' list, which allow
         the package to define a set of features that MUST be implemented
         by any conformant implementation of the package as a mechanism to
         simplify and manage the schema represented by a YANG package.</t>
@@ -1613,6 +1622,21 @@ module ietf-yang-package-types {
            It is an error to list a module in both this list and the
            'includes/import-only-module' list.";
       }
+
+      leaf-list features {
+        type scoped-feature;
+        description
+          "Lists features from the mandatory features exported by an
+          included package that are reclassified as being OPTIONAL
+          to support by any server implementing the package,
+          overriding the behavior specified by the included package.
+
+          Features MUST NOT be specified both in this list and also
+          the 'includes/features' list.
+
+          Features are identified using
+          <module-name>:<feature-name>.";
+      }
     }
   }
 
@@ -1857,16 +1881,8 @@ module ietf-yang-package-types {
           }
         }
       }
-    }
 
-    uses yang-pkg-exclusions;
-
-    container mandatory-features {
-      description
-        "Contains parameters for specifying the features that MUST
-         be supported by any server implementing the package.";
-
-      leaf-list include {
+      leaf-list features {
         type scoped-feature;
         description
           "Lists features from any modules included in the package
@@ -1876,8 +1892,8 @@ module ietf-yang-package-types {
            Mandatory features specified by any directly included
            packages MUST also be supported by server
            implementations, unless excluded by an entry in the
-           'mandatory-features/excludes' list, and do not
-           need to be repeated in this list.
+           'excludes/features' list, and do not need to be repeated
+           in this list.
 
            All other features defined in modules included in the
            package are OPTIONAL to implement.
@@ -1885,22 +1901,9 @@ module ietf-yang-package-types {
            Features are identified using
            <module-name>:<feature-name>.";
       }
-
-      leaf-list exclude {
-        type scoped-feature;
-        description
-          "Lists features from the mandatory features exported by an
-          included package that are reclassified as being OPTIONAL
-          to support by any server implementing the package,
-          overriding the behavior specified by the included package.
-
-          Features MUST NOT be specified both in this list and also
-          the 'mandatory-features/includes' list.
-
-          Features are identified using
-          <module-name>:<feature-name>.";
-      }
     }
+
+    uses yang-pkg-exclusions;
 
     list mounts {
       key "mount-path";
@@ -3280,10 +3283,8 @@ module ietf-yang-inst-data-pkg {
               "name": "example-module-b-types",
               "version": "1.1.0"
             }
-          ]
-        },
-        "mandatory-features": {
-          "include": [
+          ],
+          "features": [
             "example-module-a:foo",
             "example-module-b:bar"
           ]
@@ -3334,10 +3335,8 @@ module ietf-yang-inst-data-pkg {
           ],
           "import-only-module": [
             "example-module-b-types"
-          ]
-        },
-        "mandatory-features": {
-          "exclude": [
+          ],
+          "features": [
             "example-module-b:bar"
           ]
         }
