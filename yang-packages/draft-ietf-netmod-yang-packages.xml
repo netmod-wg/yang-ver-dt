@@ -28,7 +28,7 @@
 <?rfc inline="yes"?>
 <?rfc compact="yes"?>
 <?rfc subcompact="no"?>
-<rfc category="std" docName="draft-ietf-netmod-yang-packages-06"
+<rfc category="std" docName="draft-ietf-netmod-yang-packages-07"
      ipr="trust200902">
   <front>
     <title abbrev="YANG Packages">YANG Packages</title>
@@ -142,6 +142,16 @@
           target="I-D.ietf-netmod-yang-semver"/>. When used in the
           context of a YANG package, it follows the definition in <xref
           target="editorial_package_change"/>.</t>
+
+          <t>resolved schema: The resolved schema is the YANG schema defined by
+          a package after package resolution has been performed, as defined in
+          <xref target="resolution"/>.  The resolved schema identifies the
+          implemented modules (with any deviations applied), import-only
+          modules, enabled features, and schema mount points.</t>
+
+          <t>mandatory-feature: A YANG module feature, declared by a package
+           definition as being mandatory to implement for all implementations
+           that conform to the package definition.</t>
         </list></t>
     </section>
 
@@ -347,21 +357,17 @@
       <t>Each YANG package defines: <list style="symbols">
         <t>YANG package meta-data, such as "name", "version",
         "organization", "description", "complete" flag, etc.</t>
-        
+
         <t>An "includes" container holding a list of included packages.  It
         also contains lists of any implemented modules and import-only modules
         that are used in addition to, or with different version/revisions to,
-        the modules defined in the included packages.</t>
+        the modules defined in the included packages.  Finally, it list 
+        required features in addition to those defined in included packages.</t>
 
-        <t>An "excludes" container comprising packages and modules that are
-        implicitly included by entries in the "includes/packages" list, but are
-        excluded from this package definition.</t>
-
-        <t>A "mandatory-features" container with two lists of YANG module
-        features. The "include" list contains the features required in addition
-        to those defined in included packages. The "exclude" list contains the
-        features that have been defined as being mandatory in the directly
-        included packages, but are excluded from this package definition.</t>
+        <t>An "excludes" container comprising modules, and features that are
+        included via the resolved packages of entries in the
+        "includes/packages" list, but that are excluded from this package
+        definition.</t>
 
         <t>Lists of YANG packages that will be found at particular mount
         points by any server implementing this package, used in conjunction with
@@ -459,14 +465,14 @@
 module: ietf-yang-package-types
 
   grouping yang-pkg-instance:
-    +-- name                  pkg-name
-    +-- version               pkg-version
-    +-- timestamp?            yang:date-and-time
-    +-- organization?         string
-    +-- contact?              string
-    +-- description?          string
-    +-- reference?            string
-    +-- complete?             boolean
+    +-- name            pkg-name
+    +-- version         pkg-version
+    +-- timestamp?      yang:date-and-time
+    +-- organization?   string
+    +-- contact?        string
+    +-- description?    string
+    +-- reference?      string
+    +-- complete?       boolean
     +-- includes
     |  +-- package* [name]
     |  |  +-- name        pkg-name
@@ -477,27 +483,25 @@ module: ietf-yang-package-types
     |  |  +-- version      version-or-rev-date
     |  |  +-- location*    inet:uri
     |  |  +-- submodule* [name]
-    |  |     +-- name?       yang:yang-identifier
+    |  |     +-- name        yang:yang-identifier
     |  |     +-- version     version-or-rev-date
     |  |     +-- location*   inet:uri
     |  +-- import-only-module* [name version]
-    |     +-- name                yang:yang-identifier
-    |     +-- version             version-or-rev-date
-    |     +-- replaces-version*   version-or-rev-date
-    |     +-- location*           inet:uri
-    |     +-- submodule* [name]
-    |        +-- name?       yang:yang-identifier
-    |        +-- version     version-or-rev-date
-    |        +-- location*   inet:uri
+    |  |  +-- name                yang:yang-identifier
+    |  |  +-- version             version-or-rev-date
+    |  |  +-- replaces-version*   version-or-rev-date
+    |  |  +-- location*           inet:uri
+    |  |  +-- submodule* [name]
+    |  |     +-- name        yang:yang-identifier
+    |  |     +-- version     version-or-rev-date
+    |  |     +-- location*   inet:uri
+    |  +-- features*             scoped-feature
     +-- excludes
-    |  +-- package*              pkg-name
     |  +-- module*               pkg-name
     |  +-- import-only-module*   pkg-name
-    +-- mandatory-features
-    |  +-- include*   scoped-feature
-    |  +-- exclude*   scoped-feature
+    |  +-- features*             scoped-feature
     +-- mounts* [mount-path]
-       +-- mount-path?         mount-ypath
+       +-- mount-path          mount-ypath
        +-- package* [name]
        |  +-- name                pkg-name
        |  +-- version             pkg-version
@@ -511,10 +515,17 @@ module: ietf-yang-package-types
         <t>For a YANG package to be valid, it MUST conform to all of the
         following rules: <list
             style="numbers">
-            <t>Each (package name, version) pairing MUST define a unique
-            version of that package definition.</t>
+            <t>Each (package name, version) pairing MUST define a globally
+            unique version of that package definition.</t>
 
-            <t>Packages MUST be versioned using YANG Semver.</t>
+            <t>Each YANG package has a name that SHOULD end with the suffix
+            "-pkg".  The name MUST be globally unique to avoid issues with
+            tools and caching, e.g., using the mechanisms specified in
+            <xref target="package-scope"/>.</t>
+
+            <t>YANG packages MUST be versioned using YANG Semver,
+            <xref target="I-D.ietf-netmod-yang-semver"/>.  Versioning YANG
+            packages is further described in <xref target="versioning"/>.</t>
 
             <t>A YANG package MAY represent a referentially complete set of 
             modules or MAY represent a set of modules with some module import 
@@ -522,24 +533,18 @@ module: ietf-yang-package-types
             </t>
 
             <t>Packages definitions are hierarchical because a package can
-            include other packages. Only a single version of any included
-            package (including any descendant included packages) MUST be
-            implemented by a package.  Conflicting package versions (e.g. from
-            descendant package includes) MUST be resolved via explicit includes
-            of the package version that takes precedence over all other
-            versions.</t>
+            include other packages.</t>
 
             <t>For each module implemented by a package, only a single
             version/revision of that module MUST be implemented.   Conflicting
-            package versions (e.g. from package includes) MUST be resolved via
-            explicit includes of the package version that takes precedence over
-            all other versions.</t>
+            module versions (e.g. from package includes) MAY be resolved
+            explicitly (via "includes/modules") or using automatic version
+            resolution, as described in
+            <xref target="auto-module-version-resolution"/>.</t>
 
             <t>Multiple versions/revisions of an import-only module MAY be
-            listed.</t>
-
-            <t>A package definition MUST NOT include the same package name in
-            both the 'includes/package' and 'excludes/package' lists.</t>
+            listed, but any extraneous import-only module versions should be
+            removed.</t>
 
             <t>A package definition MUST NOT include the same module name in
             both the 'includes/module' and 'excludes/module' lists.</t>
@@ -549,12 +554,22 @@ module: ietf-yang-package-types
             'excludes/import-only-module' lists.</t>
 
             <t>A package definition MUST NOT include the same feature name in
-            both the 'mandatory-features/include' and
-            'mandatory-features/exclude' lists.</t>
+            both the 'includes/features' and
+            'excludes/features' lists.</t>
 
-            <t>Finally, standard rules for YANG instance data apply.  In
-            particular entries in the various lists MUST be unique by any list
-            key.</t>
+            <t>A package definition MUST NOT exclude a module and list features
+            defined by that module in the 'includes/feature' list.</t>
+
+            <t>A package definition MAY include redundant information, e.g.,
+            including a module or package version that is already present by an
+            included package, or excluding a module that is not included by any
+            included package.  However, such redundant information might be
+            confusing to readers.  Although the resolved package definition
+            is unambiguous, it is best to minimize redundant information where
+            possible.</t>
+
+            <t>Finally, standard rules for YANG instance data apply.  E.g.,
+            entries in the various lists MUST be unique by any list key.</t>
           </list></t>
       </section>
 
@@ -566,10 +581,13 @@ module: ietf-yang-package-types
         <t>If all import statements in all YANG modules included in the
         package (either directly, or through included packages) can be
         resolved to a module revision defined with the YANG package
-        definition, then the package is classified as referentially complete.
+        definition, then the package is classified as being referentially complete.
         Conversely, if one or more import statements cannot be resolved to a
         module specified as part of the package definition, then the package
-        is classified as referentially incomplete.</t>
+        is classified as being referentially incomplete.</t>
+
+        <t>Also see <xref target="completeness-usage"/> for details on cases
+        when referentially incomplete packages are helpful.</t>
       </section>
 
       <section title="Submodules packages considerations">
@@ -588,7 +606,7 @@ module: ietf-yang-package-types
       <section title="Package Mount Points">
         <t>YANG Schema Mount <xref target="RFC8528"/> defines a mechanism for YANG
         modules to be mounted at specific mount points in the schema tree.  This
-        mechanism is required to instanstiate the full schema for some common
+        mechanism is required to instantiate the full schema for some common
         networking use cases, e.g., <xref target="RFC8529"/> defines a YANG
         Model for Network Instances, that uses YANG mount points to mount IETF
         routing protocol YANG modules within the network instance list.</t>
@@ -610,8 +628,19 @@ module: ietf-yang-package-types
             unless explicitly overridden by a mount definition in this package
             with a 'replaces-package' statement.</t>
 
+            <t>A package definition CANNOT remove a package from a mount point,
+            but it MAY replace it a different package version, which SHOULD be
+            newer version of the package.  A package definition MAY also remove
+            modules or mandatory features.  In all cases, this is achieved by
+            listing the replacement package in the 'mounts/package' list, which MUST import a version of the package to be replaced.
+            </t>
+
+
             <t>Each package definition may include a list of packages found
-            at each mount point.   Only a single version of any package found at
+            at each mount point.
+            
+            
+               Only a single version of any package found at
             a given mount point is allowed, and hence the version within the
             'mounts/package' list replaces any mounted version exported from
             included packages, as defined in <xref target="resolution"/>.  In
@@ -622,41 +651,44 @@ module: ietf-yang-package-types
           </list>
         </t>
 
+        <section title="Exclusions">
+          <t>A package definition may exclude modules or mandatory features.  The
+          mechanism for this is described in <xref target="resolution"/>, and
+          the conformance implications are described in
+          <xref target="conformance"/>.  [TODO - Check if this is the best
+          reference.]</t>
+        </section>
       </section>
     </section>
 
     <section anchor="resolution" title="Package Resolution">
       <t>Package resolution is taking a YANG package definition and converting
-      it to a specification for a YANG schema, e.g., as that may be implemented
+      it to a specification for a YANG schema, e.g., as may be implemented
       by a device for a particular datastore.  A YANG schema can be thought of
       as comprising:
       <list style="hanging">
         <t>A set of implemented modules at specific versions,</t>
         <t>A set of import-only modules, potentially with multiple versions of a
         given module,</t>
-        <t>A set of implemented packages, potentially with deviations and
-        modifications,</t>
         <t>A set of mandatory features that are supported,</t>
         <t>A set of mount points, each with its own YANG schema,</t>
       </list> that can be collectively compiled into a YANG schema tree.</t>
 
       <t>The YANG schema generated by a package definition can be converted
-      into an equivalent instance in YANG library.</t>
+      into an equivalent instance in YANG library <xref target="RFC8525"/>,
+      with Schema Mount <xref target="RFC8528"/> if mount points are used.
+      E.g., see <xref target="yang-lib-binding"/>.</t>
 
       <t>The following process defines how a YANG a package definition is
       resolved, using two steps:
       <list style="numbers">
-        <t>The list of included packages is filtered by any excluded packages.
-        The remaining included packages are each recusively resolved taking
-        into consideration the entries in the "excludes/package" list.</t>
-        <t>The resolved included package definitions (i.e., those in the
-        "includes/packages" list that have not been excluded) are then
-        combined, using the following merge resolution rules:
+        <t>The list of included packages are each recursively resolved using
+        these steps and then combined using the following merge resolution rules:
           <list style="symbols">
-            <t>The set of implemented packages is the union of all resolved
-            included packages.</t>
             <t>The set of implemented modules is the union of all
-            implemeted modules in the resolved included packages, overwritten
+            implemented modules in the resolved included packages.  Conflicting
+            module versions can be resolved automatically as per
+            <xref target="auto-module-version-resolution"/>, then overwritten
             by any entries in the "includes/modules" list, and finally filtered
             by any entries in "excludes/modules" list.</t>
             <t>The set of import-only modules is the union of all import-only
@@ -666,9 +698,10 @@ module: ietf-yang-package-types
             any entries in "excludes/import-only-modules" list.</t>
             <t>The set of mandatory-features is the union of the mandatory 
             features in the resolved included packages, with any
-            "mandatory-features/include" entries added, and any
-            "mandatory-features/exclude" entries removed. [TODO - Also exclude
-            any for which the module has been removed?]</t>
+            "includes/features" entries added, and any
+            "excludes/features" entries removed.  If a module is
+            excluded by "excludes/modules" then all features associated with
+            that module are also implicitly removed.</t>
             <t>The set of mounts is the union of the mounts in the resolved
             included packages, where for a given mount-path that is present in
             more than one included package then it takes the union of the
@@ -677,7 +710,7 @@ module: ietf-yang-package-types
             with any entries listed in "mounts/package/replaces-package" list
             removed (or replaced) at the mount point.</t>
             <t>If the same module version is being resolved from multiple
-            included modules, then the union of the module locations are
+            included modules, then the union of the module locations is
             used.</t>
             <t>Submodules are ignored for resolution purposes, only the module
             version is considered and compared.</t>
@@ -697,42 +730,59 @@ module: ietf-yang-package-types
       <t>See https://github.com/netmod-wg/yang-ver-dt/issues/258.  How to handle
       union of meta-data, locations, and override behaviours.</t>
 
+      <section anchor="auto-module-version-resolution" title="Automatic Module Version Resolution">
+        <t>A resolved package definition can only advertise a single version of
+        a module, and hence when conflicting module versions arise though included
+        packages that resolve to different versions of a given module then a single
+        version has to be chosen.  The following rules are used, in the order given,
+        to automatically select the chosen version by performing a pairwise
+        comparison of the module versions from the resolved included packages,
+        by comparing the version leaf:
+          <list style="numbers">
+            <t>If both the version leaf matches the YANG Semver format, then
+            considering section 4.4 or <xref target="I-D.ietf-netmod-yang-semver"/>:
+              <list style="format %i">
+                <t>The module with the highest MAJOR version component is chosen.</t>
+                <t>Otherwise, if the MAJOR version components are the same, then the module
+                with the highest MINOR version component is chosen.</t>
+                <t>Otherwise, the module with the highest PATCH version component is chosen.</t>
+                <t>Note, the _COMPAT modifier is ignored for comparison purposes.</t>
+              </list></t>
+            <t>If one module has a version statement that matches the YANG
+            Semver format but the other does not, then the module with the
+            version statement matching the YANG Semver format is chosen.</t>
+            <t>If neither module has a version statement that matches the YANG
+            Semver format, then the module with the most recent revision-date is
+            chosen.</t>
+          </list>
+        </t>
+      </section>
     </section>
-    <section title="YANG Package Usage Guidance">
-      <t>TODO - Decide if some of this text should move to the conformance
-      section.</t>
-      <t>It is RECOMMENDED that organizations that publish YANG modules also
+    <section title="YANG Package Usage">
+      <t>This section provides information and guidance on how YANG packages
+      can be used.</t>
+
+      <t>It is RECOMMENDED that organizations publishing YANG modules also
       publish YANG package definition that group and version those modules
-      into units of related functionality. This increases interoperability,
-      by encouraging implementations to use the same collections of YANG
-      modules versions. Using packages also makes it easier to understand
-      relationship between modules, and enables functionality to be
-      described on a more abstract level than individual modules.</t>
+      into units of related functionality.  This increases interoperability
+      by encouraging different implementations to coalesce around use the same
+      collections of YANG modules versions. Using packages also makes it easier
+      to understand relationship between modules, and enables functionality to
+      be described on a more abstract level than individual modules.</t>
 
-      <t>TODO, more work required on this section.</t>
-
-      <t>Each YANG package has a name that SHOULD end with the suffix "-pkg".
-      Package names are normally expected to be globally unique, but in some
-      cases the package name may be locally scoped to a server or device, as
-      described in <xref target="package-scope"/>.</t>
-
-      <t>YANG packages are versioned using the same approaches described in
-      <xref target="I-D.ietf-netmod-yang-semver"/>. This is described in further
-      detail in <xref target="versioning"/>.</t>
-
-      <t>When choosing between conflicting package versions, or replacing a
-      package version,the selected version SHOULD be greater or equal to
-            the most recent incldued version </t>
-
-        <t>Mounted packages SHOULD only be replaced by a mounted package at a
-        later version.</t>
+      <t>Where possible, package definitions SHOULD be made available offline in
+      Package Instance Data files, see <xref target="package_files"/>, but also
+      on the device as a list of known packages and relationships between 
+      YANG library datastore schema and equivalent YANG package definitions,
+      e.g., see <xref target="on-device-pkg-definitions"/>.</t>
 
       <section anchor="package-scope"
-               title="Package name scoping and uniqueness">
-        <t>YANG package names SHOULD be globally unique, since two different
-        package definitions with the same name, but different content, cannot 
-        both be used together within the same package definition.</t>
-        <t>There are a couple of ways that this uniqueness can be achieved:
+               title="Achieving package name uniqueness">
+        <t>As per <xref target="definition"/>, YANG package names are globally
+        unique, since two different package definitions with the same name, but
+        different content, cannot both be used together within the same package
+        definition.</t>
+        <t>There are a couple of ways of achieving this uniqueness requirement:
         <list style="symbols">
             <t>For package definitions that define an public API, or that could
             apply to multiple servers exposing the same management API, then an
@@ -740,33 +790,16 @@ module: ietf-yang-package-types
             included in the package name, i.e., following a similar naming
             convention as for modules.</t>
 
-            <t>For package definitions that are local to a particular server,
-            then the sysName of the device, a MAC address, or a UUID should be
-            used as a suffix to the package name to ensure uniqueness.</t>
+            <t>For package definitions that are entirely local to a particular
+            server or device, then the sysName of the device, a MAC address, or
+            a UUID should be used as a suffix to the package name to ensure
+            uniqueness.</t>
         </list>
         </t>
       </section>
 
-
-
-      <section title="Use of features in YANG modules and YANG packages">
-        <t>TODO - Move to conformance section?</t>
-
-        <t>The YANG language supports feature statements as the mechanism to
-        make parts of a schema optional. Published standard YANG modules
-        make use of appropriate feature statements to provide
-        flexibility in how YANG modules may be used by implementations and
-        used by YANG modules published by other organizations.</t>
-
-        <t>YANG packages include the 'mandatory-features' list, which allow
-        the package to define a set of features that MUST be implemented
-        by any conformant implementation of the package as a mechanism to
-        simplify and manage the schema represented by a YANG package.</t>
-      </section>
-
-      <section title="Referential completeness and YANG packages">
-        <t>TODO - moved from another section, may not be the right place.</t>
-
+      <section anchor="completeness-usage"
+        title="Referential completeness and YANG packages">
         <t>Referentially incomplete packages can be used, along with locally
         scoped packages, to represent an update to a device's datastore schema
         as part of an optional software hot fix. E.g., the base software is
@@ -782,10 +815,86 @@ module: ietf-yang-package-types
         be resolved when the package definition is used.</t>
       </section>
 
+      <section anchor="on-device-pkg-definitions"
+        title="Providing Package Definitions on a Server">
+        <section title="Package List">
+          <t>A top level 'packages' container holds the list of all versions of
+          all packages known to the server.  Entries in this list do not
+          necessarily mean that the package is implemented by the server or
+          currently active for any datastore.  Instead the YANG Library package
+          bindings in <xref target="yang-lib-binding"/> are used to indicate
+          which of the advertised packages are supported by each datastore
+          schema.</t>
+
+          <t>Each list entry in '/packages/package' SHOULD list one or more URLs
+          pointing to an offline location where the package definition can be
+          obtained as a YANG Instance Data File.</t>
+
+          <t>The '/packages/package' list MAY include multiple versions of a
+          particular package. E.g. if the server is capable of allowing clients
+          to select which package versions should be used by the server, or if
+          package versions have been changed via applying different software
+          packages or hot fixes.</t>
+        </section>
+
+        <section title="Tree diagram">
+          <figure>
+            <preamble>The "ietf-yang-packages" YANG module has the following
+            structure:</preamble>
+
+            <artwork><![CDATA[
+module: ietf-yang-packages
+  +--ro packages
+     +--ro package* [name version]
+        // Uses the yang-package-instance grouping defined in
+        // ietf-yang-package-types.yang, with location:
+        +--ro name                  pkg-name
+        +--ro version               pkg-version
+        ... remainder of yang-package-instance grouping ...
+        +--ro location*             inet:uri
+        ]]></artwork>
+          </figure>
+        </section>
+
+        <section anchor="yang-lib-binding" title="YANG Library Package Bindings">
+          <t>The ietf-yl-packages module augments YANG library to allow a server
+          to indicate that a datastore schema is defined by a package, or a
+          union of compatible packages. Since packages can be made available
+          offline in instance data files, it may be sufficient for a client to
+          only check that a compatible version of the package is implemented by
+          the server without fetching either the package definition (if
+          previously cached), or downloading and comparing the full list of
+          modules and enabled features.</t>
+
+          <t>If multiple packages are listed for a datastore schema then they
+          are resolved as if the packages were all directly included in a single
+          package definition, following the rules in
+          <xref target="resolution"/>.</t>
+
+          <t>If populated, the set of packages listed for a datastore schema
+          MUST resolve to a schema that exactly matches the schema defined the
+          YANG library module-sets, and the resolved schema MUST be
+          referentially complete.</t>
+
+          <figure>
+            <preamble>The "ietf-yl-packages" YANG module has the following
+            structure:</preamble>
+
+          <artwork><![CDATA[
+module: ietf-yl-packages
+
+  augment /yanglib:yang-library/yanglib:schema:
+    +--ro package* [name version]
+       +--ro name       -> /pkgs:packages/package/name
+       +--ro version    leafref
+          ]]></artwork>
+          </figure>
+        </section>
+      </section>
+
       <section anchor="package_files" title="Package Instance Data Files">
-        <t>YANG packages SHOULD be available offline from the server, defined as
-        YANG instance data files <xref
-        target="RFC9195"/> using the 
+        <t>YANG packages SHOULD be made available offline from the server,
+        defined as YANG instance data files <xref target="RFC9195"/> using the 
         schema below to define the package data.</t>
 
         <t>The following rules apply to the format of the YANG package instance
@@ -835,87 +944,11 @@ module: ietf-yang-package-instance
         </figure>
       </section>
 
-      <section title="Providing Package Definitions on a Server">
-        <section title="Package List">
-          <t>A top level 'packages' container holds the list of all versions of
-          all packages known to the server. Each list entry uses the common
-          package definition, but with the addition of package location that
-          cannot be contained within a offline package definition contained in
-          an instance data file.</t>
-
-          <t>The '/packages/package' list MAY include multiple versions of a
-          particular package. E.g. if the server is capable of allowing clients
-          to select which package versions should be used by the server.</t>
-
-          <t/>
-        </section>
-
-        <section title="Tree diagram">
-          <figure>
-            <preamble>The "ietf-yang-packages" YANG module has the following
-            structure:</preamble>
-
-            <artwork><![CDATA[
-module: ietf-yang-packages
-  +--ro packages
-     +--ro package* [name version]
-        // Uses the yang-package-instance grouping defined in
-        // ietf-yang-package-types.yang, with location:
-        +--ro name                  pkg-name
-        +--ro version               pkg-version
-        ... remainder of yang-package-instance grouping ...
-        +--ro location*             inet:uri
-        ]]></artwork>
-          </figure>
-        </section>
-
-        <section title="YANG Library Package Bindings">
-          <t>The YANG packages module also augments YANG library to allow a server
-          to optionally indicate that a datastore schema is defined by a package,
-          or a union of compatible packages. Since packages can generally be made
-          available offline in instance data files, it may be sufficient for a
-          client to only check that a compatible version of the package is
-          implemented by the server without fetching either the package
-          definition, or downloading and comparing the full list of modules and
-          enabled features.</t>
-
-          <t>If a server indicates that a datastore schema maps to a particular
-          package, then it MUST exactly match the schema defined by that package,
-          taking into account enabled features and any deviations.</t>
-
-          <t>If a server cannot faithfully implement a package then it can define
-          a new package to accurately report what it does implement. The new
-          package can include the original package as an included package, and the
-          new package can define additional modules containing deviations to the
-          modules in the original package, allowing the new package to accurately
-          describe the server's behavior. There is no specific mechanism provided
-          to indicate that a mandatory-feature in package definition is not
-          supported on a server, but deviations MAY be used to disable
-          functionality predicated by an if-feature statement.</t>
-
-          <figure>
-            <preamble>The "ietf-yl-packages" YANG module has the following
-            structure:</preamble>
-
-          <artwork><![CDATA[
-module: ietf-yl-packages
-
-  augment /yanglib:yang-library/yanglib:schema:
-    +--ro package* [name version]
-       +--ro name       -> /pkgs:packages/package/name
-       +--ro version    leafref
-          ]]></artwork>
-          </figure>
-        </section>
-      </section>
-
-
-
       <section title="YANG packages as schema for YANG instance data document">
-        <t>YANG package definitions can be used as the content schema definition for
-        YANG instance data files. When using a package-based content schema, the name and
-        version of the package MUST be specified, a package URL to the package
-        definition MAY also be provided.</t>
+        <t>YANG package definitions can be used as the content schema definition
+        for YANG instance data files. When using a package-based content schema,
+        the name and version of the package MUST be specified, a package URL to
+        the package definition MAY also be provided.</t>
 
         <figure>
           <preamble>The "ietf-yang-inst-data-pkg" YANG module has the following
@@ -937,9 +970,9 @@ module: ietf-yang-inst-data-pkg
 
     <section title="Package Evolution and Versioning">
       <section anchor="versioning" title="Package versioning">
-        <t>Individual versions of a YANG package are versioned using the
-        "revision-label" scheme defined in section 3.3 of <xref
-        target="I-D.ietf-netmod-yang-module-versioning"/>.</t>
+        <t>As defined in <xref target="definition"/>, YANG packages are
+        versioning using <xref target="I-D.ietf-netmod-yang-semver"/>.  This
+        section describes how those rules apply to YANG package definitions.</t>
 
         <section anchor="change_scope"
                  title="Updating a package with a new version">
@@ -948,12 +981,30 @@ module: ietf-yang-inst-data-pkg
 
           <t>When a package definition is updated, the version associated with
           the package MUST be updated appropriately, taking into consideration
-          the scope of the changes as defined by the rules below.</t>
+          the scope of the changes as defined by the rules below.  See section
+          4.5 of <xref target="I-D.ietf-netmod-yang-semver"/> for guidance on
+          choosing the next version number based on the type of change being
+          made.</t>
 
-          <t>It is important to note that a non-backwards-compatible (NBC) change to a package definition (generally requiring a major version number increment) may not always result in an NBC change to the resolved schema. For example, if a package replaces a module version 1.0.0 with version 3.0.0, but the content of version 3.0.0 has been reverted to be functionally identical to version 1.0.0 (effectively backing out previous changes between the two), the schema difference between the package versions may be functionally compatible.  Nevertheless, such changes must still follow the versioning rules defined above based on the package definition changes, not the effective change before resolved schema.</t>
+          <t>It is important to note that a non-backwards-compatible (NBC)
+          change to a package definition (generally requiring a major version
+          number increment) may not always result in an NBC change to the
+          resolved schema. For example, if a package replaces a module version
+          1.0.0 with version 3.0.0, but the content of version 3.0.0 has been
+          reverted to be functionally identical to version 1.0.0 (effectively
+          backing out previous changes between the two), the schema difference
+          between the package versions may be functionally compatible.
+          Nevertheless, such changes must still follow the versioning rules
+          defined above based on the package definition changes, not the
+          effective change before resolved schema.</t>
 
           <section anchor="nbc_package_change"
                    title="Non-Backwards-compatible changes">
+            <t>Non-backwards-compatible changes to a package are those that may
+            cause the resolved package schema to change in a way that can
+            negatively impact clients.  E.g., the removal or change of a data
+            node that was present in the previous package version, which may be
+            used by client applications.</t>
             <t>The following changes classify as non-backwards-compatible
             changes to a package definition: <list style="symbols">
                 <t>Changing an 'includes/package' list entry to select a
@@ -961,23 +1012,27 @@ module: ietf-yang-inst-data-pkg
                 package version, or removing a previously included
                 package.</t>
 
-                <t>Changing an 'includes/module' or 'includes/import-only-module' 
-                list entry to select a module version that is non-backwards-compatible 
-                to the prior module version, or removing a previously
-                implemented module.</t>
+                <t>Changing an 'includes/module' or
+                'includes/import-only-module' list entry to select a module
+                version that is non-backwards-compatible to the prior module
+                version, or removing a previously implemented module.</t>
 
-                <t>Removing a feature from the 'mandatory-features/include'
-                list.</t>
-                
-                <t>Adding a feature to the 'mandatory-features/exclude'
-                list.</t>
+                <t>Adding an entry to the 'excludes/module' list or the
+                'excludes/import-only-module' list, which in either case causes
+                a module to be removed from an included package.</t>
+
+                <t>Removing a feature from the 'includes/features' list unless
+                the feature was not mandatory in any included packages.</t>
+
+                <t>Adding a feature to the 'excludes/features' list unless the
+                feature was not mandatory in any included package.</t>
 
                 <t>Adding, changing, or removing a module containing one 
                 or more deviations, that when applied to the target module 
                 would create a change that is considered a 
                 non-backwards-compatible change to the affected data node 
                 in the schema associated with the prior package version.</t>
-                
+
                 <t>Removing a package from a mount point, or changing a mounted
                 package to a version that is non-backwards-compatible to the
                 prior package version.</t>
@@ -986,6 +1041,10 @@ module: ietf-yang-inst-data-pkg
 
           <section anchor="bc_package_change"
                    title="Backwards-compatible changes">
+            <t>Backwards-compatible changes to a package are those that may
+            cause the resolved package schema to change in a way that should not
+            impact clients.  E.g., the addition of a new data node that was not
+            present in the previous package version.</t>
             <t>The following changes classify as backwards-compatible changes
             to a package definition: <list style="symbols">
                 <t>Changing an 'included-package' list entry to select a
@@ -998,7 +1057,16 @@ module: ietf-yang-inst-data-pkg
                 prior module revision, or including a new module to the
                 package definition.</t>
 
-                <t>Adding a feature to the 'mandatory-feature' leaf-list.</t>
+                <t>Removing an entry to the 'excludes/module' list or the
+                'excludes/import-only-module' list.  [TODO - Do we need to
+                consider deviations here, e.g., removing a deviation may change
+                the schema.]</t>
+
+                <t>Adding a feature to the 'mandatory-feature/include'
+                leaf-list.</t>
+
+                <t>Removing a feature to the 'mandatory-feature/exclude'
+                leaf-list.</t>
 
                 <t>Adding, changing, or removing a module containing one 
                 or more deviations, that when applied to the target module 
@@ -1009,8 +1077,10 @@ module: ietf-yang-inst-data-pkg
           </section>
 
           <section anchor="editorial_package_change" title="Editorial changes">
-            <t>The following changes classify as editorial changes to a
-            package definition: <list style="symbols">
+            <t>Editorial changes to a package are those that do not change the
+            resolved package schema.</t>
+            <t>The following changes classify as editorial changes to a package
+            definition: <list style="symbols">
                 <t>Changing a 'included-package' list entry to select a
                 package version that is classified as an editorial change
                 relative to the prior package version.</t>
@@ -1019,11 +1089,22 @@ module: ietf-yang-inst-data-pkg
                 select a module revision that is classified as an editorial
                 change relative to the prior module revision.</t>
 
+                <t>Adding a package or module to the package definition
+                (including at a mount point), if that package or module version
+                is already present from an included package.</t>
+
+                <t>Updating the location information of any module or package
+                from an included package.</t>
+
                 <t>Any change to any meta-data associated with a package
                 definition.</t>
               </list></t>
           </section>
         </section>
+
+<!--
+Note: This section is not needed, since we state that YANG packages are
+versioned using YANG Semver labels in an earlier section.
 
         <section anchor="semantic_versioning"
                  title="YANG Semantic Versioning for packages">
@@ -1049,21 +1130,22 @@ module: ietf-yang-inst-data-pkg
           packages or modules) can be used to help determine the scope of
           changes being made.</t>
         </section>
+--> 
 
         <section title="Guidelines for Package Versions During Package Development">
           <t>During development of a new package, or while updating a previously 
           released package, special care should be taken with the selection of the 
           version associated with the package.</t>
-          
-          <t>If YANG Semver is being used for the package version scheme, then the 
-          guidelines in Section 5 of [RFC YANG SEMVER] MUST be followed for the 
-          package version.</t>
-          
-          <t>If a revision label scheme other than YANG Semver is being used for the 
-          package version, then that revision label scheme SHOULD define how the 
-          revision label is assigned during development.</t>
+
+          <t>General guidance from chapter 6 of
+          <xref target="I-D.ietf-netmod-yang-semver"/> may be helpful here.
+          [TODO - Will we provide more specific guidance in a separate draft for
+          IETF YANG Packages?]</t>
         </section>
       </section>
+<!--
+This section has already been covered in the resolution section.
+
       <section title="Changing versions of includes modules, packages, and features">
         <t>Package definitions are expected to be constructed in a hierachical
         fashion, where more significant larger package definitions include
@@ -1085,6 +1167,7 @@ module: ietf-yang-inst-data-pkg
         version/revision from an included package, but MAY choose to include
         an earlier version/revision.</t>
 
+
         <t>A similar mechanism applies for import-only modules, but a package MAY
         include mulitple versions of an import-only module, and hence the
         'replaces-revision' leaf-list is used to indicate which versions are
@@ -1094,8 +1177,9 @@ module: ietf-yang-inst-data-pkg
 
         <t>TODO - Add text about mounted packages.</t>
       </section>
+-->
     </section>
-    <section title="Package Conformance">
+    <section anchor="conformance" title="Package Conformance">
       <t>YANG packages allows for conformance to be checked at a package
       level rather than requiring a client to download all modules,
       revisions, and deviations from the server to ensure that the datastore
@@ -1106,25 +1190,72 @@ module: ietf-yang-inst-data-pkg
       faithfully, or otherwise use deviations to indicate areas of
       non-conformance.</t>
 
-      <t>For a top level package representing a datastore schema, servers
+      <t>For a set of packages representing a datastore schema, servers
       SHOULD implement the package definition faithfully, including all
       mandatory features.</t>
 
-        <t>A package that represents the exact contents of a datastore schema
-        MUST always be referentially complete.</t>
-
-      <t>However, it may be necessary for an implementation to use deviations
-      to indicate where the server does not conform to the package, or even to
-      exclude modules or packages that are not implemented in their entirety.
-      The RECOMMENDED mechanism for this is to advertise a separate
-      "server implementation" package that includes the package to be conformed
-      to, and uses deviation modules, excluded-packages, excluded-modules, and
-      excluded mandatory-features to indicate the actual conformance of the
-      server.  TODO, please see Appendix X for an example.</t>
-
       <t>Package definitions MAY modify the schema for directly or
       hierarchically included packages through the use of different module
-      revisions or module deviations.</t>
+      versions, use of module deviations, and changes to the mandatory features
+      or mount points.</t>
+
+      <section title="Resolving Conflicting Module Versions in Included Packages">
+        <t>Sometimes a package definition may include multiple packages that
+        implement different versions of a module.  A package must only implement a
+        single version of a module, and hence in these cases it is necessary to
+        resolve which version of the module is used.  The default behaviour,
+        defined in <xref target="auto-module-version-resolution"/> is to
+        use automatic resolution, which is generally the best choice.  Manual
+        resolution could be used to select a different module version instead.
+        However, care should be taken if an older module version is chosen because
+        this may cause a non-backwards-compatible change in one of the included
+        packaged.</t>
+      </section>
+
+      <section title="Exclusions, Deviations">
+        <t>If a server cannot faithfully implement a package then it can define
+        a new package to accurately report what it does implement. The new
+        package can include the original package as an included package, and the
+        new package can define modified module versions, exclusions, or
+        additional modules containing deviations to the modules in the
+        original package, allowing the new package to accurately describe the
+        server's behavior.</t>
+
+        <t>YANG Package definitions can exclude implemented modules and
+        import-only modules.  They can also exclude mandatory features, allowing
+        a server implementation to not implement the feature.  Both of these
+        mechanism, whilst useful, should be used with great care, particularly
+        if they break or change the resolved schema of any include packages.
+        </t>
+
+        <t>However, it may be necessary for an implementation to use deviations
+        to indicate where the server does not conform to the package, or even to
+        exclude modules that are not implemented in their entirety.
+        The RECOMMENDED mechanism for this is to advertise a separate
+        "server implementation" package that includes the package to be conformed
+        to, and then excludes modules, adds deviation modules, and excluded
+        mandatory-features to indicate the actual conformance of the server.
+        TODO, please see Appendix X for an example.</t>
+
+        <t>If an implementation doesn't support any functionality in a module
+        then it should exclude the module rather than using deviations to
+        exclude all data nodes added by the module to the resolved schema.
+        This gives a clearer indication to users of the package definition as to
+        the intent.</t>
+      </section>
+
+      <section title="Use of features in YANG modules and YANG packages">
+        <t>The YANG language supports feature statements as the mechanism to
+        make parts of a schema optional. Published standard YANG modules
+        make use of appropriate feature statements to provide
+        flexibility in how YANG modules may be used by implementations and
+        used by YANG modules published by other organizations.</t>
+
+        <t>YANG packages include the 'features' list, which allow
+        the package to define a set of features that MUST be implemented
+        by any conformant implementation of the package as a mechanism to
+        simplify and manage the schema represented by a YANG package.</t>
+      </section>
 
       <section title="Use of YANG semantic versioning">
         <t>Using the YANG semantic versioning scheme for package version
@@ -1155,8 +1286,19 @@ module: ietf-yang-inst-data-pkg
         non-backwards-compatible patch level changes.</t>
       </section>
 
-      <section title="Package exclusions">
-        <t>TODO. </t>
+<!--
+      <section title="Package replacement">
+        <t>When choosing between conflicting package versions, or replacing a
+        package version, the selected version SHOULD be greater or equal to
+        the most recent incldued version </t>
+
+        <t>Mounted packages SHOULD only be replaced by a mounted package at a
+        later version.</t>
+      </section>
+-->
+
+      <section title="Implementing package versions">
+        <t>TODO - Document differences in implementing package versions.</t>
       </section>
 
       <section anchor="deviations-in-packages" 
@@ -1273,6 +1415,9 @@ module: ietf-yang-inst-data-pkg
             package or as the union of a set of compatible packages, i.e.,
             equivalently to a set of non-conflicting packages being included
             together in an overarching package definition.</t>
+
+            <t>The resolved schema representing a datastore MUST be
+            referentially complete.</t>
           </list></t>
       </section>
     </section>
@@ -1284,7 +1429,7 @@ module: ietf-yang-inst-data-pkg
       <section title="ietf-yang-package-types">
         <figure>
           <artwork><![CDATA[
-<CODE BEGINS> file "ietf-yang-package-types#0.6.0.yang"
+<CODE BEGINS> file "ietf-yang-package-types#0.7.0.yang"
 module ietf-yang-package-types {
   yang-version 1.1;
   namespace "urn:ietf:params:xml:ns:yang:ietf-yang-package-types";
@@ -1349,8 +1494,8 @@ module ietf-yang-package-types {
   // and remove this note.
   // RFC Ed.: replace XXXX with actual RFC number and remove this
   // note.
-  revision 2025-04-23 {
-    ys:version 0.6.0;
+  revision 2025-11-18 {
+    ys:version 0.7.0;
     description
       "Initial revision";
     reference
@@ -1371,7 +1516,7 @@ module ietf-yang-package-types {
   typedef pkg-version {
     type ys:version;
     description
-      "Packages are versioning used YANG Semver version labels.";
+      "Packages are versioning using YANG Semver version labels.";
   }
 
   typedef version-or-rev-date {
@@ -1396,7 +1541,7 @@ module ietf-yang-package-types {
       "RFC XXXX, YANG Packages.";
   }
 
-  type mount-ypath {
+  typedef mount-ypath {
     type string;
 
     description
@@ -1449,25 +1594,6 @@ module ietf-yang-package-types {
         "Contains parameters for excluding modules and packages
          from a YANG package definition";
 
-      leaf-list package {
-        type pkg-name;
-        description
-          "Lists descendent packages, of any version, to be excluded
-          from from all included package definitions.
-
-          The behaviour is equivalent to the package definitions of
-          any descendent included packages never having included
-          the excluded packages.
-
-          Excluding a package also implicitly excludes any modules
-          submodules (implemented or import-only), mandatory-features
-          and mount-point definitions that were only present due to
-          the definition of the package being excluded.
-
-          It is an error to list a package in both this list and the
-          'includes/package' list.";
-      }
-
       leaf-list module {
         type pkg-name;
         description
@@ -1478,6 +1604,9 @@ module ietf-yang-package-types {
            Excluding a module can affect the compliance and
            correctness of any included packages that expect that
            module to be implemented.
+
+           Excluding a module also implicitly excludes any submodules
+           and mandatory-features defined in the excluded module.
 
            It is an error to list a module in both this list and the
            'includes/module' list.";
@@ -1493,6 +1622,21 @@ module ietf-yang-package-types {
            It is an error to list a module in both this list and the
            'includes/import-only-module' list.";
       }
+
+      leaf-list features {
+        type scoped-feature;
+        description
+          "Lists features from the mandatory features exported by an
+          included package that are reclassified as being OPTIONAL
+          to support by any server implementing the package,
+          overriding the behavior specified by the included package.
+
+          Features MUST NOT be specified both in this list and also
+          the 'includes/features' list.
+
+          Features are identified using
+          <module-name>:<feature-name>.";
+      }
     }
   }
 
@@ -1504,14 +1648,10 @@ module ietf-yang-package-types {
       type inet:uri;
       description
         "Contains a URL that represents where an instance data file
-          for this YANG package can be found.
+         (RFC 9195) for this YANG package can be found.
 
-          This leaf will only be present if there is a URL available
-          for retrieval of the schema for this entry.
-
-          If multiple locations are provided, then the first
-          location in the leaf-list MUST be the definitive location
-          that uniquely identifies this package";
+         This leaf will only be present if there is a URL available
+         for retrieval of the schema for this entry.";
     }
   }
 
@@ -1741,12 +1881,8 @@ module ietf-yang-package-types {
           }
         }
       }
-    }
 
-    uses yang-pkg-exclusions;
-
-    container mandatory-features {
-      leaf-list include {
+      leaf-list features {
         type scoped-feature;
         description
           "Lists features from any modules included in the package
@@ -1756,8 +1892,8 @@ module ietf-yang-package-types {
            Mandatory features specified by any directly included
            packages MUST also be supported by server
            implementations, unless excluded by an entry in the
-           'mandatory-features/excludes' list, and do not
-           need to be repeated in this list.
+           'excludes/features' list, and do not need to be repeated
+           in this list.
 
            All other features defined in modules included in the
            package are OPTIONAL to implement.
@@ -1765,22 +1901,9 @@ module ietf-yang-package-types {
            Features are identified using
            <module-name>:<feature-name>.";
       }
-
-      leaf-list exclude {
-        type scoped-feature;
-        description
-          "Lists features from the mandatory features exported by an
-          included package that are reclassified as being OPTIONAL
-          to support by any server implementing the package,
-          overriding the behavior specified by the included package.
-
-          Features MUST NOT be specified both in this list and also
-          the 'mandatory-features/includes' list.
-
-          Features are identified using
-          <module-name>:<feature-name>.";
-      }
     }
+
+    uses yang-pkg-exclusions;
 
     list mounts {
       key "mount-path";
@@ -1847,11 +1970,12 @@ module ietf-yang-package-types {
           type pkg-name;
           description
             "Lists other packages that have been explicitly mounted
-             at the same mount point by included package, that are
-             replaced by this mounted package.
+             at the same mount point by the included package, that
+             are replaced by this mounted package.
 
-             The replacing mounted package MUST explicitly include
-             or exclude the mounted package being replaced.
+             The replacing mounted package MUST include the mounted
+             package being replaced, but it may choose a different
+             version that SHOULD be a later version or revision.
 
              Any packages or modules included by the replaced
              package are also removed by this mounted package
@@ -1862,7 +1986,7 @@ module ietf-yang-package-types {
              replaces-package is expected to be used if an
              implementation does not fully implement a mounted
              package and needs to apply deviations or remove
-             included packages or modules.";
+             included modules or mandatory-features.";
         }
       }
 
@@ -2345,6 +2469,7 @@ module ietf-yang-inst-data-pkg {
     </section>
 
     <section anchor="security" title="Security Considerations">
+      <t>TODO - Update this to more closely follow the latest template</t>
       <t>The YANG modules specified in this document defines a schema for data
       that is accessed by network management protocols such as NETCONF <xref
       target="RFC6241"/> or RESTCONF <xref target="RFC8040"/>. The lowest
@@ -3158,10 +3283,8 @@ module ietf-yang-inst-data-pkg {
               "name": "example-module-b-types",
               "version": "1.1.0"
             }
-          ]
-        },
-        "mandatory-features": {
-          "include": [
+          ],
+          "features": [
             "example-module-a:foo",
             "example-module-b:bar"
           ]
@@ -3212,10 +3335,8 @@ module ietf-yang-inst-data-pkg {
           ],
           "import-only-module": [
             "example-module-b-types"
-          ]
-        },
-        "mandatory-features": {
-          "exclude": [
+          ],
+          "features": [
             "example-module-b:bar"
           ]
         }
@@ -3302,10 +3423,10 @@ module ietf-yang-inst-data-pkg {
         <t>TODO - Indicate that this is a minimal example to illustrate a concept, 
         and leaves out some optional elements that would be expected in a full
         implementation.</t>
-        <figure>
+<!--        <figure>
           <artwork><![CDATA[
         ]]></artwork>
-        </figure>
+        </figure>-->
       </section>
 
       <section anchor="replace_mounted_package_example"
@@ -3318,10 +3439,10 @@ module ietf-yang-inst-data-pkg {
            remove modules from a mounted package, change mandatory features,
            change the behaviour of recursive mounts, etc.</t>
         <t>TODO - Probably need more than one example.</t>
-        <figure>
+<!--        <figure>
           <artwork><![CDATA[
         ]]></artwork>
-        </figure>
+        </figure>-->
       </section>
     </section>
     </section> <!-- End of appendix-->

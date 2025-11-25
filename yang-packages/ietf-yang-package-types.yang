@@ -62,8 +62,8 @@ module ietf-yang-package-types {
   // and remove this note.
   // RFC Ed.: replace XXXX with actual RFC number and remove this
   // note.
-  revision 2025-04-23 {
-    ys:version 0.6.0;
+  revision 2025-11-18 {
+    ys:version 0.7.0;
     description
       "Initial revision";
     reference
@@ -84,7 +84,7 @@ module ietf-yang-package-types {
   typedef pkg-version {
     type ys:version;
     description
-      "Packages are versioning used YANG Semver version labels.";
+      "Packages are versioning using YANG Semver version labels.";
   }
 
   typedef version-or-rev-date {
@@ -109,7 +109,7 @@ module ietf-yang-package-types {
       "RFC XXXX, YANG Packages.";
   }
 
-  type mount-ypath {
+  typedef mount-ypath {
     type string;
 
     description
@@ -162,25 +162,6 @@ module ietf-yang-package-types {
         "Contains parameters for excluding modules and packages
          from a YANG package definition";
 
-      leaf-list package {
-        type pkg-name;
-        description
-          "Lists descendent packages, of any version, to be excluded
-          from from all included package definitions.
-
-          The behaviour is equivalent to the package definitions of
-          any descendent included packages never having included
-          the excluded packages.
-
-          Excluding a package also implicitly excludes any modules
-          submodules (implemented or import-only), mandatory-features
-          and mount-point definitions that were only present due to
-          the definition of the package being excluded.
-
-          It is an error to list a package in both this list and the
-          'includes/package' list.";
-      }
-
       leaf-list module {
         type pkg-name;
         description
@@ -191,6 +172,9 @@ module ietf-yang-package-types {
            Excluding a module can affect the compliance and
            correctness of any included packages that expect that
            module to be implemented.
+
+           Excluding a module also implicitly excludes any submodules
+           and mandatory-features defined in the excluded module.
 
            It is an error to list a module in both this list and the
            'includes/module' list.";
@@ -206,6 +190,21 @@ module ietf-yang-package-types {
            It is an error to list a module in both this list and the
            'includes/import-only-module' list.";
       }
+
+      leaf-list features {
+        type scoped-feature;
+        description
+          "Lists features from the mandatory features exported by an
+          included package that are reclassified as being OPTIONAL
+          to support by any server implementing the package,
+          overriding the behavior specified by the included package.
+
+          Features MUST NOT be specified both in this list and also
+          the 'includes/features' list.
+
+          Features are identified using
+          <module-name>:<feature-name>.";
+      }
     }
   }
 
@@ -217,14 +216,10 @@ module ietf-yang-package-types {
       type inet:uri;
       description
         "Contains a URL that represents where an instance data file
-          for this YANG package can be found.
+         (RFC 9195) for this YANG package can be found.
 
-          This leaf will only be present if there is a URL available
-          for retrieval of the schema for this entry.
-
-          If multiple locations are provided, then the first
-          location in the leaf-list MUST be the definitive location
-          that uniquely identifies this package";
+         This leaf will only be present if there is a URL available
+         for retrieval of the schema for this entry.";
     }
   }
 
@@ -454,12 +449,8 @@ module ietf-yang-package-types {
           }
         }
       }
-    }
 
-    uses yang-pkg-exclusions;
-
-    container mandatory-features {
-      leaf-list include {
+      leaf-list features {
         type scoped-feature;
         description
           "Lists features from any modules included in the package
@@ -469,8 +460,8 @@ module ietf-yang-package-types {
            Mandatory features specified by any directly included
            packages MUST also be supported by server
            implementations, unless excluded by an entry in the
-           'mandatory-features/excludes' list, and do not
-           need to be repeated in this list.
+           'excludes/features' list, and do not need to be repeated
+           in this list.
 
            All other features defined in modules included in the
            package are OPTIONAL to implement.
@@ -478,22 +469,9 @@ module ietf-yang-package-types {
            Features are identified using
            <module-name>:<feature-name>.";
       }
-
-      leaf-list exclude {
-        type scoped-feature;
-        description
-          "Lists features from the mandatory features exported by an
-          included package that are reclassified as being OPTIONAL
-          to support by any server implementing the package,
-          overriding the behavior specified by the included package.
-
-          Features MUST NOT be specified both in this list and also
-          the 'mandatory-features/includes' list.
-
-          Features are identified using
-          <module-name>:<feature-name>.";
-      }
     }
+
+    uses yang-pkg-exclusions;
 
     list mounts {
       key "mount-path";
@@ -560,11 +538,12 @@ module ietf-yang-package-types {
           type pkg-name;
           description
             "Lists other packages that have been explicitly mounted
-             at the same mount point by included package, that are
-             replaced by this mounted package.
+             at the same mount point by the included package, that
+             are replaced by this mounted package.
 
-             The replacing mounted package MUST explicitly include
-             or exclude the mounted package being replaced.
+             The replacing mounted package MUST include the mounted
+             package being replaced, but it may choose a different
+             version that SHOULD be a later version or revision.
 
              Any packages or modules included by the replaced
              package are also removed by this mounted package
@@ -575,7 +554,7 @@ module ietf-yang-package-types {
              replaces-package is expected to be used if an
              implementation does not fully implement a mounted
              package and needs to apply deviations or remove
-             included packages or modules.";
+             included modules or mandatory-features.";
         }
       }
 
