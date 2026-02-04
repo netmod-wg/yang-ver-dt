@@ -392,10 +392,10 @@ module: ietf-yang-package-types
     +-- mounts* [mount-path]
        +-- mount-path          mount-ypath
        +-- package* [name]
-       |  +-- name                pkg-name
-       |  +-- version             pkg-version
-       |  +-- location*           inet:uri
-       |  +-- replaces-package*   pkg-name
+       |  +-- name             pkg-name
+       |  +-- version          pkg-version
+       |  +-- location*        inet:uri
+       |  +-- wraps-package*   pkg-name
        +-- parent-reference*   mount-ypath
         ]]></artwork>
         </figure>
@@ -585,11 +585,10 @@ module: ietf-yang-package-types
             by any entries in the "includes/modules" list, and finally filtered
             by any entries in "excludes/modules" list.</t>
             <t>The set of import-only modules is the union of all import-only
-            modules in the resolved included packages, updated by any entries in
-            the "includes/import-only-modules" list whilst taking the
-            'replaces-version' leaf-list into account, and finally filtered by
-            any entries in "excludes/import-only-modules" list.</t>
-            <t>The set of mandatory-features is the union of the mandatory 
+            modules in the resolved included packages, then updated by any
+            entries in the "includes/import-only-modules" list, and finally
+            filtered by any entries in "excludes/import-only-modules" list.</t>
+            <t>The set of mandatory-features is the union of the mandatory
             features in the resolved included packages, with any
             "includes/features" entries added, and any
             "excludes/features" entries removed.  If a module is
@@ -597,11 +596,12 @@ module: ietf-yang-package-types
             that module are also implicitly removed.</t>
             <t>The set of mounts is the union of the mounts in the resolved
             included packages, where for a given mount-path that is present in
-            more than one included package then it takes the union of the
-            mounted packages and mount parent-references.  The mounts are then
-            updated by combining any entries in the package's "mounts" list,
-            with any entries listed in "mounts/package/replaces-package" list
-            removed (or replaced) at the mount point.</t>
+            more than one included package (same path and same keys) then it
+            takes the union of the mounted packages and mount parent-references.
+            The mounts are then updated by combining any entries in the
+            package's "mounts" list, with any entries listed in
+            "mounts/package/wraps-package" list replaced by a package that wraps
+            the original package at the mount point.</t>
             <t>If the same module version is being resolved from multiple
             included modules, then the union of the module locations is
             used.</t>
@@ -610,15 +610,6 @@ module: ietf-yang-package-types
           </list></t>
       </list>
       </t>
-      <!--<t>TODO - Document the replaces-revision mechanism for import only
-      modules, e.g., modify text below (taken from another section)</t>
-
-            <t>The 'replaces-revision' leaf-list in the 'import-only-module'
-            list can be used to exclude duplicate revisions of import-only
-            modules from included packages. Otherwise, the import-only-modules
-            for a package are the import-only-modules from all included
-            packages combined with any modules listed in the packages
-            import-only-module list.</t>-->
 
       <t>See https://github.com/netmod-wg/yang-ver-dt/issues/258.  How to handle
       union of meta-data, locations, and override behaviours.</t>
@@ -1868,16 +1859,17 @@ module ietf-yang-package-types {
     list mounts {
       key "mount-path";
       description
-        "An entry in this list represents a package that will be
-         found mounted in the schema at the specified mount path.
+        "An entry in this list represents additions or changes to
+         the schema found at the specified mount point.
 
-         For a given mount path, the set of mounted package
-         versions is the union of all packages mounted at the
-         given mount point.  Any conflicting package versions
-         MUST be explicitly resolved via an entry in the
-         mounted/packages of the package definition.
+         The full schema at the mount point is defined by the set of
+         mounted packages, which is constructed as the union of all
+         packages mounted at the same mount point by any packages
+         in the 'includes/package' list, filtered by any packages
+         listed in the 'wraps-package' leaf-list, and then combined
+         with all packages listed in the 'package' list.
 
-         A mount path with specific keys MUST also includes any
+         A mount path with specified keys MUST also includes any
          mounted packages without specific keys.";
 
       leaf "mount-path" {
@@ -1915,39 +1907,30 @@ module ietf-yang-package-types {
         key "name";
         description
           "The packages that will be mounted at the specified mount
-           path.
-
-           The set of mounteed packages is the union of all packages
-           mounted at the given mount by any packages in the
-           'includes/package' list, except that each entry in this list
-           replaces any other versions of the same package at the
-           same mount point.  In addition, other package versions may
-           be omitted from the mount point via the 'replaces-package'
-           leaf-list.";
+           path in addition to those in any includes packages with
+           the same mount path.";
         uses yang-pkg-identification-leafs;
         uses yang-pkg-location;
 
-        leaf-list replaces-package {
+        leaf-list wraps-package {
           type pkg-name;
           description
             "Lists other packages that have been explicitly mounted
-             at the same mount point by the included package, that
-             are replaced by this mounted package.
+             at the same mount point by an included package (i.e.,
+             in the 'includes/package' list), that are replaced by
+             this mounted package.
 
-             The replacing mounted package MUST include the mounted
-             package being replaced, but it may choose a different
-             version that SHOULD be a later version or revision.
+             The replaced mounted package MUST include the mounted
+             package being replaced at the same package version. It
+             MAY also include the same package at other versions, in
+             which case it SHOULD select a higher version of the
+             wrapped package.
 
-             Any packages or modules included by the replaced
-             package are also removed by this mounted package
-             unless they have also been explicitly mounted at the
-             same mount point, in which case the replacing package
-             MUST also explicitly include/exclude them.
-
-             replaces-package is expected to be used if an
-             implementation does not fully implement a mounted
-             package and needs to apply deviations or remove
-             included modules or mandatory-features.";
+             This leaf is expected to be used if an implementation
+             does not fully implement the schema defined by a
+             mounted package and needs to apply deviations, modify
+             or remove module versions, or change
+             mandatory-features.";
         }
       }
 

@@ -504,16 +504,17 @@ module ietf-yang-package-types {
     list mounts {
       key "mount-path";
       description
-        "An entry in this list represents a package that will be
-         found mounted in the schema at the specified mount path.
+        "An entry in this list represents additions or changes to
+         the schema found at the specified mount point.
 
-         For a given mount path, the set of mounted package
-         versions is the union of all packages mounted at the
-         given mount point.  Any conflicting package versions
-         MUST be explicitly resolved via an entry in the
-         mounted/packages of the package definition.
+         The full schema at the mount point is defined by the set of
+         mounted packages, which is constructed as the union of all
+         packages mounted at the same mount point by any packages
+         in the 'includes/package' list, filtered by any packages
+         listed in the 'wraps-package' leaf-list, and then combined
+         with all packages listed in the 'package' list.
 
-         A mount path with specific keys MUST also includes any
+         A mount path with specified keys MUST also includes any
          mounted packages without specific keys.";
 
       leaf "mount-path" {
@@ -551,39 +552,30 @@ module ietf-yang-package-types {
         key "name";
         description
           "The packages that will be mounted at the specified mount
-           path.
-
-           The set of mounteed packages is the union of all packages
-           mounted at the given mount by any packages in the
-           'includes/package' list, except that each entry in this list
-           replaces any other versions of the same package at the
-           same mount point.  In addition, other package versions may
-           be omitted from the mount point via the 'replaces-package'
-           leaf-list.";
+           path in addition to those in any includes packages with
+           the same mount path.";
         uses yang-pkg-identification-leafs;
         uses yang-pkg-location;
 
-        leaf-list replaces-package {
+        leaf-list wraps-package {
           type pkg-name;
           description
             "Lists other packages that have been explicitly mounted
-             at the same mount point by the included package, that
-             are replaced by this mounted package.
+             at the same mount point by an included package (i.e.,
+             in the 'includes/package' list), that are replaced by
+             this mounted package.
 
-             The replacing mounted package MUST include the mounted
-             package being replaced, but it may choose a different
-             version that SHOULD be a later version or revision.
+             The replaced mounted package MUST include the mounted
+             package being replaced at the same package version. It
+             MAY also include the same package at other versions, in
+             which case it SHOULD select a higher version of the
+             wrapped package.
 
-             Any packages or modules included by the replaced
-             package are also removed by this mounted package
-             unless they have also been explicitly mounted at the
-             same mount point, in which case the replacing package
-             MUST also explicitly include/exclude them.
-
-             replaces-package is expected to be used if an
-             implementation does not fully implement a mounted
-             package and needs to apply deviations or remove
-             included modules or mandatory-features.";
+             This leaf is expected to be used if an implementation
+             does not fully implement the schema defined by a
+             mounted package and needs to apply deviations, modify
+             or remove module versions, or change
+             mandatory-features.";
         }
       }
 
