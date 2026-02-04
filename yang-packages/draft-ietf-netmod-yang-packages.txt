@@ -84,23 +84,23 @@ Table of Contents
      4.1.  Automatic Module Version Resolution . . . . . . . . . . .  14
    5.  YANG Package Usage  . . . . . . . . . . . . . . . . . . . . .  15
      5.1.  Achieving package name uniqueness . . . . . . . . . . . .  16
-     5.2.  Specifying modules as implemented or import-only  . . . .  16
+     5.2.  Specifying modules as implemented or import-only  . . . .  17
      5.3.  Referential completeness and YANG packages  . . . . . . .  17
-     5.4.  Providing Package Definitions on a Server . . . . . . . .  17
-       5.4.1.  Package List  . . . . . . . . . . . . . . . . . . . .  17
+     5.4.  Providing Package Definitions on a Server . . . . . . . .  18
+       5.4.1.  Package List  . . . . . . . . . . . . . . . . . . . .  18
        5.4.2.  Tree diagram  . . . . . . . . . . . . . . . . . . . .  18
        5.4.3.  YANG Library Package Bindings . . . . . . . . . . . .  18
      5.5.  Package Instance Data Files . . . . . . . . . . . . . . .  19
      5.6.  YANG packages as schema for YANG instance data
            document  . . . . . . . . . . . . . . . . . . . . . . . .  20
-   6.  Package Evolution and Versioning  . . . . . . . . . . . . . .  20
-     6.1.  Package versioning  . . . . . . . . . . . . . . . . . . .  20
+   6.  Package Evolution and Versioning  . . . . . . . . . . . . . .  21
+     6.1.  Package versioning  . . . . . . . . . . . . . . . . . . .  21
        6.1.1.  Updating a package with a new version . . . . . . . .  21
          6.1.1.1.  Non-Backwards-compatible changes  . . . . . . . .  21
          6.1.1.2.  Backwards-compatible changes  . . . . . . . . . .  22
          6.1.1.3.  Editorial changes . . . . . . . . . . . . . . . .  23
        6.1.2.  Guidelines for Package Versions During Package
-               Development . . . . . . . . . . . . . . . . . . . . .  23
+               Development . . . . . . . . . . . . . . . . . . . . .  24
    7.  Package Conformance . . . . . . . . . . . . . . . . . . . . .  24
      7.1.  Resolving conflicting module versions in included
            packages  . . . . . . . . . . . . . . . . . . . . . . . .  24
@@ -125,12 +125,12 @@ Internet-Draft                YANG Packages                February 2026
      8.3.  ietf-yang-package . . . . . . . . . . . . . . . . . . . .  44
      8.4.  ietf-yl-packages  . . . . . . . . . . . . . . . . . . . .  47
      8.5.  ietf-yang-inst-data-pkg . . . . . . . . . . . . . . . . .  49
-   9.  Security Considerations . . . . . . . . . . . . . . . . . . .  51
+   9.  Security Considerations . . . . . . . . . . . . . . . . . . .  52
    10. IANA Considerations . . . . . . . . . . . . . . . . . . . . .  52
-     10.1.  Media Type Registration for application/ypkg . . . . . .  53
+     10.1.  Media Type Registration for application/ypkg . . . . . .  54
    11. Acknowledgements  . . . . . . . . . . . . . . . . . . . . . .  54
-   12. References  . . . . . . . . . . . . . . . . . . . . . . . . .  54
-     12.1.  Normative References . . . . . . . . . . . . . . . . . .  54
+   12. References  . . . . . . . . . . . . . . . . . . . . . . . . .  55
+     12.1.  Normative References . . . . . . . . . . . . . . . . . .  55
      12.2.  Informative References . . . . . . . . . . . . . . . . .  57
    Appendix A.  Package Examples . . . . . . . . . . . . . . . . . .  58
      A.1.  Basic Package Examples  . . . . . . . . . . . . . . . . .  58
@@ -697,9 +697,10 @@ Internet-Draft                YANG Packages                February 2026
        *  The set of implemented modules is the union of all implemented
           modules in the resolved included packages.  Conflicting module
           versions can be resolved automatically as per Section 4.1,
-          then overwritten by any entries in the "includes/modules"
-          list, and finally filtered by any entries in "excludes/
-          modules" list.
+          then overwritten (including submodule and location
+          information) by any entries in the "includes/modules" list,
+          and finally filtered by any entries in "excludes/modules"
+          list.
 
        *  The set of import-only modules is the union of all import-only
           modules in the resolved included packages, then updated by any
@@ -713,7 +714,6 @@ Internet-Draft                YANG Packages                February 2026
           entries removed.  If a module is excluded by "excludes/
           modules" then all features associated with that module are
           also implicitly removed.
-
 
 
 
@@ -794,6 +794,16 @@ Internet-Draft                YANG Packages                February 2026
        Semver format, then the module with the most recent revision-date
        is chosen.
 
+   4.  If there is no difference in version/revision dates to
+       distinguish between two module then:
+
+       i   Submodule information, if present, for both module
+           definitions is assumed to be equivalent and hence either can
+           be used.
+
+       ii  the location leaf-list for both modules is combined into a
+           single list of locations without duplicates.
+
 5.  YANG Package Usage
 
    This section provides information and guidance on how YANG packages
@@ -822,6 +832,16 @@ Internet-Draft                YANG Packages                February 2026
          the device and where clients can select which YANG schema can
          be used via configuration.
 
+
+
+
+
+
+Wilton, et al.            Expires 8 August 2026                [Page 15]
+
+Internet-Draft                YANG Packages                February 2026
+
+
       -  to refine standards based and industry packages to accurately
          report how the device does not fully conform to the package
          schema definition.
@@ -834,14 +854,6 @@ Internet-Draft                YANG Packages                February 2026
    into units of related functionality.  This increases interoperability
    by encouraging different implementations to coalesce around use the
    same collections of YANG modules versions.  Using packages also makes
-
-
-
-Wilton, et al.            Expires 8 August 2026                [Page 15]
-
-Internet-Draft                YANG Packages                February 2026
-
-
    it easier to understand relationship between modules, and enables
    functionality to be described on a more abstract level than
    individual modules.
@@ -872,6 +884,20 @@ Internet-Draft                YANG Packages                February 2026
       or a UUID should be used as a suffix to the package name to ensure
       uniqueness.
 
+
+
+
+
+
+
+
+
+
+Wilton, et al.            Expires 8 August 2026                [Page 16]
+
+Internet-Draft                YANG Packages                February 2026
+
+
 5.2.  Specifying modules as implemented or import-only
 
    Some YANG modules do not define any implementable data nodes, RPCs,
@@ -889,14 +915,6 @@ Internet-Draft                YANG Packages                February 2026
 
       Identities are only available for use by the server for
       implemented modules.
-
-
-
-
-Wilton, et al.            Expires 8 August 2026                [Page 16]
-
-Internet-Draft                YANG Packages                February 2026
-
 
       If a module defines data node and types and the server only wants
       to use the types but not implement any data nodes from the module
@@ -927,6 +945,15 @@ Internet-Draft                YANG Packages                February 2026
    types.yang), instead leaving the choice of specific revisions of
    'types' modules to be resolved when the package definition is used.
 
+
+
+
+
+Wilton, et al.            Expires 8 August 2026                [Page 17]
+
+Internet-Draft                YANG Packages                February 2026
+
+
 5.4.  Providing Package Definitions on a Server
 
 5.4.1.  Package List
@@ -941,18 +968,6 @@ Internet-Draft                YANG Packages                February 2026
    Each list entry in '/packages/package' SHOULD list one or more URLs
    pointing to an offline location where the package definition can be
    obtained as a YANG Instance Data File.
-
-
-
-
-
-
-
-
-Wilton, et al.            Expires 8 August 2026                [Page 17]
-
-Internet-Draft                YANG Packages                February 2026
-
 
    The '/packages/package' list MAY include multiple versions of a
    particular package.  E.g. if the server is capable of allowing
@@ -985,6 +1000,16 @@ Internet-Draft                YANG Packages                February 2026
    previously cached), or downloading and comparing the full list of
    modules and enabled features.
 
+
+
+
+
+
+Wilton, et al.            Expires 8 August 2026                [Page 18]
+
+Internet-Draft                YANG Packages                February 2026
+
+
    If multiple packages are listed for a datastore schema then they are
    resolved as if the packages were all directly included in a single
    package definition, following the standard package resolution rules
@@ -999,16 +1024,6 @@ Internet-Draft                YANG Packages                February 2026
    used to select a lower/older module version.  Instead, a wrapper
    package would need to be defined to explicitly select the older
    module version (see Section 7.1).
-
-
-
-
-
-
-Wilton, et al.            Expires 8 August 2026                [Page 18]
-
-Internet-Draft                YANG Packages                February 2026
-
 
    If populated, the set of packages listed for a datastore schema MUST
    resolve to a schema that exactly matches the schema defined by the
@@ -1042,6 +1057,15 @@ Internet-Draft                YANG Packages                February 2026
    2.  The name of the file SHOULD follow the format "<package-
        name>@<version>.ypkg".
 
+
+
+
+
+Wilton, et al.            Expires 8 August 2026                [Page 19]
+
+Internet-Draft                YANG Packages                February 2026
+
+
    3.  The package name MUST be specified in both the instance-data-set
        'name' and package 'name' leafs.
 
@@ -1058,13 +1082,6 @@ Internet-Draft                YANG Packages                February 2026
 
    6.  The 'revision' list in the instance data file SHOULD NOT be used,
        since versioning is handled by the package definition.
-
-
-
-Wilton, et al.            Expires 8 August 2026                [Page 19]
-
-Internet-Draft                YANG Packages                February 2026
-
 
    7.  The instance data file for each version of a YANG package SHOULD
        be made available at one of more locations accessible via URLs.
@@ -1094,6 +1111,17 @@ Internet-Draft                YANG Packages                February 2026
    The "ietf-yang-inst-data-pkg" YANG module has the following
    structure:
 
+
+
+
+
+
+
+Wilton, et al.            Expires 8 August 2026                [Page 20]
+
+Internet-Draft                YANG Packages                February 2026
+
+
 module: ietf-yang-inst-data-pkg
 
   augment-structure /yid:instance-data-set/yid:content-schema/yid:content-schema-spec:
@@ -1110,17 +1138,6 @@ module: ietf-yang-inst-data-pkg
    As defined in Section 3.1, YANG packages are versioning using
    [I-D.ietf-netmod-yang-semver].  This section describes how those
    rules apply to YANG package definitions.
-
-
-
-
-
-
-
-Wilton, et al.            Expires 8 August 2026                [Page 20]
-
-Internet-Draft                YANG Packages                February 2026
-
 
 6.1.1.  Updating a package with a new version
 
@@ -1153,6 +1170,14 @@ Internet-Draft                YANG Packages                February 2026
    node that was present in the previous package version, which may be
    used by client applications.
 
+
+
+
+Wilton, et al.            Expires 8 August 2026                [Page 21]
+
+Internet-Draft                YANG Packages                February 2026
+
+
    The following changes classify as non-backwards-compatible changes to
    a package definition:
 
@@ -1170,13 +1195,6 @@ Internet-Draft                YANG Packages                February 2026
       be removed from an included package and could affect the
       conformance reporting of whether the included package is deemed as
       being implemented.
-
-
-
-Wilton, et al.            Expires 8 August 2026                [Page 21]
-
-Internet-Draft                YANG Packages                February 2026
-
 
    *  Removing a feature from the 'includes/features' list unless the
       feature was not mandatory in any included packages.
@@ -1209,6 +1227,13 @@ Internet-Draft                YANG Packages                February 2026
       or including a new package that does not conflict with any
       existing included package or module.
 
+
+
+Wilton, et al.            Expires 8 August 2026                [Page 22]
+
+Internet-Draft                YANG Packages                February 2026
+
+
    *  Changing a 'module' or 'import-only-module' list entry to select a
       module revision that is backwards-compatible to the prior module
       revision, or including a new module to the package definition.
@@ -1221,18 +1246,6 @@ Internet-Draft                YANG Packages                February 2026
    *  Adding a feature to the 'mandatory-feature/include' leaf-list.
 
    *  Removing a feature to the 'mandatory-feature/exclude' leaf-list.
-
-
-
-
-
-
-
-
-Wilton, et al.            Expires 8 August 2026                [Page 22]
-
-Internet-Draft                YANG Packages                February 2026
-
 
    *  Adding, changing, or removing a module containing one or more
       deviations, that when applied to the target module would create a
@@ -1265,19 +1278,6 @@ Internet-Draft                YANG Packages                February 2026
 
    *  Any change to any meta-data associated with a package definition.
 
-6.1.2.  Guidelines for Package Versions During Package Development
-
-   During development of a new package, or while updating a previously
-   released package, special care should be taken with the selection of
-   the version associated with the package.
-
-   General guidance from chapter 6 of [I-D.ietf-netmod-yang-semver] may
-   be helpful here.  [TODO - Will we provide more specific guidance in a
-   separate draft for IETF YANG Packages?]
-
-
-
-
 
 
 
@@ -1289,6 +1289,16 @@ Wilton, et al.            Expires 8 August 2026                [Page 23]
 
 Internet-Draft                YANG Packages                February 2026
 
+
+6.1.2.  Guidelines for Package Versions During Package Development
+
+   During development of a new package, or while updating a previously
+   released package, special care should be taken with the selection of
+   the version associated with the package.
+
+   General guidance from chapter 6 of [I-D.ietf-netmod-yang-semver] may
+   be helpful here.  [TODO - Will we provide more specific guidance in a
+   separate draft for IETF YANG Packages?]
 
 7.  Package Conformance
 
@@ -1328,6 +1338,14 @@ Internet-Draft                YANG Packages                February 2026
    As per the package definition rules in Section 3.1, a package can
    only implement a single version of a module, and hence in cases of
    conflicting versions in included packages/modules it is necessary to
+
+
+
+Wilton, et al.            Expires 8 August 2026                [Page 24]
+
+Internet-Draft                YANG Packages                February 2026
+
+
    resolve which version of the module is used.  The default behaviour,
    defined in Section 4.1 is to use automatic resolution, which is
    generally the best choice.  Manual resolution could be used to select
@@ -1336,15 +1354,6 @@ Internet-Draft                YANG Packages                February 2026
    version is chosen, or a new non-backwards-compatible newer version is
    chosen, because, in both cases, this may affect conformance in one of
    the included packages.
-
-
-
-
-
-Wilton, et al.            Expires 8 August 2026                [Page 24]
-
-Internet-Draft                YANG Packages                February 2026
-
 
 7.2.  Handling multiple included package versions
 
@@ -1384,15 +1393,6 @@ Internet-Draft                YANG Packages                February 2026
    happen unless the module defining the deviations is explicitly
    removed.
 
-   If an alternative version of a module is used then it is RECOMMENDED
-   to use a newer module version, if possible, rather than an older
-   version.  Selecting a backwards-compatible version is also helpful
-   because it maximizes the chance that clients will be able to easily
-   interoperate with the server.
-
-
-
-
 
 
 
@@ -1401,6 +1401,12 @@ Wilton, et al.            Expires 8 August 2026                [Page 25]
 
 Internet-Draft                YANG Packages                February 2026
 
+
+   If an alternative version of a module is used then it is RECOMMENDED
+   to use a newer module version, if possible, rather than an older
+   version.  Selecting a backwards-compatible version is also helpful
+   because it maximizes the chance that clients will be able to easily
+   interoperate with the server.
 
 7.4.  Use of features in YANG modules and YANG packages
 
@@ -1439,12 +1445,6 @@ Internet-Draft                YANG Packages                February 2026
    versioning rules require that package version 1.3.5 is backwards
    compatible to version 1.0.0.
 
-   This also has a relevance on servers that are capable of supporting
-   version selection because they need not support every version of a
-   YANG package to ensure good client compatibility.  Choosing suitable
-   minor versions within each major version number should generally be
-   sufficient, particular if they can avoid non-backwards-compatible
-   patch level changes.
 
 
 
@@ -1457,6 +1457,13 @@ Wilton, et al.            Expires 8 August 2026                [Page 26]
 
 Internet-Draft                YANG Packages                February 2026
 
+
+   This also has a relevance on servers that are capable of supporting
+   version selection because they need not support every version of a
+   YANG package to ensure good client compatibility.  Choosing suitable
+   minor versions within each major version number should generally be
+   sufficient, particular if they can avoid non-backwards-compatible
+   patch level changes.
 
 7.6.  Restrictions on the use of deviations in YANG packages
 
@@ -1490,6 +1497,23 @@ Internet-Draft                YANG Packages                February 2026
 
    *  The schema for all conventional datastores is the same.
 
+
+
+
+
+
+
+
+
+
+
+
+
+Wilton, et al.            Expires 8 August 2026                [Page 27]
+
+Internet-Draft                YANG Packages                February 2026
+
+
    *  The schema for non conventional configuration datastores (e.g.,
       dynamic datastores) may completely differ (i.e. no overlap at all)
       from the schema associated with the conventional configuration
@@ -1506,14 +1530,6 @@ Internet-Draft                YANG Packages                February 2026
       the schema nodes from the conventional configuration datastores),
       but data nodes can be omitted if they cannot be accurately
       reported.  The operational datastore schema can include additional
-
-
-
-Wilton, et al.            Expires 8 August 2026                [Page 27]
-
-Internet-Draft                YANG Packages                February 2026
-
-
       modules containing only config false data nodes, but there is no
       harm in including those modules in the configuration datastore
       schema as well.
@@ -1547,6 +1563,13 @@ Internet-Draft                YANG Packages                February 2026
       be included in the package for configuration datastores if that
       helps unify the package definitions.
 
+
+
+Wilton, et al.            Expires 8 August 2026                [Page 28]
+
+Internet-Draft                YANG Packages                February 2026
+
+
    *  The packages for the operational datastore schema SHOULD include
       all packages for all configuration datastores, along with any
       required modules defining deviations to mark unsupported data
@@ -1560,15 +1583,6 @@ Internet-Draft                YANG Packages                February 2026
       equivalently to a set of non-conflicting packages being included
       together in an overarching package definition that relies on the
       automatic resolution of module versions.
-
-
-
-
-
-Wilton, et al.            Expires 8 August 2026                [Page 28]
-
-Internet-Draft                YANG Packages                February 2026
-
 
    *  The resolved schema representing a datastore MUST be referentially
       complete.
@@ -1601,6 +1615,17 @@ Internet-Draft                YANG Packages                February 2026
 
 8.1.  ietf-yang-package-types
 
+
+
+
+
+
+
+Wilton, et al.            Expires 8 August 2026                [Page 29]
+
+Internet-Draft                YANG Packages                February 2026
+
+
    <CODE BEGINS> file "ietf-yang-package-types#0.8.0.yang"
    module ietf-yang-package-types {
      yang-version 1.1;
@@ -1618,14 +1643,6 @@ Internet-Draft                YANG Packages                February 2026
      }
 
      import ietf-yang-types {
-
-
-
-Wilton, et al.            Expires 8 August 2026                [Page 29]
-
-Internet-Draft                YANG Packages                February 2026
-
-
        prefix yang;
        rev:recommended-min-date 2019-07-21;
        reference "RFC 6991bis: Common YANG Data Types.";
@@ -1657,6 +1674,14 @@ Internet-Draft                YANG Packages                February 2026
         Redistribution and use in source and binary forms, with or
         without modification, is permitted pursuant to, and subject to
         the license terms contained in, the Revised BSD License set
+
+
+
+Wilton, et al.            Expires 8 August 2026                [Page 30]
+
+Internet-Draft                YANG Packages                February 2026
+
+
         forth in Section 4.c of the IETF Trust's Legal Provisions
         Relating to IETF Documents
         (https://trustee.ietf.org/license-info).
@@ -1674,14 +1699,6 @@ Internet-Draft                YANG Packages                February 2026
      // and remove this note.
      // RFC Ed.: replace XXXX with actual RFC number and remove this
      // note.
-
-
-
-Wilton, et al.            Expires 8 August 2026                [Page 30]
-
-Internet-Draft                YANG Packages                February 2026
-
-
      revision 2026-01-30 {
        ys:version 0.8.0;
        description
@@ -1713,6 +1730,14 @@ Internet-Draft                YANG Packages                February 2026
          "Module names are typed as YANG identifiers.";
      }
 
+
+
+
+Wilton, et al.            Expires 8 August 2026                [Page 31]
+
+Internet-Draft                YANG Packages                February 2026
+
+
      typedef version-or-rev-date {
        type union {
          type rev:revision-date;
@@ -1730,14 +1755,6 @@ Internet-Draft                YANG Packages                February 2026
        description
          "Represents a feature name scoped to a particular module,
           identified as the '<module-name>:<feature-name>', where both
-
-
-
-Wilton, et al.            Expires 8 August 2026                [Page 31]
-
-Internet-Draft                YANG Packages                February 2026
-
-
           <module-name> and <feature-name> are YANG identifier strings,
           as defiend by Section 12 or RFC 6020.";
        reference
@@ -1769,6 +1786,14 @@ Internet-Draft                YANG Packages                February 2026
          "Parameters for identifying a specific version of a YANG
           package";
 
+
+
+
+Wilton, et al.            Expires 8 August 2026                [Page 32]
+
+Internet-Draft                YANG Packages                February 2026
+
+
        leaf name {
          type pkg-name;
          mandatory true;
@@ -1786,13 +1811,6 @@ Internet-Draft                YANG Packages                February 2026
             draft-verdt-nemod-yang-module-versioning, section XXX";
        }
      }
-
-
-
-Wilton, et al.            Expires 8 August 2026                [Page 32]
-
-Internet-Draft                YANG Packages                February 2026
-
 
      grouping yang-pkg-exclusions {
        description
@@ -1824,6 +1842,14 @@ Internet-Draft                YANG Packages                February 2026
 
          list import-only-module {
            key "name";
+
+
+
+Wilton, et al.            Expires 8 August 2026                [Page 33]
+
+Internet-Draft                YANG Packages                February 2026
+
+
            description
              "Lists import-only modules that may have have been brought
               in by included packages, but are explicitly excluded from
@@ -1842,14 +1868,6 @@ Internet-Draft                YANG Packages                February 2026
 
            leaf-list version {
              type version-or-rev-date;
-
-
-
-Wilton, et al.            Expires 8 August 2026                [Page 33]
-
-Internet-Draft                YANG Packages                February 2026
-
-
              description
                "Lists specific versions of the import-only module being
                  excluded.  If no versions are listed, all versions of
@@ -1880,6 +1898,14 @@ Internet-Draft                YANG Packages                February 2026
 
      grouping yang-pkg-location {
        description
+
+
+
+Wilton, et al.            Expires 8 August 2026                [Page 34]
+
+Internet-Draft                YANG Packages                February 2026
+
+
          "Parameters for locating a YANG package instance";
 
        leaf-list location {
@@ -1898,14 +1924,6 @@ Internet-Draft                YANG Packages                February 2026
          "Specifies the data node for a full YANG package instance
           represented either on a server or as a YANG instance data
           document.";
-
-
-
-Wilton, et al.            Expires 8 August 2026                [Page 34]
-
-Internet-Draft                YANG Packages                February 2026
-
-
        uses yang-pkg-identification-leafs;
 
        leaf timestamp {
@@ -1936,6 +1954,14 @@ Internet-Draft                YANG Packages                February 2026
        leaf reference {
          type string;
          description "Allows for a reference for the package";
+
+
+
+Wilton, et al.            Expires 8 August 2026                [Page 35]
+
+Internet-Draft                YANG Packages                February 2026
+
+
        }
 
        leaf complete {
@@ -1954,14 +1980,6 @@ Internet-Draft                YANG Packages                February 2026
             definition.";
 
          list package {
-
-
-
-Wilton, et al.            Expires 8 August 2026                [Page 35]
-
-Internet-Draft                YANG Packages                February 2026
-
-
            key "name";
            description
              "An entry in this list represents a package that is
@@ -1992,6 +2010,14 @@ Internet-Draft                YANG Packages                February 2026
            reference
              "RFC 7950: The YANG 1.1 Data Modeling Language.";
 
+
+
+
+Wilton, et al.            Expires 8 August 2026                [Page 36]
+
+Internet-Draft                YANG Packages                February 2026
+
+
            leaf name {
              type module-name;
              mandatory true;
@@ -2010,14 +2036,6 @@ Internet-Draft                YANG Packages                February 2026
 
            leaf-list location {
              type inet:uri;
-
-
-
-Wilton, et al.            Expires 8 August 2026                [Page 36]
-
-Internet-Draft                YANG Packages                February 2026
-
-
              description
                "Contains a URL that represents the YANG schema resource
                 for this module.
@@ -2048,6 +2066,14 @@ Internet-Draft                YANG Packages                February 2026
 
                   If the parent module include statement for this
                   submodule includes a revision date then it MUST match
+
+
+
+Wilton, et al.            Expires 8 August 2026                [Page 37]
+
+Internet-Draft                YANG Packages                February 2026
+
+
                   the revision date specified here or it MUST match the
                   revision-date associated with the version specified
                   here.";
@@ -2065,14 +2091,6 @@ Internet-Draft                YANG Packages                February 2026
              }
            }
          }
-
-
-
-
-Wilton, et al.            Expires 8 August 2026                [Page 37]
-
-Internet-Draft                YANG Packages                February 2026
-
 
          list import-only-module {
            key "name version";
@@ -2104,6 +2122,14 @@ Internet-Draft                YANG Packages                February 2026
            }
 
            leaf-list location {
+
+
+
+Wilton, et al.            Expires 8 August 2026                [Page 38]
+
+Internet-Draft                YANG Packages                February 2026
+
+
              type inet:uri;
              description
                "Contains a URL that represents the YANG schema resource
@@ -2122,14 +2148,6 @@ Internet-Draft                YANG Packages                February 2026
              leaf name {
                type module-name;
                mandatory true;
-
-
-
-Wilton, et al.            Expires 8 August 2026                [Page 38]
-
-Internet-Draft                YANG Packages                February 2026
-
-
                description
                  "The YANG submodule name.";
              }
@@ -2161,6 +2179,13 @@ Internet-Draft                YANG Packages                February 2026
            }
          }
 
+
+
+Wilton, et al.            Expires 8 August 2026                [Page 39]
+
+Internet-Draft                YANG Packages                February 2026
+
+
          leaf-list features {
            type scoped-feature;
            description
@@ -2178,14 +2203,6 @@ Internet-Draft                YANG Packages                February 2026
               package are OPTIONAL to implement.
 
               Features are identified using
-
-
-
-Wilton, et al.            Expires 8 August 2026                [Page 39]
-
-Internet-Draft                YANG Packages                February 2026
-
-
               <module-name>:<feature-name>.";
          }
        }
@@ -2217,6 +2234,14 @@ Internet-Draft                YANG Packages                February 2026
               This leaf is encoded as a JSON style encoded
               instance-identifier (regardless of whether the format
               used to encode the YANG instance data), as specified in
+
+
+
+Wilton, et al.            Expires 8 August 2026                [Page 40]
+
+Internet-Draft                YANG Packages                February 2026
+
+
               RFC 7951, section 6.11, except that keys are optional.
 
               For optional keys, the name and value of the key is
@@ -2233,14 +2258,6 @@ Internet-Draft                YANG Packages                February 2026
                 package schema for only the 'foo' entry in the module
                 list.  Each entry in the list could have a different
                 mounted schema specified.
-
-
-
-
-Wilton, et al.            Expires 8 August 2026                [Page 40]
-
-Internet-Draft                YANG Packages                February 2026
-
 
               - '/modules/module[]' would indicate that the same
                 mounted package schema is available for all list
@@ -2273,6 +2290,14 @@ Internet-Draft                YANG Packages                February 2026
                 This leaf is expected to be used if an implementation
                 does not fully implement the schema defined by a
                 mounted package and needs to apply deviations, modify
+
+
+
+Wilton, et al.            Expires 8 August 2026                [Page 41]
+
+Internet-Draft                YANG Packages                February 2026
+
+
                 or remove module versions, or change
                 mandatory-features.";
            }
@@ -2290,14 +2315,6 @@ Internet-Draft                YANG Packages                February 2026
 
               Unlike the YANG module defined in RFC 8528, this leaf is
               encoded as a JSON style encoded instance-identifier
-
-
-
-Wilton, et al.            Expires 8 August 2026                [Page 41]
-
-Internet-Draft                YANG Packages                February 2026
-
-
               (regardless of whether the format used to encode the YANG
               instance data), as specified in RFC 7951, section 6.11,
               except that keys are optional.
@@ -2329,6 +2346,14 @@ Internet-Draft                YANG Packages                February 2026
        reference "RFC XXX: this RFC.";
      }
 
+
+
+
+Wilton, et al.            Expires 8 August 2026                [Page 42]
+
+Internet-Draft                YANG Packages                February 2026
+
+
      import ietf-yang-structure-ext {
        prefix sx;
        reference "RFC 8791: YANG Data Structure Extensions.";
@@ -2346,14 +2371,6 @@ Internet-Draft                YANG Packages                February 2026
 
      description
        "This module provides a definition of a YANG package, which is
-
-
-
-Wilton, et al.            Expires 8 August 2026                [Page 42]
-
-Internet-Draft                YANG Packages                February 2026
-
-
         used as the content schema for an YANG instance data document specifying
         a YANG package.
 
@@ -2385,6 +2402,14 @@ Internet-Draft                YANG Packages                February 2026
        ys:version 0.5.0;
        description
          "Initial revision";
+
+
+
+Wilton, et al.            Expires 8 August 2026                [Page 43]
+
+Internet-Draft                YANG Packages                February 2026
+
+
        reference
          "RFC XXXX: YANG Packages";
      }
@@ -2402,14 +2427,6 @@ Internet-Draft                YANG Packages                February 2026
        uses pkg-types:yang-pkg-instance;
      }
    }
-
-
-
-Wilton, et al.            Expires 8 August 2026                [Page 43]
-
-Internet-Draft                YANG Packages                February 2026
-
-
    <CODE ENDS>
 
 8.3.  ietf-yang-package
@@ -2441,6 +2458,14 @@ Internet-Draft                YANG Packages                February 2026
        prefix inet;
        rev:recommended-min-date 2013-07-15;
        reference "RFC 6991: Common YANG Data Types.";
+
+
+
+Wilton, et al.            Expires 8 August 2026                [Page 44]
+
+Internet-Draft                YANG Packages                February 2026
+
+
      }
 
      organization
@@ -2458,13 +2483,6 @@ Internet-Draft                YANG Packages                February 2026
 
         Copyright (c) 2025 IETF Trust and the persons identified as
         authors of the code.  All rights reserved.
-
-
-
-Wilton, et al.            Expires 8 August 2026                [Page 44]
-
-Internet-Draft                YANG Packages                February 2026
-
 
         Redistribution and use in source and binary forms, with or
         without modification, is permitted pursuant to, and subject to
@@ -2497,6 +2515,13 @@ Internet-Draft                YANG Packages                February 2026
      }
 
 
+
+
+Wilton, et al.            Expires 8 August 2026                [Page 45]
+
+Internet-Draft                YANG Packages                February 2026
+
+
      /*
       * Groupings
       */
@@ -2514,14 +2539,6 @@ Internet-Draft                YANG Packages                February 2026
        }
 
        leaf version {
-
-
-
-Wilton, et al.            Expires 8 August 2026                [Page 45]
-
-Internet-Draft                YANG Packages                February 2026
-
-
          type leafref {
            path '/pkgs:packages'
              + '/pkgs:package[pkgs:name = current()/../name]'
@@ -2554,6 +2571,13 @@ Internet-Draft                YANG Packages                February 2026
             All of the referenced packages must be compatible with no
             conflicting module versions or dependencies.";
 
+
+
+Wilton, et al.            Expires 8 August 2026                [Page 46]
+
+Internet-Draft                YANG Packages                February 2026
+
+
          uses yang-pkg-ref;
        }
      }
@@ -2569,14 +2593,6 @@ Internet-Draft                YANG Packages                February 2026
 
        list package {
          key "name version";
-
-
-
-
-Wilton, et al.            Expires 8 August 2026                [Page 46]
-
-Internet-Draft                YANG Packages                February 2026
-
 
          description
            "YANG package instance";
@@ -2610,6 +2626,14 @@ Internet-Draft                YANG Packages                February 2026
      namespace "urn:ietf:params:xml:ns:yang:ietf-yl-packages";
      prefix yl-pkgs;
 
+
+
+
+Wilton, et al.            Expires 8 August 2026                [Page 47]
+
+Internet-Draft                YANG Packages                February 2026
+
+
      import ietf-yang-revisions {
        prefix rev;
        reference "XXXX: Updated YANG Module Revision Handling";
@@ -2625,14 +2649,6 @@ Internet-Draft                YANG Packages                February 2026
        ys:recommended-min-version 0.5.0;
        reference "RFC XXX: YANG Packages.";
      }
-
-
-
-
-Wilton, et al.            Expires 8 August 2026                [Page 47]
-
-Internet-Draft                YANG Packages                February 2026
-
 
      import ietf-yang-library {
        prefix yanglib;
@@ -2667,6 +2683,13 @@ Internet-Draft                YANG Packages                February 2026
         This version of this YANG module is part of RFC XXXX; see
         the RFC itself for full legal notices.
 
+
+
+Wilton, et al.            Expires 8 August 2026                [Page 48]
+
+Internet-Draft                YANG Packages                February 2026
+
+
         The key words 'MUST', 'MUST NOT', 'REQUIRED', 'SHALL', 'SHALL
         NOT', 'SHOULD', 'SHOULD NOT', 'RECOMMENDED', 'NOT RECOMMENDED',
         'MAY', and 'OPTIONAL' in this document are to be interpreted as
@@ -2682,14 +2705,6 @@ Internet-Draft                YANG Packages                February 2026
      revision 2025-03-03 {
        ys:version 0.5.0;
        description
-
-
-
-Wilton, et al.            Expires 8 August 2026                [Page 48]
-
-Internet-Draft                YANG Packages                February 2026
-
-
          "Initial revision";
        reference
          "RFC XXXX: YANG Packages";
@@ -2723,6 +2738,14 @@ Internet-Draft                YANG Packages                February 2026
        reference "XXXX: YANG Semantic Versioning";
      }
 
+
+
+
+Wilton, et al.            Expires 8 August 2026                [Page 49]
+
+Internet-Draft                YANG Packages                February 2026
+
+
      import ietf-yang-package-types {
        prefix pkg-types;
        ys:recommended-min-version 0.5.0;
@@ -2738,13 +2761,6 @@ Internet-Draft                YANG Packages                February 2026
        prefix yid;
        reference "RFC XXX: YANG Instance Data File Format.";
      }
-
-
-
-Wilton, et al.            Expires 8 August 2026                [Page 49]
-
-Internet-Draft                YANG Packages                February 2026
-
 
      organization
        "IETF NETMOD (Network Modeling) Working Group";
@@ -2778,6 +2794,14 @@ Internet-Draft                YANG Packages                February 2026
         NOT', 'SHOULD', 'SHOULD NOT', 'RECOMMENDED', 'NOT RECOMMENDED',
         'MAY', and 'OPTIONAL' in this document are to be interpreted as
         described in BCP 14 (RFC 2119) (RFC 8174) when, and only when,
+
+
+
+Wilton, et al.            Expires 8 August 2026                [Page 50]
+
+Internet-Draft                YANG Packages                February 2026
+
+
         they appear in all capitals, as shown here.";
 
      // RFC Ed.: update the date below with the date of RFC publication
@@ -2794,14 +2818,6 @@ Internet-Draft                YANG Packages                February 2026
 
      /*
       * Augmentations
-
-
-
-Wilton, et al.            Expires 8 August 2026                [Page 50]
-
-Internet-Draft                YANG Packages                February 2026
-
-
       */
 
      sx:augment-structure
@@ -2832,6 +2848,16 @@ Internet-Draft                YANG Packages                February 2026
    }
    <CODE ENDS>
 
+
+
+
+
+
+Wilton, et al.            Expires 8 August 2026                [Page 51]
+
+Internet-Draft                YANG Packages                February 2026
+
+
 9.  Security Considerations
 
    TODO - Update this to more closely follow the latest template
@@ -2848,15 +2874,6 @@ Internet-Draft                YANG Packages                February 2026
    restrict access for particular NETCONF or RESTCONF users to a
    preconfigured subset of all available NETCONF or RESTCONF protocol
    operations and content.
-
-
-
-
-
-Wilton, et al.            Expires 8 August 2026                [Page 51]
-
-Internet-Draft                YANG Packages                February 2026
-
 
    Similarly to YANG library [I-D.ietf-netconf-rfc7895bis], some of the
    readable data nodes in these YANG modules may be considered sensitive
@@ -2889,6 +2906,14 @@ Internet-Draft                YANG Packages                February 2026
    It is expected that a central registry of standard YANG package
    definitions is required to support this solution.
 
+
+
+
+Wilton, et al.            Expires 8 August 2026                [Page 52]
+
+Internet-Draft                YANG Packages                February 2026
+
+
    It is unclear whether an IANA registry is also required to manage
    specific package versions.  It is highly desirable to have a specific
    canonical location, under IETF control, where the definitive YANG
@@ -2905,14 +2930,6 @@ Internet-Draft                YANG Packages                February 2026
       URI: urn:ietf:params:xml:ns:yang:ietf-yang-package-instance.yang
       Registrant Contact: The IESG.
       XML: N/A, the requested URI is an XML namespace.
-
-
-
-
-Wilton, et al.            Expires 8 August 2026                [Page 52]
-
-Internet-Draft                YANG Packages                February 2026
-
 
       URI: urn:ietf:params:xml:ns:yang:ietf-yang-packages.yang
       Registrant Contact: The IESG.
@@ -2946,6 +2963,13 @@ Internet-Draft                YANG Packages                February 2026
       Prefix: pkgs
       Reference: RFC XXXX
 
+
+
+Wilton, et al.            Expires 8 August 2026                [Page 53]
+
+Internet-Draft                YANG Packages                February 2026
+
+
       Name: ietf-yl-packages.yang
       Namespace: urn:ietf:params:xml:ns:yang:ietf-yl-packages.yang
       Prefix: yl-pkgs
@@ -2961,14 +2985,6 @@ Internet-Draft                YANG Packages                February 2026
 
    This document requests IANA to register the following media type,
    following the procedures of [RFC6838]:
-
-
-
-
-Wilton, et al.            Expires 8 August 2026                [Page 53]
-
-Internet-Draft                YANG Packages                February 2026
-
 
       Type name: application
       Subtype name: ypkg
@@ -3002,6 +3018,14 @@ Internet-Draft                YANG Packages                February 2026
 
    Bo Wu acted as a temporary editor for earlier versions of this work.
 
+
+
+
+Wilton, et al.            Expires 8 August 2026                [Page 54]
+
+Internet-Draft                YANG Packages                February 2026
+
+
 12.  References
 
 12.1.  Normative References
@@ -3012,19 +3036,6 @@ Internet-Draft                YANG Packages                February 2026
               Draft, draft-ietf-netconf-rfc7895bis-07, 17 October 2018,
               <https://datatracker.ietf.org/doc/html/draft-ietf-netconf-
               rfc7895bis-07>.
-
-
-
-
-
-
-
-
-
-Wilton, et al.            Expires 8 August 2026                [Page 54]
-
-Internet-Draft                YANG Packages                February 2026
-
 
    [I-D.ietf-netmod-yang-data-ext]
               Bierman, A., Björklund, M., and K. Watsen, "YANG Data
@@ -3063,6 +3074,14 @@ Internet-Draft                YANG Packages                February 2026
               <https://datatracker.ietf.org/doc/html/draft-ietf-netmod-
               yang-ver-selection-00>.
 
+
+
+
+Wilton, et al.            Expires 8 August 2026                [Page 55]
+
+Internet-Draft                YANG Packages                February 2026
+
+
    [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
               Requirement Levels", BCP 14, RFC 2119,
               DOI 10.17487/RFC2119, March 1997,
@@ -3071,16 +3090,6 @@ Internet-Draft                YANG Packages                February 2026
    [RFC3688]  Mealling, M., "The IETF XML Registry", BCP 81, RFC 3688,
               DOI 10.17487/RFC3688, January 2004,
               <https://www.rfc-editor.org/info/rfc3688>.
-
-
-
-
-
-
-Wilton, et al.            Expires 8 August 2026                [Page 55]
-
-Internet-Draft                YANG Packages                February 2026
-
 
    [RFC5246]  Dierks, T. and E. Rescorla, "The Transport Layer Security
               (TLS) Protocol Version 1.2", RFC 5246,
@@ -3119,15 +3128,6 @@ Internet-Draft                YANG Packages                February 2026
               Protocol", RFC 8040, DOI 10.17487/RFC8040, January 2017,
               <https://www.rfc-editor.org/info/rfc8040>.
 
-   [RFC8174]  Leiba, B., "Ambiguity of Uppercase vs Lowercase in RFC
-              2119 Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174,
-              May 2017, <https://www.rfc-editor.org/info/rfc8174>.
-
-   [RFC8342]  Bjorklund, M., Schoenwaelder, J., Shafer, P., Watsen, K.,
-              and R. Wilton, "Network Management Datastore Architecture
-              (NMDA)", RFC 8342, DOI 10.17487/RFC8342, March 2018,
-              <https://www.rfc-editor.org/info/rfc8342>.
-
 
 
 
@@ -3137,6 +3137,15 @@ Wilton, et al.            Expires 8 August 2026                [Page 56]
 
 Internet-Draft                YANG Packages                February 2026
 
+
+   [RFC8174]  Leiba, B., "Ambiguity of Uppercase vs Lowercase in RFC
+              2119 Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174,
+              May 2017, <https://www.rfc-editor.org/info/rfc8174>.
+
+   [RFC8342]  Bjorklund, M., Schoenwaelder, J., Shafer, P., Watsen, K.,
+              and R. Wilton, "Network Management Datastore Architecture
+              (NMDA)", RFC 8342, DOI 10.17487/RFC8342, March 2018,
+              <https://www.rfc-editor.org/info/rfc8342>.
 
    [RFC8525]  Bierman, A., Bjorklund, M., Schoenwaelder, J., Watsen, K.,
               and R. Wilton, "YANG Library", RFC 8525,
@@ -3176,15 +3185,6 @@ Internet-Draft                YANG Packages                February 2026
               "Semantic Versioning for OpenConfig Models",
               <http://www.openconfig.net/docs/semver/>.
 
-   [RFC8199]  Bogdanovic, D., Claise, B., and C. Moberg, "YANG Module
-              Classification", RFC 8199, DOI 10.17487/RFC8199, July
-              2017, <https://www.rfc-editor.org/info/rfc8199>.
-
-   [RFC8529]  Berger, L., Hopps, C., Lindem, A., Bogdanovic, D., and X.
-              Liu, "YANG Data Model for Network Instances", RFC 8529,
-              DOI 10.17487/RFC8529, March 2019,
-              <https://www.rfc-editor.org/info/rfc8529>.
-
 
 
 
@@ -3193,6 +3193,15 @@ Wilton, et al.            Expires 8 August 2026                [Page 57]
 
 Internet-Draft                YANG Packages                February 2026
 
+
+   [RFC8199]  Bogdanovic, D., Claise, B., and C. Moberg, "YANG Module
+              Classification", RFC 8199, DOI 10.17487/RFC8199, July
+              2017, <https://www.rfc-editor.org/info/rfc8199>.
+
+   [RFC8529]  Berger, L., Hopps, C., Lindem, A., Bogdanovic, D., and X.
+              Liu, "YANG Data Model for Network Instances", RFC 8529,
+              DOI 10.17487/RFC8529, March 2019,
+              <https://www.rfc-editor.org/info/rfc8529>.
 
 Appendix A.  Package Examples
 
@@ -3226,15 +3235,6 @@ A.1.1.  Example IETF Basic Types YANG package, version 1.0.0
    illustrates how a basic types package might be defined.  In this
    case, the module dependencies have been declared as import-only but
    they could also have been declared as implemented modules.
-
-
-
-
-
-
-
-
-
 
 
 
