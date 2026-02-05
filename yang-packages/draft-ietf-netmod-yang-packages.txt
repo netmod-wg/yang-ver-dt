@@ -482,14 +482,14 @@ Internet-Draft                YANG Packages                February 2026
        |  |     +-- name        module-name
        |  |     +-- version     version-or-rev-date
        |  |     +-- location*   inet:uri
-       |  +-- features*             scoped-feature
+       |  +-- feature*              scoped-feature
        +-- excludes
        |  +-- module*               module-name
        |  +-- import-only-module* [name]
        |  |  +-- name       module-name
        |  |  +-- version*   version-or-rev-date
-       |  +-- features*             scoped-feature
-       +-- mounts* [mount-path]
+       |  +-- feature*              scoped-feature
+       +-- mount* [mount-path]
           +-- mount-path          mount-ypath
           +-- package* [name]
           |  +-- name             pkg-name
@@ -535,7 +535,7 @@ Internet-Draft                YANG Packages                February 2026
    6.   For each module implemented by a package, only a single version/
         revision of that module MUST be implemented.  Conflicting module
         versions (e.g. from package includes) MAY be resolved explicitly
-        (via "includes/modules") or using automatic module version
+        (via "includes/module") or using automatic module version
         resolution, as described in Section 4.1.
 
    7.   Multiple versions/revisions of an import-only module MAY be
@@ -550,7 +550,7 @@ Internet-Draft                YANG Packages                February 2026
         only-module' lists.
 
    10.  A package definition MUST NOT include the same feature name in
-        both the 'includes/features' and 'excludes/features' lists.
+        both the 'includes/feature' and 'excludes/feature' lists.
 
    11.  A package definition MUST NOT exclude a module and list features
         defined by that module in the 'includes/feature' list.
@@ -639,9 +639,9 @@ Internet-Draft                YANG Packages                February 2026
       but it MAY add a different package version, which SHOULD be newer
       version of the package.  A package definition MAY also remove
       modules or mandatory-features.  In all cases, this is achieved by
-      listing the replacement package in the 'mounts/package' list,
-      which MUST include a version of the package to be replaced.
-      Examples of this are given in Appendix A.5.2.
+      listing the replacement package in the 'mount/package' list, which
+      MUST include a version of the package to be replaced.  Examples of
+      this are given in Appendix A.5.2.
 
 3.4.1.  Exclusions
 
@@ -689,30 +689,28 @@ Internet-Draft                YANG Packages                February 2026
           modules in the resolved included packages.  Conflicting module
           versions can be resolved automatically as per Section 4.1,
           then overwritten (including submodule and location
-          information) by any entries in the "includes/modules" list,
-          and finally filtered by any entries in "excludes/modules"
-          list.
+          information) by any entries in the "includes/module" list, and
+          finally filtered by any entries in "excludes/module" list.
 
        *  The set of import-only modules is the union of all import-only
           modules in the resolved included packages, then updated by any
-          entries in the "includes/import-only-modules" list, and
-          finally filtered by any entries in "excludes/import-only-
-          modules" list.
+          entries in the "includes/import-only-module" list, and finally
+          filtered by any entries in "excludes/import-only-module" list.
 
        *  The set of mandatory-features is the union of the mandatory
           features in the resolved included packages, with any
-          "includes/features" entries added, and any "excludes/features"
-          entries removed.  If a module is excluded by "excludes/
-          modules" then all features associated with that module are
-          also implicitly removed.
+          "includes/feature" entries added, and any "excludes/feature"
+          entries removed.  If a module is excluded by "excludes/module"
+          then all features associated with that module are also
+          implicitly removed.
 
        *  The set of mounts is the union of the mounts in the resolved
           included packages, where for a given mount-path that is
           present in more than one included package (same path and same
           keys) then it takes the union of the mounted packages and
           mount parent-references.  The mounts are then updated by
-          combining any entries in the package's "mounts" list, with any
-          entries listed in "mounts/package/wraps-package" list replaced
+          combining any entries in the package's "mount" list, with any
+          entries listed in "mount/package/wraps-package" list replaced
           by a package that wraps the original package at the mount
           point.
 
@@ -722,6 +720,8 @@ Internet-Draft                YANG Packages                February 2026
 
        *  Submodules are ignored for resolution purposes, only the
           module version is considered and compared.
+
+
 
 
 
@@ -1178,11 +1178,11 @@ Wilton, et al.            Expires 9 August 2026                [Page 21]
 Internet-Draft                YANG Packages                February 2026
 
 
-   *  Removing a feature from the 'includes/features' list unless the
+   *  Removing a feature from the 'includes/feature' list unless the
       feature was not mandatory in any included packages.
 
-   *  Adding a feature to the 'excludes/features' list unless the
-      feature was not mandatory in any included package.
+   *  Adding a feature to the 'excludes/feature' list unless the feature
+      was not mandatory in any included package.
 
    *  Adding, changing, or removing a module containing one or more
       deviations, that when applied to the target module would create a
@@ -1861,7 +1861,7 @@ Internet-Draft                YANG Packages                February 2026
            }
          }
 
-         leaf-list features {
+         leaf-list feature {
            type scoped-feature;
            description
              "Lists features from the mandatory-features exported by an
@@ -1870,7 +1870,7 @@ Internet-Draft                YANG Packages                February 2026
              overriding the behavior specified by the included package.
 
              Features MUST NOT be specified both in this list and also
-             the 'includes/features' list.
+             the 'includes/feature' list.
 
              Features are identified using
              <module-name>:<feature-name>.";
@@ -2161,7 +2161,7 @@ Internet-Draft                YANG Packages                February 2026
            }
          }
 
-         leaf-list features {
+         leaf-list feature {
            type scoped-feature;
            description
              "Lists features from any modules included in the package
@@ -2171,7 +2171,7 @@ Internet-Draft                YANG Packages                February 2026
               Mandatory-features specified by any directly included
               packages MUST also be supported by server
               implementations, unless excluded by an entry in the
-              'excludes/features' list, and do not need to be repeated
+              'excludes/feature' list, and do not need to be repeated
               in this list.
 
               All other features defined in modules included in the
@@ -2192,7 +2192,7 @@ Internet-Draft                YANG Packages                February 2026
 
        uses yang-pkg-exclusions;
 
-       list mounts {
+       list mount {
          key "mount-path";
          description
            "An entry in this list represents additions or changes to
