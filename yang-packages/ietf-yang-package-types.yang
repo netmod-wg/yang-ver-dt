@@ -39,7 +39,7 @@ module ietf-yang-package-types {
     "This module provides type and grouping definitions for YANG
      packages.
 
-     Copyright (c) 2025 IETF Trust and the persons identified as
+     Copyright (c) 2026 IETF Trust and the persons identified as
      authors of the code.  All rights reserved.
 
      Redistribution and use in source and binary forms, with or
@@ -62,8 +62,8 @@ module ietf-yang-package-types {
   // and remove this note.
   // RFC Ed.: replace XXXX with actual RFC number and remove this
   // note.
-  revision 2025-11-18 {
-    ys:version 0.7.0;
+  revision 2026-01-30 {
+    ys:version 0.8.0;
     description
       "Initial revision";
     reference
@@ -87,13 +87,20 @@ module ietf-yang-package-types {
       "Packages are versioning using YANG Semver version labels.";
   }
 
+  typedef module-name {
+    type yang:yang-identifier;
+    description
+      "Module names are typed as YANG identifiers.";
+  }
+
   typedef version-or-rev-date {
     type union {
       type rev:revision-date;
       type ys:version;
     }
     description
-      "Identifies a module by YANG semantic version or revision date";
+      "Identifies a module by YANG semantic version or revision
+       date";
   }
 
   typedef scoped-feature {
@@ -163,7 +170,7 @@ module ietf-yang-package-types {
          from a YANG package definition";
 
       leaf-list module {
-        type pkg-name;
+        type module-name;
         description
           "Lists implemented modules, of any version, that may have
            have been brought in by included packages, but are
@@ -180,27 +187,47 @@ module ietf-yang-package-types {
            'includes/module' list.";
       }
 
-      leaf-list import-only-module {
-        type pkg-name;
+      list import-only-module {
+        key "name";
         description
-          "Lists import-only modules, of any version, that may have
-           have been brought in by included packages, but are
-           explicitly excluded from this package definition.
+          "Lists import-only modules that may have have been brought
+           in by included packages, but are explicitly excluded from
+           this package definition.
 
            It is an error to list a module in both this list and the
            'includes/import-only-module' list.";
+
+        leaf name {
+          type module-name;
+          mandatory true;
+          description
+            "The name of the import-only module to exclude some
+             versions of.";
+        }
+
+        leaf-list version {
+          type version-or-rev-date;
+          description
+            "Lists specific versions of the import-only module being
+              excluded.  If no versions are listed, all versions of
+              the import-only module are excluded.
+
+              If required, the YANG Semantic Version SHOULD be used to
+              identify the module version, otherwise the YANG module
+              revision date is used.";
+        }
       }
 
-      leaf-list features {
+      leaf-list feature {
         type scoped-feature;
         description
-          "Lists features from the mandatory features exported by an
+          "Lists features from the mandatory-features exported by an
           included package that are reclassified as being OPTIONAL
           to support by any server implementing the package,
           overriding the behavior specified by the included package.
 
           Features MUST NOT be specified both in this list and also
-          the 'includes/features' list.
+          the 'includes/feature' list.
 
           Features are identified using
           <module-name>:<feature-name>.";
@@ -278,17 +305,17 @@ module ietf-yang-package-types {
       list package {
         key "name";
         description
-          "An entry in this list represents a package that is included
-          as part of the package definition, or to change the version
-          of a descendent included package.
+          "An entry in this list represents a package that is
+           included as part of the package definition, or to change
+           the version of a descendent included package.
 
-          An entry in this list overrides any other package version
-          'included' by an included package, which can be used for
-          resolving conflicting package versions from included
-          packages.
+           An entry in this list overrides any other package version
+           'included' by an included package, which can be used for
+           resolving conflicting package versions from included
+           packages.
 
-          A package definition MUST resolve to including only a single
-          version of any YANG package.";
+           A package definition MUST resolve to including only a
+           single version of any YANG package.";
 
         uses yang-pkg-identification-leafs;
         uses yang-pkg-location;
@@ -307,7 +334,7 @@ module ietf-yang-package-types {
           "RFC 7950: The YANG 1.1 Data Modeling Language.";
 
         leaf name {
-          type yang:yang-identifier;
+          type module-name;
           mandatory true;
           description
             "The YANG module name.";
@@ -318,28 +345,29 @@ module ietf-yang-package-types {
           mandatory true;
           description
             "Identifies the module version.  If available, the YANG
-            Semantic Version SHOULD be used, otherwise the YANG module
-            revision date is used.";
+             Semantic Version SHOULD be used, otherwise the YANG
+             module revision date is used.";
         }
 
         leaf-list location {
           type inet:uri;
           description
             "Contains a URL that represents the YANG schema resource
-            for this module.
+             for this module.
 
-            This leaf will only be present if there is a URL available
-            for retrieval of the schema for this entry.";
+             This leaf will only be present if there is a URL
+             available for retrieval of the schema for this entry.";
         }
 
         list submodule {
           key "name";
           description
             "Each entry represents one submodule within the
-            parent module.";
+             parent module.";
 
           leaf name {
-            type yang:yang-identifier;
+            type module-name;
+            mandatory true;
             description
               "The YANG submodule name.";
           }
@@ -348,22 +376,25 @@ module ietf-yang-package-types {
             type version-or-rev-date;
             mandatory true;
             description
-              "The YANG submodule revision date or YANG Semantic version.
+              "The YANG submodule revision date or YANG Semantic
+               version.
 
-              If the parent module include statement for this submodule
-              includes a revision date then it MUST match the revision
-              date specified here or it MUST match the revision-date
-              associated with the version specified here.";
+               If the parent module include statement for this
+               submodule includes a revision date then it MUST match
+               the revision date specified here or it MUST match the
+               revision-date associated with the version specified
+               here.";
           }
 
           leaf-list location {
             type inet:uri;
             description
-              "Contains a URL that represents the YANG schema resource
-              for this submodule.
+              "Contains a URL that represents the YANG schema
+               resource for this submodule.
 
-              This leaf will only be present if there is a URL
-              available for retrieval of the schema for this entry.";
+               This leaf will only be present if there is a URL
+               available for retrieval of the schema for this
+               entry.";
           }
         }
       }
@@ -372,16 +403,17 @@ module ietf-yang-package-types {
         key "name version";
         description
           "An entry in this list indicates that the server imports
-          reusable definitions from the specified revision of the
-          module, but does not implement any protocol accessible
-          objects from this revision.
+           reusable definitions from the specified revision of the
+           module, but does not implement any protocol accessible
+           objects from this revision.
 
-          Multiple entries for the same module name MAY exist.  This
-          can occur if multiple modules import the same module, but
-          specify different revision-dates in the import statements.";
+           Multiple entries for the same module name MAY exist.
+           This can occur if multiple modules import the same
+           module, but specify different revision-dates in the
+           import statements.";
 
         leaf name {
-          type yang:yang-identifier;
+          type module-name;
           mandatory true;
           description
             "The YANG module name.";
@@ -392,36 +424,29 @@ module ietf-yang-package-types {
           mandatory true;
           description
             "Identifies the module version.  If available, the YANG
-            Semantic Version SHOULD be used, otherwise the YANG module
-            revision date is used.";
-        }
-
-        leaf-list replaces-version {
-          type version-or-rev-date;
-          description
-            "Gives the version of an import-only-module defined in an
-            included package that is replaced by this
-            import-only-module version.";
+             Semantic Version SHOULD be used, otherwise the YANG
+             module revision date is used.";
         }
 
         leaf-list location {
           type inet:uri;
           description
             "Contains a URL that represents the YANG schema resource
-            for this module.
+             for this module.
 
-            This leaf will only be present if there is a URL available
-            for retrieval of the schema for this entry.";
+             This leaf will only be present if there is a URL
+             available for retrieval of the schema for this entry.";
         }
 
         list submodule {
           key "name";
           description
             "Each entry represents one submodule within the
-            parent module.";
+             parent module.";
 
           leaf name {
-            type yang:yang-identifier;
+            type module-name;
+            mandatory true;
             description
               "The YANG submodule name.";
           }
@@ -430,37 +455,40 @@ module ietf-yang-package-types {
             type version-or-rev-date;
             mandatory true;
             description
-              "The YANG submodule revision date or YANG Semantic version.
+              "The YANG submodule revision date or YANG Semantic
+               version.
 
-              If the parent module include statement for this submodule
-              includes a revision date then it MUST match the revision
-              date specified here or it MUST match the revision-date
-              associated with the version specified here.";
+               If the parent module include statement for this
+               submodule includes a revision date then it MUST match
+               the revision date specified here or it MUST match the
+               revision-date associated with the version specified
+               here.";
           }
 
           leaf-list location {
             type inet:uri;
             description
               "Contains a URL that represents the YANG schema resource
-              for this submodule.
+               for this submodule.
 
-              This leaf will only be present if there is a URL
-              available for retrieval of the schema for this entry.";
+               This leaf will only be present if there is a URL
+               available for retrieval of the schema for this
+               entry.";
           }
         }
       }
 
-      leaf-list features {
+      leaf-list feature {
         type scoped-feature;
         description
           "Lists features from any modules included in the package
            that MUST be supported by any server implementing the
            package.
 
-           Mandatory features specified by any directly included
+           Mandatory-features specified by any directly included
            packages MUST also be supported by server
            implementations, unless excluded by an entry in the
-           'excludes/features' list, and do not need to be repeated
+           'excludes/feature' list, and do not need to be repeated
            in this list.
 
            All other features defined in modules included in the
@@ -473,23 +501,25 @@ module ietf-yang-package-types {
 
     uses yang-pkg-exclusions;
 
-    list mounts {
+    list mount {
       key "mount-path";
       description
-        "An entry in this list represents a package that will be
-         found mounted in the schema at the specified mount path.
+        "An entry in this list represents additions or changes to
+         the schema found at the specified mount point.
 
-         For a given mount path, the set of mounted package
-         versions is the union of all packages mounted at the
-         given mount point.  Any conflicting package versions
-         MUST be explicitly resolved via an entry in the
-         mounted/packages of the package definition.
+         The full schema at the mount point is defined by the set of
+         mounted packages, which is constructed as the union of all
+         packages mounted at the same mount point by any packages
+         in the 'includes/package' list, filtered by any packages
+         listed in the 'wraps-package' leaf-list, and then combined
+         with all packages listed in the 'package' list.
 
-         A mount path with specific keys MUST also includes any
+         A mount path with specified keys MUST also includes any
          mounted packages without specific keys.";
 
       leaf "mount-path" {
         type mount-ypath;
+        mandatory true;
         description
           "This path identifies a mount point in the schema.
 
@@ -522,46 +552,51 @@ module ietf-yang-package-types {
         key "name";
         description
           "The packages that will be mounted at the specified mount
-           path.
-
-           The set of mounteed packages is the union of all packages
-           mounted at the given mount by any packages in the
-           'includes/package' list, except that each entry in this list
-           replaces any other versions of the same package at the
-           same mount point.  In addition, other package versions may
-           be omitted from the mount point via the 'replaces-package'
-           leaf-list.";
+           path in addition to those in any includes packages with
+           the same mount path.";
         uses yang-pkg-identification-leafs;
         uses yang-pkg-location;
 
-        leaf-list replaces-package {
+        leaf-list wraps-package {
           type pkg-name;
           description
             "Lists other packages that have been explicitly mounted
-             at the same mount point by the included package, that
-             are replaced by this mounted package.
+             at the same mount point by an included package (i.e.,
+             in the 'includes/package' list), that are replaced by
+             this mounted package.
 
-             The replacing mounted package MUST include the mounted
-             package being replaced, but it may choose a different
-             version that SHOULD be a later version or revision.
+             The replaced mounted package MUST include the mounted
+             package being replaced at the same package version. It
+             MAY also include the same package at other versions, in
+             which case it SHOULD select a higher version of the
+             wrapped package.
 
-             Any packages or modules included by the replaced
-             package are also removed by this mounted package
-             unless they have also been explicitly mounted at the
-             same mount point, in which case the replacing package
-             MUST also explicitly include/exclude them.
-
-             replaces-package is expected to be used if an
-             implementation does not fully implement a mounted
-             package and needs to apply deviations or remove
-             included modules or mandatory-features.";
+             This leaf is expected to be used if an implementation
+             does not fully implement the schema defined by a
+             mounted package and needs to apply deviations, modify
+             or remove module versions, or change
+             mandatory-features.";
         }
       }
 
       leaf-list parent-reference {
         type mount-ypath;
         description
-          "See Mount Point path and parent-reference in Schema Mount";
+          "Represents paths in the parent schema that are accessible
+           from the mounted schema for the evaluation of XPath
+           expressions.
+
+           See Mount Point path and parent-reference in Schema Mount
+           (RFC 8528) for a more detailed description.
+
+           Unlike the YANG module defined in RFC 8528, this leaf is
+           encoded as a JSON style encoded instance-identifier
+           (regardless of whether the format used to encode the YANG
+           instance data), as specified in RFC 7951, section 6.11,
+           except that keys are optional.
+
+           For optional keys, the name and value of the key is
+           excluded from the key list.";
       }
     }
   }
