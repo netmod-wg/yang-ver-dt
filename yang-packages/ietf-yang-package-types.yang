@@ -504,18 +504,22 @@ module ietf-yang-package-types {
     list mount {
       key "mount-path";
       description
-        "An entry in this list represents additions or changes to
-         the schema found at the specified mount point.
+        "An entry in this list represents additions to, or a
+         replacement of, the schema found at the specified mount
+         point.
 
-         The full schema at the mount point is defined by the set of
-         mounted packages, which is constructed as the union of all
-         packages mounted at the same mount point by any packages
-         in the 'includes/package' list, filtered by any packages
-         listed in the 'wraps-package' leaf-list, and then combined
-         with all packages listed in the 'package' list.
+         The full schema at the mount point depends on the
+         setting of the inherit-packages leaf:
 
-         A mount path with specified keys MUST also includes any
-         mounted packages without specific keys.";
+         If set to true (the default) - the schema is defined
+         as the union of the resolved package schema at the mount
+         point by any packages in the 'includes/package' list
+         combined with the resolve package schema of all packages
+         listed in the 'packages' list.
+
+         If set to false - the schema is defined as the union of
+         only the resolved package schema of all packages
+         listed in the 'packages' list.";
 
       leaf "mount-path" {
         type mount-ypath;
@@ -548,35 +552,36 @@ module ietf-yang-package-types {
              entries in the module list.";
       }
 
+      leaf inherit-packages {
+        type boolean;
+        default true;
+        description
+          "Indicates whether the packages and parent-references
+           available at the mount point for this package definition
+           automatically include all packages and parent-references
+           mounted at the same mount path in any
+           'includes/packages' entries.
+
+           If set to false, then only packages and
+           parent-references listed here in the 'packages' list are
+           included.  This allows the definitions in the mounted
+           packages to be modified (e.g., remove or change module
+           versions).  To help conformance, the packages listed
+           here SHOULD include all the packages that would be have
+           been automatically included.
+          ";
+      }
+
       list package {
         key "name";
         description
           "The packages that will be mounted at the specified mount
-           path in addition to those in any includes packages with
-           the same mount path.";
+           path either in addition to, or instead of, the mounted
+           packages from the 'included/package' list.
+
+           Also see the 'inherit-packages' leaf.";
         uses yang-pkg-identification-leafs;
         uses yang-pkg-location;
-
-        leaf-list wraps-package {
-          type pkg-name;
-          description
-            "Lists other packages that have been explicitly mounted
-             at the same mount point by an included package (i.e.,
-             in the 'includes/package' list), that are replaced by
-             this mounted package.
-
-             The replaced mounted package MUST include the mounted
-             package being replaced at the same package version. It
-             MAY also include the same package at other versions, in
-             which case it SHOULD select a higher version of the
-             wrapped package.
-
-             This leaf is expected to be used if an implementation
-             does not fully implement the schema defined by a
-             mounted package and needs to apply deviations, modify
-             or remove module versions, or change
-             mandatory-features.";
-        }
       }
 
       leaf-list parent-reference {

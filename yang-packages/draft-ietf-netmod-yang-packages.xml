@@ -122,6 +122,11 @@
           refers to a particular version of a YANG package
           definition, identified by the package version field.</t>
 
+          <t>YANG schema: The combined set of schema nodes for a set of modules
+          taking into account implemented modules, import-only modules,
+          deviations, features and mount-points.  A more complete definition
+          is provided in <xref target="resolution"/>.</t>
+
           <t>YANG package: a versioned organizational structure used to
           manage a set of YANG modules that collectively define a package
           schema. YANG packages are defined in
@@ -396,11 +401,11 @@ module: ietf-yang-package-types
     |  +-- feature*              scoped-feature
     +-- mount* [mount-path]
        +-- mount-path          mount-ypath
+       +-- inherit-packages?   boolean
        +-- package* [name]
-       |  +-- name             pkg-name
-       |  +-- version          pkg-version
-       |  +-- location*        inet:uri
-       |  +-- wraps-package*   pkg-name
+       |  +-- name        pkg-name
+       |  +-- version     pkg-version
+       |  +-- location*   inet:uri
        +-- parent-reference*   mount-ypath
         ]]></artwork>
         </figure>
@@ -450,8 +455,7 @@ module: ietf-yang-package-types
             'excludes/import-only-module' lists.</t>
 
             <t>A package definition MUST NOT include the same feature name in
-            both the 'includes/feature' and
-            'excludes/feature' lists.</t>
+            both the 'includes/feature' and 'excludes/feature' lists.</t>
 
             <t>A package definition MUST NOT exclude a module and list features
             defined by that module in the 'includes/feature' list.</t>
@@ -525,7 +529,7 @@ module: ietf-yang-package-types
             with a 'replaces-package' statement.</t>
 
             <t>A package definition CANNOT remove a package from a mount point,
-            but it MAY add a different package version, which SHOULD be
+            but it MAY add another different package version, which SHOULD be
             newer version of the package.  A package definition MAY also remove
             modules or mandatory-features.  In all cases, this is achieved by
             listing the replacement package in the 'mount/package' list, which
@@ -721,16 +725,16 @@ module: ietf-yang-package-types
         does not specify how these should be declared, but instead gives some
         points of consideration that may be helpful when choosing.  These are:
         <list>
-          <t>Listing a types only module as implemented allows for simpler automatic
-          module version selection between different packages, as per <xref
-          target="auto-module-version-resolution"/>.</t>
-          <t>Identities are only available for use by the server for implemented
-          modules.</t>
-          <t>If a module defines data node and types and the server only wants to
+          <t>Listing a types only module as implemented allows for simpler
+          automatic module version selection between different packages, as per
+          <xref target="auto-module-version-resolution"/>.</t>
+          <t>As per <xref target="RFC7950"/> section 9.10.2, identities are
+          only available for use by the server for implemented modules.</t>
+          <t>If a module defines data nodes and types and the server only wants to
           use the types but not implement any data nodes from the module then
           listing the module as import-only is clearer and simpler than marking it
           as implemented with a separate deviation file that deviates all data
-          nodes.</t>
+          nodes as not-supported.</t>
           <t>If a module imports a module at an exact revision (which, as per <xref
               target="I-D.ietf-netmod-yang-module-versioning"/>, is not recommended)
               then it may be helpful to list that module in the import-only module
@@ -749,7 +753,8 @@ module: ietf-yang-package-types
         made available as a complete globally scoped package. The hot fix is
         made available as an incomplete globally scoped package. A device's
         datastore schema can define a local package that implements the base
-        software package updated with the hot fix package.</t>
+        software package updated with the hot fix package.  An example is
+        provided in <xref target="hotfix-pkg-example"/>.</t>
 
         <t>Referentially incomplete packages could also be used to group sets
         of logically related modules together, but without requiring a fixed
@@ -839,8 +844,9 @@ module: ietf-yl-packages
 
   augment /yanglib:yang-library/yanglib:schema:
     +--ro package* [name version]
-       +--ro name       -> /pkgs:packages/package/name
-       +--ro version    leafref
+    |  +--ro name       -> /pkgs:packages/package/name
+    |  +--ro version    leafref
+    +--ro supported-feature*   pkg-types:scoped-feature
           ]]></artwork>
           </figure>
         </section>
@@ -1079,10 +1085,10 @@ module: ietf-yang-inst-data-pkg
       <t>Better and easier conformance is a major design goal for YANG Packages.  YANG
       package conformance is similiar to how YANG <xref target="RFC7950"/>
       requires that servers either implement a module faithfully, or otherwise
-      use deviations to indicate areas of non-conformance.  Ulitmately, each
+      use deviations to indicate areas of non-conformance.  Ultimately, each
       version of a YANG package resolves, as per (<xref target="resolution"/>),
       to a YANG schema that is defined as a set of implemented modules and
-      import-only modules, devations, features, and mounted schema.  For YANG
+      import-only modules, deviations, features, and mounted schema.  For YANG
       package conformance, it is necessary to determine whether an
       implementation faithfully conforms to the full YANG schema defined by a
       resolved YANG package.</t>
@@ -1394,7 +1400,7 @@ module ietf-yang-package-types {
     "This module provides type and grouping definitions for YANG
      packages.
 
-     Copyright (c) 2025 IETF Trust and the persons identified as
+     Copyright (c) 2026 IETF Trust and the persons identified as
      authors of the code.  All rights reserved.
 
      Redistribution and use in source and binary forms, with or
@@ -1859,18 +1865,22 @@ module ietf-yang-package-types {
     list mount {
       key "mount-path";
       description
-        "An entry in this list represents additions or changes to
-         the schema found at the specified mount point.
+        "An entry in this list represents additions to, or a
+         replacement of, the schema found at the specified mount
+         point.
 
-         The full schema at the mount point is defined by the set of
-         mounted packages, which is constructed as the union of all
-         packages mounted at the same mount point by any packages
-         in the 'includes/package' list, filtered by any packages
-         listed in the 'wraps-package' leaf-list, and then combined
-         with all packages listed in the 'package' list.
+         The full schema at the mount point depends on the
+         setting of the inherit-packages leaf:
 
-         A mount path with specified keys MUST also includes any
-         mounted packages without specific keys.";
+         If set to true (the default) - the schema is defined
+         as the union of the resolved package schema at the mount
+         point by any packages in the 'includes/package' list
+         combined with the resolve package schema of all packages
+         listed in the 'packages' list.
+
+         If set to false - the schema is defined as the union of
+         only the resolved package schema of all packages
+         listed in the 'packages' list.";
 
       leaf "mount-path" {
         type mount-ypath;
@@ -1903,35 +1913,36 @@ module ietf-yang-package-types {
              entries in the module list.";
       }
 
+      leaf inherit-packages {
+        type boolean;
+        default true;
+        description
+          "Indicates whether the packages and parent-references
+           available at the mount point for this package definition
+           automatically include all packages and parent-references
+           mounted at the same mount path in any
+           'includes/packages' entries.
+
+           If set to false, then only packages and
+           parent-references listed here in the 'packages' list are
+           included.  This allows the definitions in the mounted
+           packages to be modified (e.g., remove or change module
+           versions).  To help conformance, the packages listed
+           here SHOULD include all the packages that would be have
+           been automatically included.
+          ";
+      }
+
       list package {
         key "name";
         description
           "The packages that will be mounted at the specified mount
-           path in addition to those in any includes packages with
-           the same mount path.";
+           path either in addition to, or instead of, the mounted
+           packages from the 'included/package' list.
+
+           Also see the 'inherit-packages' leaf.";
         uses yang-pkg-identification-leafs;
         uses yang-pkg-location;
-
-        leaf-list wraps-package {
-          type pkg-name;
-          description
-            "Lists other packages that have been explicitly mounted
-             at the same mount point by an included package (i.e.,
-             in the 'includes/package' list), that are replaced by
-             this mounted package.
-
-             The replaced mounted package MUST include the mounted
-             package being replaced at the same package version. It
-             MAY also include the same package at other versions, in
-             which case it SHOULD select a higher version of the
-             wrapped package.
-
-             This leaf is expected to be used if an implementation
-             does not fully implement the schema defined by a
-             mounted package and needs to apply deviations, modify
-             or remove module versions, or change
-             mandatory-features.";
-        }
       }
 
       leaf-list parent-reference {
@@ -2237,6 +2248,12 @@ module ietf-yl-packages {
     reference "XXXX: YANG Semantic Versioning";
   }
 
+  import ietf-yang-package-types {
+    prefix pkg-types;
+    ys:recommended-min-version 0.8.0;
+    reference "RFC XXX: YANG Packages.";
+  }
+
   import ietf-yang-packages {
     prefix pkgs;
     ys:recommended-min-version 0.8.0;
@@ -2304,9 +2321,24 @@ module ietf-yl-packages {
   augment "/yanglib:yang-library/yanglib:schema" {
     description
       "Allow datastore schema to be related to a set of YANG
-       packages";
+       packages.
+
+       Additional features may be supported by the device listed
+       in the 'implemented-feature' list.
+       ";
 
     uses pkgs:yang-ds-pkg-ref;
+
+    leaf-list supported-feature {
+      type pkg-types:scoped-feature;
+      description
+        "The name of each YANG feature supported by the
+         server MUST be identified.  Features are
+         identified using <module-name>:<feature-name>.
+
+         This list MUST be equivalent to the list of
+         supported features advertised in YANG library.";
+    }
   }
 }
 <CODE ENDS>
@@ -3478,6 +3510,17 @@ module ietf-yang-inst-data-pkg {
         ]]></artwork>
         </figure>
       </section>
+    </section>
+
+    <section anchor="hotfix-pkg-example" title="Hotfix Package Example">
+      <t>TODO, provide an example of how a bugfix package on a device that works.
+      The example should illustrate how an incomplete package contains an
+      updated version of some particular module due to a bugfix, but it does not
+      the dependencies, and hence it is marked as an incomplete package.  Both
+      the baseline server package and the bugfix package are advertised by the
+      server for the datastore schema and we rely on automatic module resolution
+      to pickup the bugfix module version.  Also note that it is not possible
+      to downrev a module using this hotfix mechanism.</t>
     </section>
 
     <section anchor="mounted_examples" title="Mounted Package Examples">
