@@ -12,7 +12,7 @@
 <?rfc compact="yes"?>
 <?rfc subcompact="no"?>
 <rfc category="std" ipr="trust200902"
-    docName="draft-ietf-netmod-yang-schema-comparison-07" updates="7950"
+    docName="draft-ietf-netmod-yang-schema-comparison-08" updates="7950"
     submissionType="IETF" consensus="true">
   <front>
     <title abbrev="YANG Schema Comparison">YANG Schema Comparison</title>
@@ -49,7 +49,7 @@
             changes, between the revisions. The output of the algorithm can be
             used to help select an appropriate revision-label or YANG semantic
             version number for a new revision. Included is also a YANG module
-            describing the output of this algorithm.
+            describing possible output of this algorithm.
         </t>
     </abstract>
   </front>
@@ -110,8 +110,8 @@
    <xref target="RFC2119" format="default"/> <xref target="RFC8174" format="default"/> when, and only when, they
    appear in all capitals, as shown here.</t>
       <t>This document makes use of the following terminology introduced in
-      the YANG 1.1 Data Modeling Language <xref target="RFC7950"/>: <list
-          style="symbols">
+      the YANG 1.1 Data Modeling Language <xref target="RFC7950"/>:
+        <list style="symbols">
           <t>module</t>
           <t>schema node</t>
           <t>data node</t>
@@ -119,8 +119,19 @@
         </list>
       </t>
     </section>
+    <section anchor="parsed_schema" numbered="true" toc="default">
+        <name>Parsed schema tree</name>
+        <t>
+            When a YANG module is parsed and its contents stored
+            in an internal representation without any statement
+            resolution or modification, the result is a parsed
+            schema tree. Such a schema tree can be printed into
+            a YANG module and it should be exactly the same as
+            the loaded source YANG module.
+        </t>
+    </section>
     <section anchor="compiled_schema" numbered="true" toc="default">
-        <name>Compiled YANG schema tree</name>
+        <name>Compiled schema tree</name>
         <t>
             The compiled schema node tree resolves all the statements used for
             syntactic abstraction and simplification to
@@ -129,7 +140,7 @@
             affect backwards compatibility of the whole YANG module.
         </t>
         <t>
-            The steps taken when compiling a schema:
+            The steps taken when compiling a parsed schema:
         </t>
         <ul spacing="normal">
             <li>
@@ -315,17 +326,17 @@
                     non-backwards-compatible.
                 </t>
                 <t>
-                    Examples of a less common or obvious compatibility breaking changes
-                    can be changing the "yang-version" of a YANG module or expanding
-                    a "type" size. The former change may break importing modules because
-                    of specific rules about "import" statement and the target module
-                    YANG version. Changing a "type" of a leaf from "uint16" to "uint32"
-                    may seem to fit the definition of a backwards-compatible change but
+                    Examples of a less common or obvious compatibility-breaking changes
+                    are changing the "yang-version" of a YANG module or expanding the
+                    size of a "type". The former change may break importing modules because
+                    of specific rules about "import" statement and the target module's
+                    YANG version. Changing a "type" of a leaf from "uint32" to "uint64"
+                    may seem to fit the definition of a backwards-compatible change, but
                     it may not be so for some data encodings that use a fixed binary data
-                    chunk that would grow in size or even a text format that may use a
-                    different encoding for the 2 types. Specifically, the JSON YANG data
-                    format encodes a "uint32" value as a number but a "uint64" as a
-                    string.
+                    chunk (which would grow in size) or even a text format that may use a
+                    different encoding for the two types. Specifically, the JSON YANG data
+                    format <xref target="RFC7951" format="default"/> encodes a "uint32"
+                    value as a JSON number but a "uint64" as a JSON string.
                 </t>
             </section>
             <section anchor="change_conformance_exts" numbered="true" toc="default">
@@ -396,40 +407,18 @@
             module.
         </t>
     </section>
-    <section anchor="yang_modules" numbered="true" toc="default">
+    <section anchor="yang_module_schema_cmp" numbered="true" toc="default">
         <name>Schema Comparison YANG Module</name>
         <t keepWithNext="true">
-            YANG module with nodes describing the differences between two
-            revisions of YANG schemas. The "ietf-yang-schema-comparison"
-            YANG module imports definitions from the "ietf-yang-types" module
-            defined in <xref target="RFC6991" format="default"/> and
-            "ietf-yang-library" module defined in
-            <xref target="RFC8525" format="default"/>, and
-            "ietf-yang-structure-ext" module defined in
-            <xref target="RFC8791" format="default"/>.
+            YANG module with extensions fine-tuning the classification of
+            differences between two revisions of YANG schemas.
         </t>
-        <sourcecode name="ietf-yang-schema-comparison@2026-05-05.yang" type=""
+        <sourcecode name="ietf-yang-schema-comparison@2026-05-27.yang" type=""
             markers="true"><![CDATA[
 module ietf-yang-schema-comparison {
   yang-version 1.1;
   namespace "urn:ietf:params:xml:ns:yang:ietf-yang-schema-comparison";
   prefix schema-cmp;
-
-  import ietf-yang-types {
-    prefix yang;
-    reference
-      "RFC 6991: Common YANG Data types";
-  }
-  import ietf-yang-library {
-    prefix yanglib;
-    reference
-      "RFC 8525: YANG Library";
-  }
-  import ietf-yang-structure-ext {
-    prefix sx;
-    reference
-      "RFC 8791: YANG Data Structure Extensions";
-  }
 
   organization
     "IETF NETMOD (Network Modeling) Working Group";
@@ -446,13 +435,8 @@ module ietf-yang-schema-comparison {
      Author:  Per Andersson
               <mailto:per.ietf@ionio.se>";
   description
-    "This YANG 1.1 module contains definitions and extensions to
-     support comparison between different versions of YANG schemas. The
-     output of the comparison algorithm is described in this YANG
-     module. The base schema nodes describe changes in a compiled YANG
-     module with all of its included submodules and imported modules.
-     The rest of the schema nodes are optional and describe changes in
-     all the statements of a single YANG module.
+    "This YANG 1.1 module contains extensions to support comparison
+     between different versions of YANG schemas.
 
      Copyright (c) 2026 IETF Trust and the persons identified as
      authors of the code.  All rights reserved.
@@ -480,7 +464,7 @@ module ietf-yang-schema-comparison {
   // RFC Ed.: replace XXXX (inc above) with actual RFC number and
   // remove this note.
 
-  revision 2026-05-05 {
+  revision 2026-05-27 {
     description
       "Initial revision.";
     reference
@@ -541,6 +525,228 @@ module ietf-yang-schema-comparison {
       "RFC 7950: The YANG 1.1 Data Modeling Language, section 11;
        RFC 6020: YANG - A Data Modeling Language for the Network
        Configuration Protocol (NETCONF), section 10";
+  }
+}
+
+]]></sourcecode>
+    </section>
+    <section anchor="contributor" numbered="true" toc="default">
+      <name>Contributors</name>
+      <t>This document grew out of the YANG module versioning design team that
+  started after IETF 101.  The following individuals are (or have been) members
+  of the design team and have worked on the YANG versioning project:</t>
+      <ul spacing="normal">
+        <li>Balazs Lengyel</li>
+        <li>Benoit Claise</li>
+        <li>Bo Wu</li>
+        <li>Ebben Aries</li>
+        <li>Jason Sterne</li>
+        <li>Joe Clarke</li>
+        <li>Juergen Schoenwaelder</li>
+        <li>Mahesh Jethanandani</li>
+        <li>Michael Wang</li>
+        <li>Qin Wu</li>
+        <li>Reshad Rahman</li>
+        <li>Rob Wilton</li>
+        <li>Jan Lindblad</li>
+        <li>Per Andersson</li>
+      </ul>
+      <t>The ideas for a tooling based comparison of YANG module revisions was
+   first described in <xref target="I-D.clacla-netmod-yang-model-update" format="default"/>.
+   This document extends upon those initial ideas.</t>
+    </section>
+    <section anchor="security" numbered="true" toc="default">
+      <name>Security Considerations</name>
+      <t>This section follows the template defined in Section 3.7.1 of
+        <xref target="RFC8407"/>.</t>
+
+      <t>The YANG module specified in this document defines a schema for data
+        that is designed to be used by offline tooling to generate output for
+        differences in supplied YANG modules.</t>
+
+      <t>The YANG module specified in this document MAY be accessed via network
+        management protocols such as NETCONF <xref target="RFC6241"/> or
+        RESTCONF <xref target="RFC8040"/>. The lowest NETCONF layer is the
+        secure transport layer, and the mandatory-to-implement secure transport
+        is Secure Shell (SSH) <xref target="RFC6242"/>. The lowest RESTCONF
+        layer is HTTPS, and the mandatory-to-implement secure transport is TLS
+        <xref target="RFC8446"/>.</t>
+
+      <t>The Network Configuration Access Control Model (NACM)
+        <xref target="RFC8341"/> provides the means to restrict access for
+        particular NETCONF or RESTCONF users to a preconfigured subset of all
+        available NETCONF or RESTCONF protocol operations and content.</t>
+
+      <t>When the module is used for offline tooling there are no security
+        considerations, since the user has full access to all YANG modules
+        used.</t>
+
+      <t>The structure "schema-comparison" contains all the groupings reflecting
+        the changes between YANG modules. If the data of this structure are
+        published in online tooling, care needs to be taken so that knowledge of
+        YANG modules is not leaked.</t>
+
+      <t>Since the module does not define any RPCs, actions, or notifications,
+        the security considerations for such statements are not provided here.</t>
+    </section>
+    <section anchor="iana" numbered="true" toc="default">
+      <name>IANA Considerations</name>
+      <section anchor="xml-registry" numbered="true" toc="default">
+        <name>The "IETF XML" Registry</name>
+        <t>This document register one URI in the "ns" subregistry of
+          the IETF XML Registry <xref target="RFC3688" format="default"/>
+          maintained at <eref target="https://www.iana.org/assignments/xml-registry/xml-registry.xhtml#ns"/>.
+          Following the format in <xref target="RFC3688" format="default"/>,
+          the following registration is requested:</t>
+        <t>
+          <figure align="center">
+            <artwork>
+URI: urn:ietf:params:xml:ns:yang:ietf-yang-schema-comparison
+Registrant Contact: The IESG.
+XML: N/A, the requested URI is an XML namespace.
+            </artwork>
+          </figure>
+        </t>
+      </section>
+
+      <section anchor="yang-module-registrations" numbered="true" toc="default">
+        <name>The "YANG Module Names" Registry</name>
+        <t>This document registers two YANG modules in the YANG Module Names
+          registry <xref target="RFC6020" format="default"/> maintained at
+          <eref target="https://www.iana.org/assignments/yang-parameters/yang-paramaters.xhtml"/>.
+          Following the format defined in <xref target="RFC6020"/>, the below
+          registrations are requested:
+        </t>
+        <t>
+          <figure align="center">
+            <artwork>
+   Name: ietf-yang-schema-comparison
+   XML Namespace: urn:ietf:params:xml:ns:yang:ietf-yang-schema-comparison
+   Prefix: schema-cmp
+   Reference: RFC XXXX
+
+   Name: ietf-yang-schema-comparison-output
+   XML Namespace: urn:ietf:params:xml:ns:yang:ietf-yang-schema-comparison-output
+   Prefix: schema-cmp-out
+   Reference: RFC XXXX
+            </artwork>
+          </figure>
+        </t>
+      </section>
+    </section>
+  </middle>
+  <back>
+    <references title="Normative References">
+        <?rfc include='reference.RFC.2119'?>
+        <?rfc include='reference.RFC.3688'?>
+        <?rfc include='reference.RFC.6020'?>
+        <?rfc include='reference.RFC.6241'?>
+        <?rfc include='reference.RFC.6242'?>
+        <?rfc include='reference.RFC.6991'?>
+        <?rfc include='reference.RFC.7950'?>
+        <?rfc include='reference.RFC.7951'?>
+        <?rfc include='reference.RFC.8040'?>
+        <?rfc include='reference.RFC.8174'?>
+        <?rfc include='reference.RFC.8341'?>
+        <?rfc include='reference.RFC.8407'?>
+        <?rfc include='reference.RFC.8446'?>
+        <?rfc include='reference.RFC.8525'?>
+        <?rfc include='reference.RFC.8791'?>
+        <?ref include='reference.I-D.ietf-netmod-yang-semver'?>
+        <?ref include='reference.I-D.ietf-netmod-yang-module-versioning'?>
+    </references>
+    <references title="Informative References">
+        <?ref include='reference.I-D.clacla-netmod-yang-model-update'?>
+    </references>
+    <section anchor="yang_module_schema_cmp_out">
+        <name>Schema Comparison Algorithm Output YANG Module</name>
+        <t keepWithNext="true">
+            YANG module with specific output of the schema comparison algorithm
+            supporting comparison of compiled or parsed and compiled schema
+            tree of a YANG module. The "ietf-yang-schema-comparison-output"
+            YANG module imports definitions from the "ietf-yang-types" module
+            defined in <xref target="RFC6991" format="default"/> and
+            "ietf-yang-library" module defined in
+            <xref target="RFC8525" format="default"/>, and
+            "ietf-yang-structure-ext" module defined in
+            <xref target="RFC8791" format="default"/>.
+        </t>
+        <sourcecode name="ietf-yang-schema-comparison-output@2026-05-27.yang" type=""
+            markers="true"><![CDATA[
+module ietf-yang-schema-comparison-output {
+  yang-version 1.1;
+  namespace "urn:ietf:params:xml:ns:yang:ietf-yang-schema-comparison-output";
+  prefix schema-cmp-out;
+
+  import ietf-yang-types {
+    prefix yang;
+    reference
+      "RFC 6991: Common YANG Data types";
+  }
+  import ietf-yang-library {
+    prefix yanglib;
+    reference
+      "RFC 8525: YANG Library";
+  }
+  import ietf-yang-structure-ext {
+    prefix sx;
+    reference
+      "RFC 8791: YANG Data Structure Extensions";
+  }
+
+  organization
+    "IETF NETMOD (Network Modeling) Working Group";
+  contact
+    "WG List: NETCONF WG list <mailto:netmod@ietf.org>
+     WG Web:  https://datatracker.ietf.org/wg/netmod
+
+     Author:  Michal Vaško
+              <mailto:mvasko@cesnet.cz>
+
+     Author:  Rob Wilton
+              <mailto:rwilton@cisco.com>
+
+     Author:  Per Andersson
+              <mailto:per.ietf@ionio.se>";
+  description
+    "This YANG 1.1 module contains definitions of output of comparison
+     between different versions of YANG schemas. The base schema nodes
+     describe changes in a compiled YANG module with all of its
+     included submodules and imported modules. The rest of the schema
+     nodes are optional and describe changes in all the statements of a
+     single YANG module.
+
+     Copyright (c) 2026 IETF Trust and the persons identified as
+     authors of the code.  All rights reserved.
+
+     Redistribution and use in source and binary forms, with
+     or without modification, is permitted pursuant to, and
+     subject to the license terms contained in, the Revised
+     BSD License set forth in Section 4.c of the IETF Trust's
+     Legal Provisions Relating to IETF Documents
+     (https://trustee.ietf.org/license-info).
+
+     This version of this YANG module is part of RFC XXXX
+     (https://www.rfc-editor.org/info/rfcXXXX); see the RFC
+     itself for full legal notices.
+
+     The key words 'MUST', 'MUST NOT', 'REQUIRED', 'SHALL',
+     'SHALL NOT', 'SHOULD', 'SHOULD NOT', 'RECOMMENDED',
+     'NOT RECOMMENDED', 'MAY', and 'OPTIONAL' in this document
+     are to be interpreted as described in BCP 14 (RFC 2119)
+     (RFC 8174) when, and only when, they appear in all
+     capitals, as shown here.";
+
+  // RFC Ed.: update the date below with the date of RFC publication
+  // and remove this note.
+  // RFC Ed.: replace XXXX (inc above) with actual RFC number and
+  // remove this note.
+
+  revision 2026-05-27 {
+    description
+      "Initial revision.";
+    reference
+      "RFC XXXX: YANG Schema Comparison";
   }
 
   feature parsed-schema {
@@ -850,7 +1056,7 @@ module ietf-yang-schema-comparison {
 
   grouping when-stmts {
     description
-      "Describes changes of all the must statements of a specific parent
+      "Describes changes of all the when statements of a specific parent
        statement.";
     list when {
       description
@@ -1040,7 +1246,10 @@ module ietf-yang-schema-comparison {
       leaf inverted {
         type boolean;
         description
-          "Inverted substatement value.";
+          "A value of true indicates that the pattern's 'modifier'
+           substatement is 'invert-match'.";
+        reference
+          "RFC 7950 Section 9.4.6";
       }
       uses restriction-substmts;
     }
@@ -1150,7 +1359,7 @@ module ietf-yang-schema-comparison {
       leaf restriction {
         type string;
         description
-          "Range argument substatement value.";
+          "Length argument substatement value.";
       }
       uses restriction-substmts;
     }
@@ -1349,7 +1558,10 @@ module ietf-yang-schema-comparison {
     leaf presence {
       type boolean;
       description
-        "Presence substatement existence.";
+        "Indicates whether a presence substatement is defined for
+         the container in the compiled schema. The textual argument
+         of 'presence' is reported via the parsed schema comparison
+         (see the 'presence' leaf in 'parsed-substmts').";
     }
     uses ext-instance-stmts;
   }
@@ -1973,130 +2185,11 @@ module ietf-yang-schema-comparison {
     }
   }
 }
+
 ]]></sourcecode>
     </section>
-    <section anchor="contributor" numbered="true" toc="default">
-      <name>Contributors</name>
-      <t>This document grew out of the YANG module versioning design team that
-  started after IETF 101.  The following individuals are (or have been) members
-  of the design team and have worked on the YANG versioning project:</t>
-      <ul spacing="normal">
-        <li>Balazs Lengyel</li>
-        <li>Benoit Claise</li>
-        <li>Bo Wu</li>
-        <li>Ebben Aries</li>
-        <li>Jason Sterne</li>
-        <li>Joe Clarke</li>
-        <li>Juergen Schoenwaelder</li>
-        <li>Mahesh Jethanandani</li>
-        <li>Michael Wang</li>
-        <li>Qin Wu</li>
-        <li>Reshad Rahman</li>
-        <li>Rob Wilton</li>
-        <li>Jan Lindblad</li>
-        <li>Per Andersson</li>
-      </ul>
-      <t>The ideas for a tooling based comparison of YANG module revisions was
-   first described in <xref target="I-D.clacla-netmod-yang-model-update" format="default"/>.
-   This document extends upon those initial ideas.</t>
-    </section>
-    <section anchor="security" numbered="true" toc="default">
-      <name>Security Considerations</name>
-      <t>This section follows the template defined in Section 3.7.1 of
-        <xref target="RFC8407"/>.</t>
-
-      <t>The YANG module specified in this document defines a schema for data
-        that is designed to be used by offline tooling to generate output for
-        differences in supplied YANG modules.</t>
-
-      <t>The YANG module specified in this document MAY be accessed via network
-        management protocols such as NETCONF <xref target="RFC6241"/> or
-        RESTCONF <xref target="RFC8040"/>. The lowest NETCONF layer is the
-        secure transport layer, and the mandatory-to-implement secure transport
-        is Secure Shell (SSH) <xref target="RFC6242"/>. The lowest RESTCONF
-        layer is HTTPS, and the mandatory-to-implement secure transport is TLS
-        <xref target="RFC8446"/>.</t>
-
-      <t>The Network Configuration Access Control Model (NACM)
-        <xref target="RFC8341"/> provides the means to restrict access for
-        particular NETCONF or RESTCONF users to a preconfigured subset of all
-        available NETCONF or RESTCONF protocol operations and content.</t>
-
-      <t>When the module is used for offline tooling there are no security
-        considerations, since the user has full access to all YANG modules
-        used.</t>
-
-      <t>The structure "schema-comparison" contains all the groupings reflecting
-        the changes between YANG modules. If the data of this structure are
-        published in online tooling, care needs to be taken so that knowledge of
-        YANG modules is not leaked.</t>
-
-      <t>Since the module does not define any RPCs, actions, or notifications,
-        the security considerations for such statements are not provided here.</t>
-    </section>
-    <section anchor="iana" numbered="true" toc="default">
-      <name>IANA Considerations</name>
-      <section anchor="xml-registry" numbered="true" toc="default">
-        <name>The "IETF XML" Registry</name>
-        <t>This document register one URI in the "ns" subregistry of
-          the IETF XML Registry <xref target="RFC3688" format="default"/>
-          maintained at <eref target="https://www.iana.org/assignments/xml-registry/xml-registry.xhtml#ns"/>.
-          Following the format in <xref target="RFC3688" format="default"/>,
-          the following registration is requested:</t>
-        <t>
-          <figure align="center">
-            <artwork>
-URI: urn:ietf:params:xml:ns:yang:ietf-yang-schema-comparison
-Registrant Contact: The IESG.
-XML: N/A, the requested URI is an XML namespace.
-            </artwork>
-          </figure>
-        </t>
-      </section>
-
-      <section anchor="yang-module-registrations" numbered="true" toc="default">
-        <name>The "YANG Module Names" Registry</name>
-        <t>This document registers one YANG module in the YANG Module Names
-          registry <xref target="RFC6020" format="default"/> maintained at
-          <eref target="https://www.iana.org/assignments/yang-parameters/yang-paramaters.xhtml"/>.
-          Following the format defined in <xref target="RFC6020"/>, the below
-          registration is requested:</t>
-        <t>
-          <figure align="center">
-            <artwork>
-Name: ietf-yang-schema-comparison
-XML Namespace: urn:ietf:params:xml:ns:yang:ietf-yang-schema-comparison
-Prefix: schema-cmp
-Reference: RFC XXXX
-            </artwork>
-          </figure>
-        </t>
-      </section>
-    </section>
-  </middle>
-  <back>
-    <references title="Normative References">
-        <?rfc include='reference.RFC.2119'?>
-        <?rfc include='reference.RFC.3688'?>
-        <?rfc include='reference.RFC.6020'?>
-        <?rfc include='reference.RFC.6241'?>
-        <?rfc include='reference.RFC.6242'?>
-        <?rfc include='reference.RFC.6991'?>
-        <?rfc include='reference.RFC.7950'?>
-        <?rfc include='reference.RFC.8040'?>
-        <?rfc include='reference.RFC.8174'?>
-        <?rfc include='reference.RFC.8341'?>
-        <?rfc include='reference.RFC.8407'?>
-        <?rfc include='reference.RFC.8446'?>
-        <?rfc include='reference.RFC.8525'?>
-        <?rfc include='reference.RFC.8791'?>
-        <?ref include='reference.I-D.ietf-netmod-yang-semver'?>
-        <?ref include='reference.I-D.ietf-netmod-yang-module-versioning'?>
-    </references>
-    <references title="Informative References">
-        <?ref include='reference.I-D.clacla-netmod-yang-model-update'?>
-    </references>
-    <section anchor="examples" title="Comparison Examples">
+    <section anchor="examples">
+        <name>Comparison Examples</name>
         <t>
             This section provides various examples of the output of the
             comparison algorithm defined in this document to illustrate it on
