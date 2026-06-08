@@ -83,7 +83,7 @@ document defines a YANG extension for controlling module imports based on these 
 <t>This document defines a YANG extension that tags a YANG artifact (i.e., YANG modules, YANG submodules, and YANG packages <xref target="I-D.ietf-netmod-yang-packages" format="default"/>
 )
         with a version identifier (YANG Semver) that adheres to extended semantic versioning rules <xref target="SemVer" format="default"/>.
-      The goal being to add a human readable version identifier that
+      The goal is to add a human-readable version identifier that
     provides compatibility information for the YANG artifact without needing to compare or parse its body.
 The version identifier and rules defined herein represent the recommended approach to apply versioning to IETF YANG artifacts.
 This document defines augmentations to ietf-yang-library to reflect the version of YANG modules within the module-set data.
@@ -258,10 +258,10 @@ that all revisions of a given YANG artifact will have a semantic version identif
        indicate changes that are backwards-compatible to versions with
        the same MAJOR version number, but a lower MINOR version number
        and no "_compatible" or "_non_compatible" modifier.</li>
-<li>'Z' is the PATCH version. Changes in the PATCH
-       version number can indicate an editorial change to the YANG artifact.
-       In conjunction with the '_COMPAT' modifier (see below) changes to 'Z'
-       may indicate a more substantive module change.
+<li>'Z' is the PATCH version. A change to the PATCH
+       version number alone (i.e., with no '_COMPAT' modifier) indicates an editorial change to the YANG artifact.
+       When the '_COMPAT' modifier is also present (see below), a change to 'Z' indicates a backwards-compatible
+       or non-backwards-compatible change as conveyed by the modifier.
        An editorial change is defined to be a change in the YANG artifact's
    content that does not affect the semantic meaning or functionality provided by
    the artifact in any way.  Some examples include correcting a spelling mistake in the 
@@ -418,7 +418,8 @@ if artifact version "1.2.3" has already been defined.</t>
   Additional pre-release rules for modules that have had at least one release are specified in <xref target="guidelines" format="default"/>.
 </t>
 <t>
-The following four rules specify the RECOMMENDED, and REQUIRED minimum, update to a YANG semantic version:
+The following four rules specify the RECOMMENDED, and REQUIRED minimum, update to a YANG semantic version.
+(A separate set of OPTIONAL rules, describing more significant updates an author MAY choose, follows these four.)
 </t>
 <ol spacing="normal" type="1">
 <li>If an artifact is being updated in a non-backwards-compatible way,
@@ -503,8 +504,25 @@ An artifact author MAY choose a more significant update, as described later in t
 <section anchor="example_module" numbered="true" toc="default">
 <name>Example Module Using YANG Semver</name>
 <t>Below is a sample YANG module that uses YANG Semver
-        based on the rules defined in this document.
+        based on the rules defined in this document.  The following diagram
+        illustrates the revision history captured by the module's revision statements,
+        from the initial released version through the latest revision (the chronological
+        order matches the order in which the versions were published):
 </t>
+<figure>
+<artwork name="" type="" align="left" alt=""><![CDATA[
+Module revision date      YANG Semver version identifier
+       2017-02-07                 <- 1.0.0
+           |
+       2017-04-03                 <- 1.1.0
+           |
+       2017-04-20                 <- 1.2.0
+           |
+       2017-07-30                 <- 1.2.1_non_compatible
+           |
+       2017-08-30                 <- 1.2.2_non_compatible
+]]></artwork>
+</figure>
 <artwork name="" type="" align="left" alt=""><![CDATA[
   module example-versioned-module {
     yang-version 1.1;
@@ -655,7 +673,8 @@ statement is considered a backwards compatible change.  An example use is:</t>
 <name>Import by YANG Semantic Version Rules</name>
 <t>When evaluating target module to import, only the numeric triplet of MAJOR.MINOR.PATCH is considered.
 The "_compatible" and "_non_compatible" modifiers as well as any metadata are ignored.
- A module to be imported is considered as meeting the recommended minimum version criteria if it meets one of the following conditions:</t>
+ A module to be imported is considered as meeting the recommended minimum version criteria if it meets at least one of the following conditions
+ (the conditions are not listed in priority order and any single matching condition is sufficient):</t>
 <ol type="1" spacing="normal">
 <li>Has the exact same MAJOR, MINOR, PATCH as in the recommended-min-version value.</li>
 <li>Has the same MAJOR and MINOR version numbers and a greater PATCH number.</li>
@@ -683,7 +702,7 @@ The "_compatible" and "_non_compatible" modifiers as well as any metadata are ig
 </section>
 <section anchor="guidelines" numbered="true" toc="default">
 <name>Guidelines for Using YANG Semver During Module Development</name>
-<t>This section and the IETF-specific sub-section below provide YANG Semver-specific
+<t>This section and the IETF-specific subsection below provide YANG Semver-specific
     guidelines to consider when developing new YANG modules.  As such this section
     updates <xref section="4.8" sectionFormat="of" target="RFC9907"/>.</t>
 <t>All modules and submodules being developed or updated that use the YANG Semver
@@ -742,8 +761,8 @@ The "_compatible" and "_non_compatible" modifiers as well as any metadata are ig
 <t>All published IETF modules and submodules MUST use YANG semantic versions in their revisions.  This
 is an update to the guidance provided in <xref section="4.8" sectionFormat="of" target="RFC9907"/>.
 As IETF modules are not expected to require branching in their revision history, the '_COMPAT' modifier SHOULD NOT be used in IETF published modules.
-The modifier would only be approppriate in the unexpected event that an IETF module's revision history branched
-(e.g, to maintain an older MAJOR.MINOR stream).  In lieu of such branching, it conveys no information and adds confusion.</t>
+The modifier would only be appropriate in the unexpected event that an IETF module's revision history branched
+(e.g., to maintain an older MAJOR.MINOR stream).  In lieu of such branching, it conveys no information and adds confusion.</t>
 <section anchor="ietf_new_module_development" numbered="true" toc="default">
 <name>YANG Semver in New IETF Modules</name>
 <t>Development of a new module or submodule (i.e., when there is no existing module of the same name) within the IETF MUST 
@@ -765,9 +784,9 @@ The modifier would only be approppriate in the unexpected event that an IETF mod
 retroactively applied to all existing revisions when the next new revision is created, starting at
 version "1.0.0" for the initial published revision, and then incrementing according to the YANG Semver 
 version rules specified in <xref target="semver_update_rules" format="default"/>.
-For example, if a module or submodule started out in the pre-NMDA (<xref target="RFC8342" format="default"/>
-) world, and then had NMDA support added without
-removing any legacy "state" branches -- and you are looking to add additional new features -- a sensible choice for the target YANG Semver would be 1.2.0 (since 1.0.0 would
+For example, if a module or submodule was first published before NMDA (<xref target="RFC8342" format="default"/>
+) and subsequently had NMDA support added without removing any legacy "state" branches, then when adding additional new features a sensible choice
+for the target YANG Semver would be 1.2.0 (since 1.0.0 would
 have been the initial, pre-NMDA release, and 1.1.0 would have been the NMDA revision).</t>
 </section>
 </section>
@@ -1362,7 +1381,7 @@ group <xref target="RFC3688"/>:</t>
 <section anchor="appendix_B" numbered="true" toc="default">
 <name>Examples of _COMPAT Modifier Use</name>
 <t>The following scenarios illustrate some situations where the _COMPAT modifier (i.e., _compatible and _non_compatible)
-might be used in the YANG Semver of a YANG module.  While module development is considered here, this is appliacable to any YANG artifact.</t>
+might be used in the YANG Semver of a YANG module.  While module development is considered here, this is applicable to any YANG artifact.</t>
   <t>In the scenarios below, the X axis represents relative time (date &amp; time) that a module is being published. Module
   versions to the right are more recent than module versions to the left. In scenario 1, for example, the time ordered publishing of 
   module versions is: 2.0.0, 2.1.0, 3.0.0, A, B.</t>
@@ -1382,7 +1401,7 @@ might be used in the YANG Semver of a YANG module.  While module development is 
             3.0.0
 ]]>  </artwork>
 </figure>
-  <t>For each revision A and B, the following are possible YANG Semver versions when the revision is backwards comptible (BC) or non backwards compatible (NBC):</t>
+  <t>For each revision A and B, the following are possible YANG Semver versions when the revision is backwards-compatible (BC) or non-backwards-compatible (NBC):</t>
   <ul empty="true" spacing="normal">
     <li>Revision A (BC): 2.0.1_compatible</li>
     <li>Revision A (NBC): 2.0.1_non_compatible</li>
@@ -1403,7 +1422,7 @@ might be used in the YANG Semver of a YANG module.  While module development is 
               2.2.1-------------Q
 ]]></artwork>
 </figure>
-  <t>For each revision N, P and Q, the following are possible YANG Semver versions when the revision is backwards comptible (BC) or non backwards compatible (NBC):</t>
+  <t>For each revision N, P and Q, the following are possible YANG Semver versions when the revision is backwards compatible (BC) or non backwards compatible (NBC):</t>
   <ul empty="true" spacing="normal">
 <li>Revision N (BC): 2.1.1_compatible</li>
 <li>Revision N (NBC): 2.1.1_non_compatible</li>
