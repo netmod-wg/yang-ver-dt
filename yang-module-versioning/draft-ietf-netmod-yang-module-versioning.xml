@@ -76,7 +76,7 @@
         <t>This document updates <xref target="RFC7950"/> section 11 and <xref target="RFC6020"/> section 10. <xref target="yang_revision_handling"/> describes modifications to YANG revision handling and update rules, and <xref target="import"/> describes a YANG extension statement to describe potential YANG import revision dependencies.</t>
         <t>This document updates Sections 4.7 and 4.8 of <xref target="RFC9907"/>. <xref target="guidelines"/> provides guidelines on managing the lifecycle of YANG modules that may contain non-backwards-compatible changes and a branched revision history.
         </t>
-        <t>This document updates <xref target="RFC8525"/> with augmentations to include two boolean leafs to indicate whether status deprecated and status obsolete schema nodes are implemented by the server. Note, an "updates" tag is used to highlight to readers of <xref target="RFC8525"/> the relationship between these documents because <xref target="RFC8525"/> is a core manageability specification and this document sets the future direction of YANG versioning.
+        <t>This document updates <xref target="RFC8525"/> with augmentations to include two boolean leafs to indicate whether status deprecated and status obsolete schema nodes are implemented by the server. Note, an RFC "updates" tag is used to highlight to readers of <xref target="RFC8525"/> about the relationship between these documents because <xref target="RFC8525"/> is a core manageability specification and this document sets the future direction of YANG versioning.
         </t>
       </section>
     </section>
@@ -102,7 +102,7 @@
       <t><xref target="RFC7950"/> and <xref target="RFC6020"/> assume, but do not explicitly state, that the revision history for a YANG module or submodule is strictly linear, i.e., it is prohibited to have two independent revisions of a YANG module or submodule that are both directly derived from the same parent revision.</t>
       <t>This document clarifies <xref target="RFC7950"/> and <xref target="RFC6020"/> to explicitly allow non-linear development of YANG module and submodule revisions, so that they MAY have multiple revisions that directly derive from the same parent revision.  As per <xref target="RFC7950"/> and <xref target="RFC6020"/>, YANG module and submodule revisions continue to be uniquely identified by their revision date, and hence all revisions of a given module or submodule MUST have unique revision dates.</t>
       <t>However, using revision dates alone to identify revisions of a YANG module versioned with a branched revision history is likely to be confusing because the relationship between module revisions is no longer guaranteed to be chronologically ordered. Instead, for modules that may use a branched revision history, it is RECOMMENDED to use a version identifier, such as the one described in <xref target="I-D.ietf-netmod-yang-semver"/>, that better describes the semantic relationship between the revisions.</t>
-      <t>For a given YANG module, revision B is derived from revision A if revision A is listed in revision B's revision history, or would have been listed there had it not been removed (see <xref target="removing-revisions-history"/>).  Although this document allows for a branched revision history, a given YANG module revision history does not contain all revisions in all possible branches, it only lists those from which it was derived, i.e., the module revision's history describes a single path of derived revisions (or a subset of them if one or more have been removed) back to the root of the module's revision history.</t>
+      <t>For a given YANG module, revision B is derived from revision A if revision A is listed in revision B's revision history, or would have been listed there had it not been removed (see <xref target="removing-revisions-history"/>).  Although this document allows for a branched revision history, a given YANG module revision history does not contain all revisions in all possible branches, it only lists those from which it was derived, i.e., the module revision's history describes a single path of linear derived revisions (or a subset of them if one or more have been removed) back to the root of the module's revision history.</t>
       <t>A corollary to the text above is that the ancestry (derived relationship) between two module or submodule revisions cannot be determined by comparing the module or submodule revision date or version identifier alone - the revision history must be consulted.</t>
       <t>A module's name and revision date identify a specific immutable definition of that module within its revision history.  Hence, if a module includes submodules then to ensure that the module's content is uniquely defined, the module's "include" statements SHOULD use "revision-date" substatements to specify the exact revision date of each included submodule. When a module does not include its submodules by revision-date,  the revision of submodules used cannot be derived from the including module. Mechanisms such as YANG packages <xref target="I-D.ietf-netmod-yang-packages"/> and YANG library <xref target="RFC8525"/> could be used to specify the exact submodule revisions used when the submodule revision date is not constrained by the "include" statement.</t>
       <t><xref target="RFC7950"/> section 11 and <xref target="RFC6020"/> section 10 require that all updates to a YANG module are backwards-compatible (BC) to the previous revision of the module.  This document introduces a method to indicate that a non-backwards-compatible (NBC) change has occurred between module revisions: this is done by using a new "non-backwards-compatible" YANG extension statement in the module revision history.</t>
@@ -401,8 +401,8 @@ module: ietf-yang-library-status
             <list style ="numbers">
               <t>The changes should be made gradually, e.g., a schema node's status SHOULD NOT be changed directly from
              "current" to "obsolete" (see Section 4.7 of
-                <xref target="RFC9907"/>). Instead, the status SHOULD first be marked "deprecated". At some point in the future, when support is removed for the schema node, there are two options. The first, and preferred, option is to keep the schema node definition in the module and change the status to “obsolete”. The second option is to simply remove the schema node from the module, but this has the risk of breaking
-             modules that import the modified module, and the removed identifier may be accidentally reused in a future revision.
+                <xref target="RFC9907"/>). Instead, the status SHOULD first be marked "deprecated". At some point in the future, when support is removed for the schema node, there are two options. The first, and preferred, option is to keep the schema node definition in the module and change the status to “obsolete”. The second option is to simply remove the schema node from the module, but this has the risk of 
+                breaking modules that import the modified module, and the removed identifier may be accidentally reused in a future revision.
               </t>
               <t>For deprecated schema nodes the "description" statement SHOULD also indicate until when support for the schema node is guaranteed (if known). If there is a replacement schema node for the deprecated schema node, this MUST be stated in the "description". The reason for deprecating the schema node can also be included in the "description" if it is deemed to be of potential interest to the user.</t>
               <t>For obsolete schema nodes, it is RECOMMENDED to keep the above information, from when the node had status "deprecated", which is still relevant.</t>
@@ -572,8 +572,8 @@ module ietf-yang-revisions {
        type.
 
        The statement MUST only be a substatement of the import
-       statement.  Zero or one 'recommended-min-date'
-       extension statement is allowed for each parent 'import' statement.
+       statement. Zero or one 'recommended-min-date' extension
+       statement is allowed for each parent 'import' statement.
        No substatements for this extension have been standardized.
 
        A particular revision of an imported module adheres to an 
@@ -680,11 +680,11 @@ module ietf-yang-library-status {
       description
         "If set to true, this leaf indicates that all schema nodes
          with a status 'deprecated' are implemented equivalently as
-         if they had status 'current' unless this is overridden by a deviation 
-         statement. Concretely, when this leaf is set to true,
-         deviations MUST be used to explicitly remove any deprecated
-         nodes from the schema that are not implemented.
-         If this leaf is absent or set to false, then the behavior is
+         if they had status 'current' unless this is overridden by a 
+         deviation statement. Concretely, when this leaf is set to 
+         true, deviations MUST be used to explicitly remove any 
+         deprecated nodes from the schema that are not implemented. 
+         If this leaf is absent or set to false, then the behavior is 
          unspecified.";
       reference
         "XXXX: Updated YANG Module Revision Handling;
@@ -949,19 +949,25 @@ module ietf-yang-library-status {
    <yang-library
 	    xmlns="urn:ietf:params:xml:ns:yang:ietf-yang-library"
 	    xmlns:ds="urn:ietf:params:xml:ns:yang:ietf-datastores"
-            xmlns:yls="urn:ietf:params:xml:ns:yang:ietf-yang-library-status">
+      xmlns:yls="urn:ietf:params:xml:ns:yang:ietf-yang-library-status">
      <schema>
        <name>config-schema</name>
        <module-set>config-modules</module-set>
-       <yls:deprecated-nodes-implemented>true</yls:deprecated-nodes-implemented>
+       <yls:deprecated-nodes-implemented>
+         true
+       </yls:deprecated-nodes-implemented>
        <yls:obsolete-nodes-absent>true</yls:obsolete-nodes-absent>
      </schema>
      <schema>
        <name>state-schema</name>
        <module-set>config-modules</module-set>
        <module-set>state-modules</module-set>
-       <yls:deprecated-nodes-implemented>true</yls:deprecated-nodes-implemented>
-       <yls:obsolete-nodes-absent>true</yls:obsolete-nodes-absent>
+       <yls:deprecated-nodes-implemented>
+         true
+       </yls:deprecated-nodes-implemented>
+       <yls:obsolete-nodes-absent>
+         true
+       </yls:obsolete-nodes-absent>
      </schema>
 
      <datastore>
@@ -977,7 +983,9 @@ module ietf-yang-library-status {
        <schema>state-schema</schema>
      </datastore>
 
-     <content-id>75a43df9bd56b92aacc156a2958fbe12312fb285</content-id>
+     <content-id>
+       75a43df9bd56b92aacc156a2958fbe12312fb285
+     </content-id>
   </yang-library>
 ]]></sourcecode>
 
