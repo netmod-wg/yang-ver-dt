@@ -1,8 +1,8 @@
-//| mill-version: 1.0.0-RC1
+//| mill-version: 1.1.2
 //| mill-jvm-version: temurin:21.0.1
 //| mvnDeps:
-//| - uk.org.wilton::yang-pkg-lib:0.0.8
-//| - uk.org.wilton::yang-pkg-mill-plugin::0.0.8
+//| - uk.org.wilton::yang-pkg-lib:0.0.13
+//| - uk.org.wilton::yang-pkg-mill-plugin::0.0.13
 package build
 
 import mill._
@@ -10,6 +10,10 @@ import mill._
 import uk.org.wilton.{plugins, yang}
 import plugins.mill.*
 import yang.packages.tools.lib.*
+
+import java.nio.charset.StandardCharsets
+import java.util.regex.{Matcher, Pattern}
+import scala.jdk.CollectionConverters.*
 
 /**
   * IETF Common YANG Package Definitions.
@@ -40,6 +44,30 @@ trait ExamplePkgDefn extends PkgDefn:
 //         "ietf-netconf-acm@2018-02-14")
 // }
 
+object YangInstDataSchemaPkg_0_1_0 extends IetfPkgDefn:
+  def name = "yang-inst-data-schema-pkg"
+  def version = "0.1.0"
+  def description =
+    """|Package schema to use for defining the yang-inst-data-schema
+       |schema for YANG packages.
+       |
+       |TODO - RFC Editor, plesae check semver and module versioning
+       |module revisions.
+       |
+       |RFC Editor, please update this module version to 1.0.0 on
+       |publication of the RFC.""".stripMargin
+
+  def reference = ""
+
+  def modules = Seq("ietf-yang-package-instance@0.8.0")
+  def importOnlyModules =
+    Seq("ietf-yang-package-types@0.8.0",
+        "ietf-yang-revisions@2025-09-16",
+        "ietf-yang-semver@2025-09-29",
+        "ietf-yang-types@2025-12-22",
+        "ietf-inet-types@2025-12-22",
+        "ietf-yang-structure-ext@2020-06-17")
+
 object ExampleBaseTypesPkg_1_0_0 extends ExamplePkgDefn {
   def name = "example-base-types-pkg"
   def version = "1.0.0"
@@ -55,7 +83,7 @@ object ExampleBaseTypesPkg_1_0_0 extends ExamplePkgDefn {
 }
 
 // Same as above but with updated RFC references and module versions.
-object ExampleBaseTypesPkg extends ExamplePkgDefn {
+object ExampleBaseTypesPkg_1_1_0 extends ExamplePkgDefn {
   def name = "example-base-types-pkg"
   def version = "1.1.0"
   def description =
@@ -76,7 +104,7 @@ object ExampleRoutingTypesPkg extends ExamplePkgDefn {
     "Example package containing routing types modules"
   def reference = ""
 
-  def includedPackages = Seq(ExampleBaseTypesPkg)
+  def includedPackages = Seq(ExampleBaseTypesPkg_1_1_0)
   def modules = Seq()
   def importOnlyModules =
     Seq("ietf-routing-types@2017-12-04",
@@ -129,3 +157,165 @@ object ExampleCPackage extends ExamplePkgDefn {
 // def all = Task {
 //   Seq(ExampleBasePkg, ExampleBasePkg2).map(_.writePackage)
 // }
+
+object DraftXml extends mill.Module:
+  private case class YangModule(name: String, source: String)
+
+  private val modules = Seq(
+    YangModule("ietf-yang-package-types", "ietf-yang-package-types.yang"),
+    YangModule("ietf-yang-package-instance", "ietf-yang-package-instance.yang"),
+    YangModule("ietf-yang-packages", "ietf-yang-packages.yang"),
+    YangModule("ietf-yl-packages", "ietf-yl-packages.yang"),
+    YangModule("ietf-yang-inst-data-pkg", "ietf-yang-inst-data-pkg.yang"),
+  )
+
+  private def dir =
+    Iterator.iterate(os.pwd)(_ / os.up).take(20)
+      .find(p => os.exists(p / "draft-ietf-netmod-yang-packages.xml"))
+      .getOrElse(sys.error("cannot find yang-packages directory"))
+
+  private def depDirs =
+    val repo = dir / os.up
+    val fromEnv = sys.env.get("YANG_MODPATH").toSeq.flatMap(_.split(":"))
+      .filter(_.nonEmpty).map(os.Path(_, os.pwd))
+    (Seq(dir, repo / "yang-module-versioning", repo / "yang-semver",
+      repo / "common-dependencies") ++ fromEnv).filter(os.exists)
+
+  private def pyangEnv =
+    val configured = sys.env.get("PYANG_ENV_SH").map(os.Path(_, os.pwd))
+    configured.orElse(Some(os.Path("/Users/rwilton/git/pyang/env.sh")))
+      .filter(os.exists)
+
+  private def shellQuote(value: String) =
+    "'" + value.replace("'", "'\"'\"'") + "'"
+
+  private def sourcedCommand(cmd: Seq[String], cwd: os.Path) =
+    pyangEnv match
+      case Some(env) =>
+        val envDir = env / os.up
+        Seq(
+          "sh",
+          "-lc",
+          Seq(
+            "cd " + shellQuote(envDir.toString),
+            ". " + shellQuote(env.toString),
+            "cd " + shellQuote(cwd.toString),
+            "exec " + cmd.map(shellQuote).mkString(" ")
+          ).mkString(" && ")
+        )
+      case None => cmd
+
+  private def run(cmd: Seq[String], cwd: os.Path = dir): String =
+    val effectiveCmd = sourcedCommand(cmd, cwd)
+    val process = new ProcessBuilder(effectiveCmd.asJava).directory(cwd.toIO).start()
+    val out = new String(process.getInputStream.readAllBytes, StandardCharsets.UTF_8)
+    val err = new String(process.getErrorStream.readAllBytes, StandardCharsets.UTF_8)
+    val code = process.waitFor()
+    if code != 0 || err.trim.nonEmpty then
+      throw RuntimeException((effectiveCmd.mkString(" ") + "\n" + err + out).trim)
+    out
+
+  private def pyangBase =
+    Seq("pyang", "-W", "error") ++
+      depDirs.flatMap(p => Seq("-p", p.toString))
+
+  private def versionOf(text: String) =
+    """(?m)^\s+ys:version\s+([^;]+);""".r.findFirstMatchIn(text)
+      .map(_.group(1)).getOrElse(sys.error("missing ys:version"))
+
+  private def oneReplace(text: String, regex: String, replacement: Matcher => String) =
+    val matcher = Pattern.compile(regex, Pattern.DOTALL).matcher(text)
+    if !matcher.find() then sys.error(s"no XML block matched: $regex")
+    val start = matcher.start()
+    val end = matcher.end()
+    val value = replacement(matcher)
+    if matcher.find() then sys.error(s"more than one XML block matched: $regex")
+    text.substring(0, start) + value + text.substring(end)
+
+  private def packageTypesFigure(tree: String) =
+    val lines = tree.linesIterator.toVector
+    val start = lines.indexWhere(_.contains("grouping yang-pkg-instance:"))
+    if start == -1 then sys.error("yang-pkg-instance grouping not found")
+    val end = lines.indexWhere(_.startsWith("  grouping "), start + 1)
+    val block = lines.slice(start, if end == -1 then lines.length else end)
+    (lines.take(2) ++ block).mkString("\n")
+
+  private def xmlTreeFigure(module: YangModule, tree: String) =
+    module.name match
+      case "ietf-yang-package-instance" =>
+        """module: ietf-yang-package-instance
+          |
+          |  structure package:
+          |    // Uses the yang-package-instance grouping defined in
+          |    // ietf-yang-package-types.yang
+          |    +-- name                  pkg-name
+          |    +-- version               pkg-version
+          |    ... remainder of yang-package-instance grouping ...""".stripMargin
+      case "ietf-yang-packages" =>
+        """module: ietf-yang-packages
+          |  +--ro packages
+          |     +--ro package* [name version]
+          |        // Uses the yang-package-instance grouping defined in
+          |        // ietf-yang-package-types.yang.
+          |        +--ro name                  pkg-name
+          |        +--ro version               pkg-version
+          |        ... remainder of yang-package-instance grouping ...""".stripMargin
+      case _ => tree.trim
+
+  private def treeOptions(module: YangModule) =
+    module.name match
+      case "ietf-yang-package-types" => Seq("--tree-print-groupings")
+      case "ietf-yang-package-instance" | "ietf-yang-inst-data-pkg" =>
+        Seq("--tree-print-structures")
+      case _ => Seq.empty
+
+  def checkYang = Task:
+    run(pyangBase ++ modules.map(m => (dir / m.source).toString))
+
+  def generatedTreeFiles = Task:
+    checkYang()
+    val outDir = Task.dest / "tree"
+    os.makeDir.all(outDir)
+    modules.map: m =>
+      val tree = run(pyangBase ++ Seq("-f", "tree", "--tree-line-length=69") ++
+        treeOptions(m) ++ Seq((dir / m.source).toString))
+      val body =
+        if m.name == "ietf-yang-package-types" then packageTypesFigure(tree)
+        else tree.trim
+      val path = outDir / s"${m.name}.tree"
+      os.write.over(path, body + "\n")
+      PathRef(path)
+
+  def treeFiles() = Task.Command:
+    val outDir = dir / "generated" / "tree"
+    os.makeDir.all(outDir)
+    generatedTreeFiles().map: ref =>
+      val path = outDir / ref.path.last
+      os.copy.over(ref.path, path)
+      path
+
+  def updateXml() = Task.Command:
+    val trees = generatedTreeFiles()
+    val treeByModule = modules.zip(trees.map(t => os.read(t.path)))
+    val xmlPath = dir / "draft-ietf-netmod-yang-packages.xml"
+    val updatedTrees = treeByModule.foldLeft(os.read(xmlPath)):
+      case (xml, (module, tree)) =>
+        oneReplace(
+          xml,
+          s"(<artwork><!\\[CDATA\\[\\s*)module: ${Pattern.quote(module.name)}.*?\\n[\\r\\n]*(\\h*)\\]\\]></artwork>",
+          m => s"${m.group(1)}${xmlTreeFigure(module, tree)}\n${m.group(2)}]]></artwork>"
+        )
+    val updatedSources = modules.foldLeft(updatedTrees):
+      case (xml, m) =>
+        val source = os.read(dir / m.source).trim
+        val version = versionOf(source)
+        oneReplace(
+          xml,
+          s"(<artwork><!\\[CDATA\\[\\s*)<CODE BEGINS> file " +
+            s""""${Pattern.quote(m.name)}#[^"]+\\.yang""" +
+            ".*?<CODE ENDS>\\n[\\r\\n]*(\\h*)\\]\\]></artwork>",
+          mtch => s"${mtch.group(1)}<CODE BEGINS> file \"${m.name}#$version.yang\"\n" +
+            source + s"\n<CODE ENDS>\n${mtch.group(2)}]]></artwork>"
+        )
+    os.write.over(xmlPath, updatedSources)
+    xmlPath
