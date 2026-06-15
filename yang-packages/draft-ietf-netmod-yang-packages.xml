@@ -290,7 +290,7 @@
 
         <t>An "excludes" container comprising modules and features that are
         included via the resolved packages of entries in the
-        "includes/packages" list, but that are excluded from this package
+        "includes/package" list, but that are excluded from this package
         definition.  It is not possible to exclude packages.</t>
 
         <t>Lists of YANG packages that will be found at particular mount
@@ -477,16 +477,20 @@ module: ietf-yang-package-types
           <list style="symbols">
             <t>All mounted packages that are exported from any included packages
             are also exported at the same mount point for this specific package,
-            unless explicitly overridden by a mount definition in this package
-            with a 'replaces-package' statement.</t>
+            unless package inheritance is explicitly disabled by a 'mount' list
+            entry for the same mount point with 'inherit-packages' set to
+            'false'.</t>
 
-            <t>A package definition CANNOT remove a package from a mount point,
-            but it MAY add another different package version, which SHOULD be
-            newer version of the package.  A package definition MAY also remove
-            modules or enabled features.  In all cases, this is achieved by
-            listing the replacement package in the 'mount/package' list, which
-            MUST include a version of the package to be replaced.  Examples of
-            this are given in <xref target="replace_mounted_package_example"/>.
+            <t>A package definition can add mounted packages to a mount point
+            by listing them in the 'mount/package' list.  These entries are
+            additive, like entries in the 'includes/package' list. If the same
+            package name is listed with a different version, then both package
+            versions are retained.  I.e., a package definition can only remove
+            inherited mounted packages, modules, or enabled features only by
+            setting 'inherit-packages' to 'false' and explicitly listing the
+            packages that define the complete mounted schema.  Examples of this
+            are given in
+            <xref target="replace_mounted_package_example"/>.
             </t>
           </list>
         </t>
@@ -544,12 +548,20 @@ module: ietf-yang-package-types
             that module are also implicitly removed.</t>
             <t>The set of mounts is the union of the mounts in the resolved
             included packages, where for a given mount-path that is present in
-            more than one included package (same path and same keys) then it
-            takes the union of the mounted packages and mount parent-references.
-            The mounts are then updated by combining any entries in the
-            package's "mount" list, with any entries listed in
-            "mount/package/wraps-package" list replaced by a package that wraps
-            the original package at the mount point.</t>
+            more than one included package (exact same path and bound list keys)
+            then it takes the union of the mounted packages and mount
+            parent-references.  The mounts are then updated by processing any
+            entries in the package's "mount" list.  If "inherit-packages" is
+            true, or absent, the local "mount/package" entries are added to the
+            inherited mounted packages.  If the same package version is
+            present in both the inherited and local "mount/package" entries,
+            then the location leaf-lists are pairwise merged into a single
+            user-ordered list with duplicates excluded.  If the same package
+            name is present with different package versions, then all package
+            versions are retained. If "inherit-packages" is false, the inherited
+            mounted packages and parent-references for that mount point are
+            discarded, and the local "mount" entry defines the mounted schema
+            for that mount point.</t>
             <t>If the same module version is being resolved from multiple
             included modules, then the user-ordered union of the module
             locations is used, with duplicate locations removed without
@@ -912,12 +924,12 @@ module: ietf-yang-inst-data-pkg
 
 {
   "ietf-yang-instance-data:instance-data-set": {
-    "name": "acme-router-netconf-diagnostics",
+    "name": "example-router-netconf-diagnostics",
     "content-schema": {
       "pkg-schema": {
-        "name": "acme-diagnostics-schema-pkg",
+        "name": "example-diagnostics-schema-pkg",
         "version": "1.0.0",
-        "location": "file:///acme-diagnostics-schema@1.0.0.ypkg",
+        "location": "file:///example-diagnostics-schema@1.0.0.ypkg",
       }
     },
     "timestamp": "2018-01-25T17:00:38Z",
@@ -1227,17 +1239,6 @@ module: ietf-yang-inst-data-pkg
         should generally be sufficient, particular if they can avoid
         non-backwards-compatible patch level changes.</t>
       </section>
-
-<!--
-      <section title="Package replacement">
-        <t>When choosing between conflicting package versions, or replacing a
-        package version, the selected version SHOULD be greater or equal to
-        the most recent incldued version </t>
-
-        <t>Mounted packages SHOULD only be replaced by a mounted package at a
-        later version.</t>
-      </section>
--->
 
       <section anchor="restrictions-on-pkg-deviations" 
                 title="Restrictions on the use of deviations in YANG packages">
@@ -1638,11 +1639,14 @@ module ietf-yang-package-types {
     list package {
       key "name";
       description
-        "The packages that will be mounted at the specified mount
-          path either in addition to, or instead of, the mounted
-          packages from the 'included/package' list.
+        "The packages that define this package schema.
 
-          Also see the 'inherit-packages' leaf.";
+         If the same package version, identified by the same name
+         and version, is already present, then the location
+         leaf-lists are merged into a single user-ordered list
+         without duplicates.  If the same package name is listed
+         with a different version, then both package versions are
+         retained.";
       uses yang-pkg-identification-leafs;
       uses yang-pkg-location;
     }
@@ -1652,6 +1656,10 @@ module ietf-yang-package-types {
       description
         "The name of YANG features enabled in addition to the
          enabled features from the resolved package definitions.
+
+         Although this list identifies additional features rather
+         than the complete set of supported features, enabled
+         features from the resolved packages MAY be included.
 
          Features are identified using
          <module-name>:<feature-name>.";
@@ -1868,22 +1876,10 @@ module ietf-yang-package-types {
     list mount {
       key "mount-path";
       description
-        "An entry in this list represents additions to, or a
-         replacement of, the schema found at the specified mount
-         point.
-
-         The full schema at the mount point depends on the
-         setting of the inherit-packages leaf:
-
-         If set to true (the default) - the schema is defined
-         as the union of the resolved package schema at the mount
-         point by any packages in the 'includes/package' list
-         combined with the resolve package schema of all packages
-         listed in the 'packages' list.
-
-         If set to false - the schema is defined as the union of
-         only the resolved package schema of all packages
-         listed in the 'packages' list.";
+        "An entry in this list represents additions to the schema
+         found at the specified mount point, or, if
+         'inherit-packages' is 'false', replacement of the
+         inherited schema found at the specified mount point.";
 
       leaf "mount-path" {
         type mount-ypath;
@@ -1924,14 +1920,20 @@ module ietf-yang-package-types {
            available at the mount point for this package definition
            automatically include all packages and parent-references
            mounted at the same mount path in any
-           'includes/packages' entries.
+           'includes/package' entries.
+
+           If set to true (the default) - the schema is defined
+           as the union of the resolved package schema at the mount
+           point by any packages in the 'includes/package' list
+           combined with the resolved package schema of all packages
+           listed in the 'package' list. 
 
            If set to false, then only packages and
-           parent-references listed here in the 'packages' list are
+           parent-references listed here in the 'package' list are
            included.  This allows the definitions in the mounted
            packages to be modified (e.g., remove or change module
            versions).  To help conformance, the packages listed
-           here SHOULD include all the packages that would be have
+           here SHOULD include all the packages that would have
            been automatically included.
           ";
       }
@@ -1940,8 +1942,21 @@ module ietf-yang-package-types {
         key "name";
         description
           "The packages that will be mounted at the specified mount
-          path either in addition to, or instead of, the mounted
-          packages from the 'included/package' list.
+          path.
+
+          If 'inherit-packages' is true, or absent, then these
+          packages are mounted in addition to the mounted packages
+          from the 'includes/package' list.
+
+          If the same package version, identified by the same name
+          and version, is already present, then the location
+          leaf-lists are merged into a single user-ordered list
+          without duplicates.  If the same package name is listed
+          with a different version, then both package versions are
+          retained.
+
+          If 'inherit-packages' is false, then these packages
+          define the mounted package schema at this mount point.
 
           Also see the 'inherit-packages' leaf.";
         uses yang-pkg-identification-leafs;
@@ -2329,8 +2344,9 @@ module ietf-yl-packages {
          to the enabled features from the resolved package
          definitions associated with this datastore schema.
 
-         This list identifies additional features rather than the
-         complete set of supported features.
+         Although this list identifies additional features rather
+         than the complete set of supported features, enabled
+         features from the resolved packages MAY be included.
 
          Features are identified using <module-name>:<feature-name>.
 
