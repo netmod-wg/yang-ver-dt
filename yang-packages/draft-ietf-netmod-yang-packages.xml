@@ -323,7 +323,7 @@ module: ietf-yang-package-types
     +-- reference?             string
     +-- complete?              boolean
     +-- includes
-    |  +-- package* [name]
+    |  +-- package* [name version]
     |  |  +-- name        pkg-name
     |  |  +-- version     pkg-version
     |  |  +-- location*   inet:uri
@@ -353,11 +353,11 @@ module: ietf-yang-package-types
     +-- mount* [mount-path]
        +-- mount-path            mount-ypath
        +-- inherit-packages?     boolean
-       +-- package* [name]
+       +-- package* [name version]
        |  +-- name        pkg-name
        |  +-- version     pkg-version
        |  +-- location*   inet:uri
-       +-- additional-feature*   pkg-types:scoped-feature
+       +-- additional-feature*   scoped-feature
        +-- parent-reference*     mount-ypath
         ]]></artwork>
         </figure>
@@ -387,6 +387,12 @@ module: ietf-yang-package-types
             include other packages.  There MUST NOT be any circular package
             include dependencies, i.e., packages cannot, directly or
             indirectly, include themselves.</t>
+
+            <t>A package definition MAY directly include multiple versions of
+            the same package in the "includes/package" list, but normally only
+            a single package version is expected.  Multiple package versions
+            can be listed, for example, to update location information for
+            package versions included through other packages.</t>
 
             <t>If the same package version, module version,
             import-only module version, or submodule version is referenced via
@@ -1828,16 +1834,17 @@ module ietf-yang-package-types {
          definition.";
 
       list package {
-        key "name";
+        key "name version";
         ordered-by user;
         description
           "An entry in this list represents a package that is
            included as part of the package definition.
 
-           A package MUST only directly include a single version
-           of a package, but the resolved package definition MAY
-           resolve to including multiple versions of a YANG
-           package.";
+           A package MAY directly include multiple versions of the
+           same package, but normally only a single package version
+           is expected.  Multiple package versions can be listed,
+           for example, to update location information for package
+           versions included through other packages.";
         reference
           "RFC XXXX: YANG Packages, Section 4.";
 
@@ -1969,11 +1976,17 @@ module ietf-yang-package-types {
       }
 
       list package {
-        key "name";
+        key "name version";
         ordered-by user;
         description
           "The packages that will be mounted at the specified mount
           path.
+
+          A mount point MAY directly list multiple versions of the
+          same package, but normally only a single package version
+          is expected.  Multiple package versions can be listed,
+          for example, to update location information for package
+          versions inherited from included packages.
 
           If 'inherit-packages' is true, or absent, then these
           packages are mounted in addition to the mounted packages
