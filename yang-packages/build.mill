@@ -436,6 +436,15 @@ object DraftXml extends mill.Module:
           |        +--ro name                  pkg-name
           |        +--ro version               pkg-version
           |        ... remainder of yang-package-instance grouping ...""".stripMargin
+      case "ietf-yang-inst-data-pkg" =>
+        """module: ietf-yang-inst-data-pkg
+          |
+          |  augment-structure /yid:instance-data-set/...
+          |    +--:(pkg-schema)
+          |       +-- pkg-schema
+          |          +-- name        pkg-name
+          |          +-- version     pkg-version
+          |          +-- location*   inet:uri""".stripMargin
       case _ => tree.trim
 
   private def treeOptions(module: YangModule) =
@@ -561,7 +570,7 @@ object DraftXml extends mill.Module:
 
   private def packageCodeBlock(artifact: PackageArtifact) =
     s"""<CODE BEGINS> file "${packageFileName(artifact.pkg)}"
-       |${os.read(artifact.path).trim}
+       |${foldLongLines(os.read(artifact.path).trim, maxCol = 69).trim}
        |<CODE ENDS>""".stripMargin
 
   private def sanitizePackageLocations(text: String, packageRefs: Seq[PathRef]) =
@@ -578,7 +587,7 @@ object DraftXml extends mill.Module:
     os.makeDir.all(outDir)
     examplePackages.zip(packageRefs).map: (pkg, ref) =>
       val path = outDir / packageFileName(pkg)
-      os.write.over(path, foldLongLines(sanitizePackageLocations(os.read(ref.path), packageRefs)))
+      os.write.over(path, sanitizePackageLocations(os.read(ref.path), packageRefs))
       println(s"Package written to $path")
       PackageArtifact(pkg, path)
 
@@ -617,13 +626,18 @@ object DraftXml extends mill.Module:
     val byName = artifacts.map(a => a.pkg.name -> a).toMap
     val body =
       Seq("example-import-1-pkg", "example-import-2-pkg", "example-3-pkg")
-        .map(name => packageCodeBlock(byName(name)))
+        .map: name =>
+          s"""        <figure>
+             |          <artwork><![CDATA[
+             |${packageCodeBlock(byName(name))}
+             |        ]]></artwork>
+             |        </figure>""".stripMargin
         .mkString("\n\n")
     oneReplace(
       xml,
-      "(<section anchor=\"resolved_example\".*?<figure>\\s*<artwork><!\\[CDATA\\[\\s*)" +
-        ".*?(\\s*\\]\\]></artwork>\\s*</figure>)",
-      m => s"${m.group(1)}$body\n${m.group(2)}"
+      "(<section anchor=\"resolved_example\".*?)(\\s*<figure>\\s*<artwork><!\\[CDATA\\[\\s*)" +
+        ".*?(\\n      </section>)",
+      m => s"${m.group(1)}\n\n$body${m.group(3)}"
     )
 
   private def updateXmlFile(trees: Seq[PathRef], packages: Seq[PackageArtifact]) =
