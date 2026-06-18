@@ -15,6 +15,12 @@ import java.nio.charset.StandardCharsets
 import java.util.regex.{Matcher, Pattern}
 import scala.jdk.CollectionConverters.*
 
+private def descriptionText(text: String) =
+  text.stripMargin.linesIterator
+    .map(_.trim)
+    .filter(_.nonEmpty)
+    .mkString(" ")
+
 /**
   * IETF Common YANG Package Definitions.
   * 
@@ -47,15 +53,16 @@ trait ExamplePkgDefn extends PkgDefn:
 object YangInstDataSchemaPkg_0_1_0 extends IetfPkgDefn:
   def name = "yang-inst-data-schema-pkg"
   def version = "0.1.0"
+  override def timestamp = "2026-03-20T17:52:47.188253Z"
   def description =
-    """|Package schema to use for defining the yang-inst-data-schema
+    descriptionText("""|Package schema to use for defining the yang-inst-data-schema
        |schema for YANG packages.
        |
        |TODO - RFC Editor, plesae check semver and module versioning
        |module revisions.
        |
        |RFC Editor, please update this module version to 1.0.0 on
-       |publication of the RFC.""".stripMargin
+       |publication of the RFC.""")
 
   def reference = ""
 
@@ -71,6 +78,7 @@ object YangInstDataSchemaPkg_0_1_0 extends IetfPkgDefn:
 object ExampleBaseTypesPkg_1_0_0 extends ExamplePkgDefn {
   def name = "example-base-types-pkg"
   def version = "1.0.0"
+  override def timestamp = "2026-03-20T17:52:47.188322Z"
   def description =
     "Example package containing base IETF and IANA type modules"
   def reference = "RFC 6021, RFC 6536"
@@ -86,6 +94,7 @@ object ExampleBaseTypesPkg_1_0_0 extends ExamplePkgDefn {
 object ExampleBaseTypesPkg_1_1_0 extends ExamplePkgDefn {
   def name = "example-base-types-pkg"
   def version = "1.1.0"
+  override def timestamp = "2026-03-20T17:52:47.188373Z"
   def description =
     "Example package containing base IETF and IANA type modules"
   def reference = "RFC 6991, RFC 8341"
@@ -100,6 +109,7 @@ object ExampleBaseTypesPkg_1_1_0 extends ExamplePkgDefn {
 object ExampleRoutingTypesPkg extends ExamplePkgDefn {
   def name = "example-routing-types-pkg"
   def version = "0.1.0"
+  override def timestamp = "2026-03-20T17:52:47.202513Z"
   def description =
     "Example package containing routing types modules"
   def reference = ""
@@ -117,6 +127,7 @@ object ExampleRoutingTypesPkg extends ExamplePkgDefn {
 object ExampleAbPackage extends ExamplePkgDefn {
   def name = "example-ab-pkg"
   def version = "0.1.0"
+  override def timestamp = "2026-03-20T17:52:47.188303Z"
   def description =
     "Example package defining modules A, B and associated types"
   def reference = ""
@@ -137,6 +148,7 @@ object ExampleAbPackage extends ExamplePkgDefn {
 object ExampleCPackage extends ExamplePkgDefn {
   def name = "example-c-pkg"
   def version = "0.1.0"
+  override def timestamp = "2026-03-20T17:52:47.202747Z"
   def description =
     "Example package importing A, removing B and adding C"
   def reference = ""
@@ -152,14 +164,164 @@ object ExampleCPackage extends ExamplePkgDefn {
     Seq("example-module-b:bar")
 }
 
+object ExampleIetfNetworkDevicePkg extends ExamplePkgDefn {
+  def name = "example-ietf-network-device-pkg"
+  def version = "1.1.2"
+  override def timestamp = "2018-12-13T17:00:00Z"
+  def organization = "IETF NETMOD Working Group"
+  def contact =
+    "WG Web:   <http://tools.ietf.org/wg/netmod/>, " +
+      "WG List:  <mailto:netmod@ietf.org>"
+  def description =
+    descriptionText("""|Example IETF network device YANG package.
+       |
+       |This package defines a small sample set of YANG modules that could
+       |represent the basic set of modules that a standard network device might
+       |be expected to support.""")
+  def reference = "XXX, draft-rwilton-netmod-yang-packages"
+
+  private def ietfModule(name: String, revision: String) =
+    yang.packages.tools.lib.Module(
+      name,
+      ModuleVersion(revision),
+      Seq(s"https://tiny.cc/ietf-yang/$name@$revision.yang")
+    )
+
+  override def modules =
+    Seq(
+      ietfModule("iana-crypt-hash", "2014-08-06"),
+      ietfModule("ietf-system", "2014-08-06"),
+      ietfModule("ietf-interfaces", "2018-02-20"),
+      ietfModule("ietf-netconf-acm", "2018-02-14"),
+      ietfModule("ietf-key-chain", "2017-06-15"),
+      ietfModule("ietf-ip", "2018-02-22"),
+    )
+
+  override def importOnlyModules =
+    Seq(
+      ImportOnlyModule(
+        "ietf-yang-types",
+        ModuleVersion("2013-07-15"),
+        Seq("https://tiny.cc/ietf-yang/ietf-yang-types@2013-07-15.yang")
+      ),
+      ImportOnlyModule(
+        "ietf-inet-types",
+        ModuleVersion("2013-07-15"),
+        Seq("https://tiny.cc/ietf-yang/ietf-inet-types@2013-07-15.yang")
+      ),
+    )
+}
+
+object ExampleIetfRoutingPkg extends ExamplePkgDefn {
+  def name = "example-ietf-routing-pkg"
+  def version = "1.3.1"
+  override def timestamp = "2018-12-13T17:00:00Z"
+  def description =
+    descriptionText("""|This package defines a small sample set of IETF routing YANG modules
+       |that could represent the set of IETF routing functionality that a basic
+       |IP network device might be expected to support.""")
+  def reference = "XXX, draft-rwilton-netmod-yang-packages"
+  def includedPackages = Seq(ExampleIetfNetworkDevicePkg)
+
+  private def ietfModule(name: String, revision: String, hasLocation: Boolean = true) =
+    yang.packages.tools.lib.Module(
+      name,
+      ModuleVersion(revision),
+      if hasLocation then Seq(s"https://tiny.cc/ietf-yang/$name@$revision.yang")
+      else Seq("https://tiny.cc/ietf-yang/")
+    )
+
+  override def modules =
+    Seq(
+      ietfModule("ietf-routing", "2018-03-13"),
+      ietfModule("ietf-ipv4-unicast-routing", "2018-03-13"),
+      ietfModule("ietf-ipv6-unicast-routing", "2018-03-13"),
+      ietfModule("ietf-isis", "2018-12-11", hasLocation = false),
+      ietfModule("ietf-interfaces-common", "2018-07-02", hasLocation = false),
+      ietfModule("ietf-if-l3-vlan", "2017-10-30", hasLocation = false),
+      ietfModule("ietf-routing-policy", "2018-10-19", hasLocation = false),
+      ietfModule("ietf-bgp", "2018-05-09", hasLocation = false),
+      ietfModule("ietf-access-control-list", "2018-11-06", hasLocation = false),
+    )
+
+  override def importOnlyModules =
+    Seq(
+      ImportOnlyModule(
+        "ietf-routing-types",
+        ModuleVersion("2017-12-04"),
+        Seq("https://tiny.cc/ietf-yang/ietf-routing-types@2017-12-04.yang")
+      ),
+      ImportOnlyModule(
+        "iana-routing-types",
+        ModuleVersion("2017-12-04"),
+        Seq("https://tiny.cc/ietf-yang/iana-routing-types@2017-12-04.yang")
+      ),
+      ImportOnlyModule(
+        "ietf-bgp-types",
+        ModuleVersion("2018-05-09"),
+        Seq("https://tiny.cc/ietf-yang/")
+      ),
+      ImportOnlyModule(
+        "ietf-packet-fields",
+        ModuleVersion("2018-11-06"),
+        Seq("https://tiny.cc/ietf-yang/")
+      ),
+      ImportOnlyModule(
+        "ietf-ethertypes",
+        ModuleVersion("2018-11-06"),
+        Seq("https://tiny.cc/ietf-yang/")
+      ),
+    )
+}
+
+object ExampleImport1Pkg extends ExamplePkgDefn {
+  def name = "example-import-1-pkg"
+  def version = "1.0.0"
+  override def timestamp = "2018-01-01T00:00:00Z"
+  def description = "First imported example package"
+  def reference = "XXX, draft-rwilton-netmod-yang-packages"
+
+  override def modules =
+    Seq("example-module-A@1.0.0", "example-module-B@1.0.0")
+
+  override def importOnlyModules =
+    Seq("example-types-module-C@2018-01-01", "example-types-module-D@2018-01-01")
+}
+
+object ExampleImport2Pkg extends ExamplePkgDefn {
+  def name = "example-import-2-pkg"
+  def version = "2.0.0"
+  override def timestamp = "2018-11-26T00:00:00Z"
+  def description = "Second imported example package"
+  def reference = "XXX, draft-rwilton-netmod-yang-packages"
+
+  override def modules =
+    Seq("example-module-A@1.2.3", "example-module-E@1.1.0")
+
+  override def importOnlyModules =
+    Seq("example-types-module-C@2018-11-26", "example-types-module-D@2018-11-26")
+}
+
+object Example3Pkg extends ExamplePkgDefn {
+  def name = "example-3-pkg"
+  def version = "1.0.0"
+  override def timestamp = "2018-11-26T00:00:00Z"
+  def description = "Importing example package"
+  def reference = "XXX, draft-rwilton-netmod-yang-packages"
+  def includedPackages = Seq(ExampleImport1Pkg, ExampleImport2Pkg)
+
+  override def modules =
+    Seq("example-module-A@1.2.3")
+
+  override def importOnlyModules =
+    Seq("example-types-module-C@2018-11-26")
+}
 
 
-// def all = Task {
-//   Seq(ExampleBasePkg, ExampleBasePkg2).map(_.writePackage)
-// }
 
 object DraftXml extends mill.Module:
   private case class YangModule(name: String, source: String)
+  private case class PackageArtifact(pkg: PkgDefn, path: os.Path)
 
   private val modules = Seq(
     YangModule("ietf-yang-package-types", "ietf-yang-package-types.yang"),
@@ -167,6 +329,20 @@ object DraftXml extends mill.Module:
     YangModule("ietf-yang-packages", "ietf-yang-packages.yang"),
     YangModule("ietf-yl-packages", "ietf-yl-packages.yang"),
     YangModule("ietf-yang-inst-data-pkg", "ietf-yang-inst-data-pkg.yang"),
+  )
+
+  private val examplePackages: Seq[PkgDefn] = Seq(
+    YangInstDataSchemaPkg_0_1_0,
+    ExampleBaseTypesPkg_1_0_0,
+    ExampleBaseTypesPkg_1_1_0,
+    ExampleRoutingTypesPkg,
+    ExampleAbPackage,
+    ExampleCPackage,
+    ExampleIetfNetworkDevicePkg,
+    ExampleIetfRoutingPkg,
+    ExampleImport1Pkg,
+    ExampleImport2Pkg,
+    Example3Pkg,
   )
 
   private def dir =
@@ -269,33 +445,188 @@ object DraftXml extends mill.Module:
         Seq("--tree-print-structures")
       case _ => Seq.empty
 
-  def checkYang = Task:
-    run(pyangBase ++ modules.map(m => (dir / m.source).toString))
+  private enum FoldingStyle:
+    case SingleBackslash, DoubleBackslash
 
-  def generatedTreeFiles = Task:
-    checkYang()
-    val outDir = Task.dest / "tree"
+  private val singleBackslashHeader =
+    "NOTE: '" + "\\" + "' line wrapping per RFC 8792"
+  private val doubleBackslashHeader =
+    "NOTE: '" + "\\\\" + "' line wrapping per RFC 8792"
+
+  private def headerText(style: FoldingStyle) =
+    style match
+      case FoldingStyle.SingleBackslash => singleBackslashHeader
+      case FoldingStyle.DoubleBackslash => doubleBackslashHeader
+
+  private def foldingHeader(style: FoldingStyle, maxCol: Int) =
+    val text = headerText(style)
+    val length = text.length + 2
+    val left = (maxCol - length) / 2
+    val right = maxCol - length - left
+    ("=" * left) + " " + text + " " + ("=" * right)
+
+  private def foldSplitIndex(line: String, foldCol: Int, spaceWindow: Int = 20) =
+    val limit = math.min(foldCol, line.length)
+    val firstCandidate = math.max(0, limit - spaceWindow)
+    (limit - 1 to firstCandidate by -1)
+      .find(idx => line.charAt(idx) == ' ')
+      .map(_ + 1)
+      .orElse:
+        val tokenStart = line.lastIndexWhere(_.isWhitespace, limit - 1) + 1
+        (limit - 1 to tokenStart by -1)
+          .find(idx => line.charAt(idx) == '/')
+          .map(_ + 1)
+      .getOrElse(limit)
+
+  private def foldSingleBackslash(lines: Vector[String], maxCol: Int) =
+    if lines.exists(_.endsWith("\\")) then None
+    else
+      val foldCol = maxCol - 1
+
+      def foldLine(line: String): Option[Vector[String]] =
+        if line.length <= maxCol then Some(Vector(line))
+        else
+          val (head, tail) = line.splitAt(foldSplitIndex(line, foldCol))
+          foldLine(tail).map((head + "\\") +: _)
+
+      lines.foldLeft(Option(Vector.empty[String])):
+        case (Some(acc), line) => foldLine(line).map(acc ++ _)
+        case (None, _) => None
+
+  private def foldDoubleBackslash(lines: Vector[String], maxCol: Int) =
+    if lines.sliding(2).exists:
+        case Seq(a, b) => a.endsWith("\\") && b.dropWhile(_ == ' ').startsWith("\\")
+        case _ => false
+      then None
+    else
+      val foldCol = maxCol - 1
+      def foldLine(line: String): Vector[String] =
+        if line.length <= maxCol then Vector(line)
+        else
+          val (head, tail) = line.splitAt(foldSplitIndex(line, foldCol))
+          (head + "\\") +: foldLine("\\" + tail)
+      Some(lines.flatMap(foldLine))
+
+  private def foldLongLines(text: String, maxCol: Int = 72) =
+    val lines = text.linesIterator.toVector
+    if lines.forall(_.length <= maxCol) then text
+    else
+      if lines.exists(_.contains('\t')) then
+        sys.error("cannot fold example containing TAB characters")
+
+      val folded =
+        foldSingleBackslash(lines, maxCol)
+          .map(FoldingStyle.SingleBackslash -> _)
+          .orElse(foldDoubleBackslash(lines, maxCol)
+            .map(FoldingStyle.DoubleBackslash -> _))
+          .getOrElse(sys.error("cannot fold example using RFC 8792"))
+
+      val (style, body) = folded
+      (Vector(foldingHeader(style, maxCol), "") ++ body).mkString("\n") + "\n"
+
+  private def unfoldLongLines(text: String) =
+    val trailingNewline = text.endsWith("\n")
+    val lines = text.linesIterator.toVector
+    val style =
+      lines.headOption.collect:
+        case line if line.contains(singleBackslashHeader) =>
+          FoldingStyle.SingleBackslash
+        case line if line.contains(doubleBackslashHeader) =>
+          FoldingStyle.DoubleBackslash
+
+    def finish(unfolded: Vector[String]) =
+      unfolded.mkString("\n") + (if trailingNewline then "\n" else "")
+
+    style match
+      case None => text
+      case Some(FoldingStyle.SingleBackslash) =>
+        finish(lines.drop(2).foldLeft(Vector.empty[String]):
+          case (acc, line) if acc.lastOption.exists(_.endsWith("\\")) =>
+            acc.init :+ (acc.last.dropRight(1) + line.dropWhile(_ == ' '))
+          case (acc, line) => acc :+ line)
+      case Some(FoldingStyle.DoubleBackslash) =>
+        finish(lines.drop(2).foldLeft(Vector.empty[String]):
+          case (acc, line)
+              if acc.lastOption.exists(_.endsWith("\\"))
+                && line.dropWhile(_ == ' ').startsWith("\\") =>
+            val continuation = line.dropWhile(_ == ' ').drop(1)
+            acc.init :+ (acc.last.dropRight(1) + continuation)
+          case (acc, line) => acc :+ line)
+
+  private def packageFileName(pkg: PkgDefn) =
+    s"${pkg.name}@${pkg.version}.ypkg"
+
+  private def packageExampleLocation(pkg: PkgDefn) =
+    s"https://example.org/yang/packages/${packageFileName(pkg)}"
+
+  private def packageCodeBlock(artifact: PackageArtifact) =
+    s"""<CODE BEGINS> file "${packageFileName(artifact.pkg)}"
+       |${os.read(artifact.path).trim}
+       |<CODE ENDS>""".stripMargin
+
+  private def sanitizePackageLocations(text: String, packageRefs: Seq[PathRef]) =
+    examplePackages.zip(packageRefs).foldLeft(text):
+      case (updated, (pkg, ref)) =>
+        Seq(
+          ref.path.toIO.toURI.toString,
+          s"file:${ref.path}",
+          s"file://${ref.path}",
+        ).foldLeft(updated)((acc, local) => acc.replace(local, packageExampleLocation(pkg)))
+
+  private def writeExamplePackages(packageRefs: Seq[PathRef]) =
+    val outDir = dir / "generated" / "packages"
     os.makeDir.all(outDir)
-    modules.map: m =>
-      val tree = run(pyangBase ++ Seq("-f", "tree", "--tree-line-length=69") ++
-        treeOptions(m) ++ Seq((dir / m.source).toString))
-      val body =
-        if m.name == "ietf-yang-package-types" then packageTypesFigure(tree)
-        else tree.trim
-      val path = outDir / s"${m.name}.tree"
-      os.write.over(path, body + "\n")
-      PathRef(path)
+    examplePackages.zip(packageRefs).map: (pkg, ref) =>
+      val path = outDir / packageFileName(pkg)
+      os.write.over(path, foldLongLines(sanitizePackageLocations(os.read(ref.path), packageRefs)))
+      println(s"Package written to $path")
+      PackageArtifact(pkg, path)
 
-  def treeFiles() = Task.Command:
+  private def writeTreeFiles(trees: Seq[PathRef]) =
     val outDir = dir / "generated" / "tree"
     os.makeDir.all(outDir)
-    generatedTreeFiles().map: ref =>
+    trees.map: ref =>
       val path = outDir / ref.path.last
       os.copy.over(ref.path, path)
-      path
+      println(s"Tree diagram written to $path")
+      PathRef(path)
 
-  def updateXml() = Task.Command:
-    val trees = generatedTreeFiles()
+  private def packageBlockLabels(pkg: PkgDefn) =
+    val generated = packageFileName(pkg)
+    val unversioned = s"${pkg.name}.ypkg"
+    val legacy =
+      pkg.name match
+        case "yang-inst-data-schema-pkg" =>
+          Seq(
+            "ietf-yang-inst-data-schema@0.1.0.ypkg",
+            "yang-inst-data-schema@0.1.0.ypkg",
+          )
+        case _ => Seq.empty
+    (Seq(generated, unversioned) ++ legacy).distinct
+
+  private def replacePackageCodeBlock(xml: String, artifact: PackageArtifact) =
+    val labels = packageBlockLabels(artifact.pkg).map(Pattern.quote).mkString("|")
+    oneReplace(
+      xml,
+      s"(<artwork><!\\[CDATA\\[\\s*)<CODE BEGINS> file \"(?:$labels)\"\\n" +
+        ".*?<CODE ENDS>\\n[\\r\\n]*(\\h*)\\]\\]></artwork>",
+      m => s"${m.group(1)}${packageCodeBlock(artifact)}\n${m.group(2)}]]></artwork>"
+    )
+
+  private def replaceResolutionExample(xml: String, artifacts: Seq[PackageArtifact]) =
+    val byName = artifacts.map(a => a.pkg.name -> a).toMap
+    val body =
+      Seq("example-import-1-pkg", "example-import-2-pkg", "example-3-pkg")
+        .map(name => packageCodeBlock(byName(name)))
+        .mkString("\n\n")
+    oneReplace(
+      xml,
+      "(<section anchor=\"resolved_example\".*?<figure>\\s*<artwork><!\\[CDATA\\[\\s*)" +
+        ".*?(\\s*\\]\\]></artwork>\\s*</figure>)",
+      m => s"${m.group(1)}$body\n${m.group(2)}"
+    )
+
+  private def updateXmlFile(trees: Seq[PathRef], packages: Seq[PackageArtifact]) =
     val treeByModule = modules.zip(trees.map(t => os.read(t.path)))
     val xmlPath = dir / "draft-ietf-netmod-yang-packages.xml"
     val updatedTrees = treeByModule.foldLeft(os.read(xmlPath)):
@@ -317,5 +648,56 @@ object DraftXml extends mill.Module:
           mtch => s"${mtch.group(1)}<CODE BEGINS> file \"${m.name}#$version.yang\"\n" +
             source + s"\n<CODE ENDS>\n${mtch.group(2)}]]></artwork>"
         )
-    os.write.over(xmlPath, updatedSources)
+    val packageBlocks = Seq(
+      "yang-inst-data-schema-pkg",
+      "example-base-types-pkg",
+      "example-ietf-network-device-pkg",
+      "example-ietf-routing-pkg",
+      "example-ab-pkg",
+      "example-c-pkg",
+    )
+    val updatedPackages = packages
+      .filter(p => packageBlocks.contains(p.pkg.name))
+      .foldLeft(updatedSources)(replacePackageCodeBlock)
+    val updatedResolution = replaceResolutionExample(updatedPackages, packages)
+    os.write.over(xmlPath, updatedResolution)
     xmlPath
+
+  def checkYang = Task:
+    run(pyangBase ++ modules.map(m => (dir / m.source).toString))
+
+  def generatedTreeFiles = Task:
+    checkYang()
+    val outDir = Task.dest / "tree"
+    os.makeDir.all(outDir)
+    modules.map: m =>
+      val tree = run(pyangBase ++ Seq("-f", "tree", "--tree-line-length=69") ++
+        treeOptions(m) ++ Seq((dir / m.source).toString))
+      val body =
+        if m.name == "ietf-yang-package-types" then packageTypesFigure(tree)
+        else tree.trim
+      val path = outDir / s"${m.name}.tree"
+      os.write.over(path, body + "\n")
+      PathRef(path)
+
+  def treeFiles() = Task.Command:
+    writeTreeFiles(generatedTreeFiles())
+
+  def buildExamples() = Task.Command:
+    val packageRefs = Task.traverse(examplePackages)(_.makePackage)()
+    writeExamplePackages(packageRefs)
+    ()
+
+  def updateXml() = Task.Command:
+    val packageRefs = Task.traverse(examplePackages)(_.makePackage)()
+    val packages = writeExamplePackages(packageRefs)
+    val trees = generatedTreeFiles()
+    updateXmlFile(trees, packages)
+
+  def all() = Task.Command:
+    checkYang()
+    val packageRefs = Task.traverse(examplePackages)(_.makePackage)()
+    val packages = writeExamplePackages(packageRefs)
+    val trees = generatedTreeFiles()
+    writeTreeFiles(trees)
+    updateXmlFile(trees, packages)
