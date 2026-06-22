@@ -436,6 +436,186 @@ object VendorIsisHotfixPkg extends ExamplePkgDefn {
     )
 }
 
+trait ExampleVersionedRoutingPkg extends ExamplePkgDefn {
+  def name = "example-versioned-routing"
+  override def timestamp = "2026-06-22T00:00:00Z"
+  def description = "Example versioned routing package"
+  def reference = "XXX, draft-ietf-netmod-yang-packages"
+
+  def includedPackageRefs: Seq[(String, String)]
+
+  override def makePackage = Task:
+    val pkg = YangPackage(
+      name = PkgName(name),
+      version = PkgVersion(version),
+      versionDescription = versionDescription,
+      timestamp = timestamp,
+      organization = organization,
+      contact = contact,
+      description = description,
+      reference = reference,
+      complete = complete.getOrElse(true),
+      includes = Includes(
+        packages = includedPackageRefs.map: (name, version) =>
+          YangPackageRef(PkgName(name), PkgVersion(version), Seq()),
+        modules = modules.collect:
+          case m: yang.packages.tools.lib.Module => m
+          case moduleRev: String =>
+            val (name, rev, locations) = moduleNameResolver(moduleRev)
+            yang.packages.tools.lib.Module(name, rev, locations),
+        importOnlyModules = importOnlyModules.collect:
+          case m: ImportOnlyModule => m
+          case moduleRev: String =>
+            val (name, rev, locations) = moduleNameResolver(moduleRev)
+            ImportOnlyModule(name, rev, locations),
+        features = mandatoryFeatures
+      ),
+      excludes = Excludes(
+        modules = excludedModules,
+        importOnlyModules = excludedImportOnlyModules.collect:
+          case m: ExcludedImportOnlyModules => m
+          case moduleRev: String =>
+            val (name, optVer) = moduleNameOptVerResolver(moduleRev)
+            ExcludedImportOnlyModules(name, optVer),
+        features = optionalFeatures
+      ),
+      mountedPackages = mountedPackages
+    )
+    val fileRef = Task.dest / Helper.packageFileName(pkg)
+    pkg.writeToFile(fileRef)
+    PathRef(fileRef)
+}
+
+object ExampleVersionedRoutingPkg_1_0_0 extends ExampleVersionedRoutingPkg {
+  def version = "1.0.0"
+  def includedPackageRefs = Seq("example-network-device" -> "1.1.2")
+  override def modules =
+    Seq(
+      yang.packages.tools.lib.Module("example-routing-core", ModuleVersion("2.0.0"), Seq()),
+      yang.packages.tools.lib.Module("example-routing-acl", ModuleVersion("1.0.0"), Seq())
+    )
+  override def mandatoryFeatures =
+    Seq("example-routing-core:ipv4")
+}
+
+object ExampleVersionedRoutingPkg_1_1_0 extends ExampleVersionedRoutingPkg {
+  def version = "1.1.0"
+  override def versionDescription =
+    "Adds telemetry, policy, and new features."
+  def includedPackageRefs =
+    Seq(
+      "example-network-device" -> "1.1.2",
+      "example-routing-telemetry" -> "1.0.0"
+    )
+  override def modules =
+    Seq(
+      yang.packages.tools.lib.Module("example-routing-core", ModuleVersion("2.0.0"), Seq()),
+      yang.packages.tools.lib.Module("example-routing-acl", ModuleVersion("1.0.0"), Seq()),
+      yang.packages.tools.lib.Module("example-routing-policy", ModuleVersion("1.0.0"), Seq())
+    )
+  override def mandatoryFeatures =
+    Seq(
+      "example-routing-core:ipv4",
+      "example-routing-core:ipv6",
+      "example-routing-policy:statistics"
+    )
+}
+
+object ExampleVersionedRoutingPkg_2_0_0 extends ExampleVersionedRoutingPkg {
+  def version = "2.0.0"
+  override def versionDescription =
+    "Downrefs a package and removes the ACL module."
+  def includedPackageRefs =
+    Seq(
+      "example-network-device" -> "1.0.0",
+      "example-routing-telemetry" -> "1.0.0"
+    )
+  override def modules =
+    Seq(
+      yang.packages.tools.lib.Module("example-routing-core", ModuleVersion("2.0.0"), Seq()),
+      yang.packages.tools.lib.Module("example-routing-policy", ModuleVersion("1.0.0"), Seq())
+    )
+  override def mandatoryFeatures =
+    Seq(
+      "example-routing-core:ipv4",
+      "example-routing-core:ipv6",
+      "example-routing-policy:statistics"
+    )
+}
+
+object ExampleVersionedRoutingPkg_3_0_0 extends ExampleVersionedRoutingPkg {
+  def version = "3.0.0"
+  override def versionDescription =
+    "Adds NBC vendor deviations."
+  def includedPackageRefs =
+    Seq(
+      "example-network-device" -> "1.0.0",
+      "example-routing-telemetry" -> "1.0.0"
+    )
+  override def modules =
+    Seq(
+      yang.packages.tools.lib.Module("example-routing-core", ModuleVersion("2.0.0"), Seq()),
+      yang.packages.tools.lib.Module("example-routing-policy", ModuleVersion("1.0.0"), Seq()),
+      yang.packages.tools.lib.Module("vendor-routing-deviations", ModuleVersion("2026-06-22"), Seq())
+    )
+  override def mandatoryFeatures =
+    Seq(
+      "example-routing-core:ipv4",
+      "example-routing-core:ipv6",
+      "example-routing-policy:statistics"
+    )
+}
+
+object ExampleVersionedRoutingPkg_4_0_0 extends ExampleVersionedRoutingPkg {
+  def version = "4.0.0"
+  override def versionDescription =
+    "Removes IPv4, downrefs core, adds ISIS."
+  def includedPackageRefs =
+    Seq(
+      "example-network-device" -> "1.0.0",
+      "example-routing-telemetry" -> "1.0.0"
+    )
+  override def modules =
+    Seq(
+      yang.packages.tools.lib.Module("example-routing-core", ModuleVersion("1.5.0"), Seq()),
+      yang.packages.tools.lib.Module("example-routing-policy", ModuleVersion("1.0.0"), Seq()),
+      yang.packages.tools.lib.Module("vendor-routing-deviations", ModuleVersion("2026-06-22"), Seq()),
+      yang.packages.tools.lib.Module("example-isis", ModuleVersion("1.0.0"), Seq())
+    )
+  override def mandatoryFeatures =
+    Seq(
+      "example-routing-core:ipv6",
+      "example-routing-policy:statistics"
+    )
+}
+
+object ExampleVersionedRoutingPkg_4_0_1 extends ExampleVersionedRoutingPkg {
+  def version = "4.0.1"
+  override def versionDescription =
+    "Updates module location information."
+  def includedPackageRefs =
+    Seq(
+      "example-network-device" -> "1.0.0",
+      "example-routing-telemetry" -> "1.0.0"
+    )
+  override def modules =
+    Seq(
+      yang.packages.tools.lib.Module(
+        "example-routing-core",
+        ModuleVersion("1.5.0"),
+        Seq("https://example.org/yang/example-routing-core@1.5.0.yang")
+      ),
+      yang.packages.tools.lib.Module("example-routing-policy", ModuleVersion("1.0.0"), Seq()),
+      yang.packages.tools.lib.Module("vendor-routing-deviations", ModuleVersion("2026-06-22"), Seq()),
+      yang.packages.tools.lib.Module("example-isis", ModuleVersion("1.0.0"), Seq())
+    )
+  override def mandatoryFeatures =
+    Seq(
+      "example-routing-core:ipv6",
+      "example-routing-policy:statistics"
+    )
+}
+
 object ExampleImport1Pkg extends ExamplePkgDefn {
   def name = "example-import-1"
   def version = "1.0.0"
@@ -505,6 +685,12 @@ object DraftXml extends mill.Module:
     ExampleRoutingPkg,
     DeviceRoutingPkg,
     VendorIsisHotfixPkg,
+    ExampleVersionedRoutingPkg_1_0_0,
+    ExampleVersionedRoutingPkg_1_1_0,
+    ExampleVersionedRoutingPkg_2_0_0,
+    ExampleVersionedRoutingPkg_3_0_0,
+    ExampleVersionedRoutingPkg_4_0_0,
+    ExampleVersionedRoutingPkg_4_0_1,
     ExampleImport1Pkg,
     ExampleImport2Pkg,
     Example3Pkg,
@@ -828,6 +1014,7 @@ object DraftXml extends mill.Module:
       "example-routing",
       "device-routing",
       "vendor-isis-hotfix",
+      "example-versioned-routing",
       "example-ab",
       "example-c",
     )

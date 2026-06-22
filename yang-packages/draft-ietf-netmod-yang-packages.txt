@@ -69,7 +69,7 @@ Internet-Draft                YANG Packages                    June 2026
 
 Table of Contents
 
-   1.  Introduction  . . . . . . . . . . . . . . . . . . . . . . . .   3
+   1.  Introduction  . . . . . . . . . . . . . . . . . . . . . . . .   4
      1.1.  Main Objectives . . . . . . . . . . . . . . . . . . . . .   4
      1.2.  Potential Alternative Mechanisms  . . . . . . . . . . . .   5
      1.3.  Open Questions/Issues . . . . . . . . . . . . . . . . . .   6
@@ -148,20 +148,20 @@ Internet-Draft                YANG Packages                    June 2026
        A.2.2.  YANG library advertisement for device-routing . . . .  80
        A.2.3.  Hotfix Package Example  . . . . . . . . . . . . . . .  82
      A.3.  Package Versioning Examples . . . . . . . . . . . . . . .  84
-     A.4.  Package Resolution Examples . . . . . . . . . . . . . . .  84
-       A.4.1.  Example of package import conflict resolution . . . .  85
-     A.5.  Package Exclusion Examples  . . . . . . . . . . . . . . .  88
+       A.3.1.  Initial Package Version . . . . . . . . . . . . . . .  85
+       A.3.2.  Backwards-compatible Update . . . . . . . . . . . . .  85
+       A.3.3.  Package Downref and Module Removal  . . . . . . . . .  87
+       A.3.4.  Adding a Deviations Module  . . . . . . . . . . . . .  89
+       A.3.5.  Mixed Backwards-compatible and NBC Changes  . . . . .  91
+       A.3.6.  Editorial Location Update . . . . . . . . . . . . . .  92
+     A.4.  Package Resolution Examples . . . . . . . . . . . . . . .  93
+       A.4.1.  Example of package import conflict resolution . . . .  94
+     A.5.  Package Exclusion Examples  . . . . . . . . . . . . . . .  97
        A.5.1.  Example of excluding modules and an enabled
-               feature . . . . . . . . . . . . . . . . . . . . . . .  89
-     A.6.  Mounted Package Examples  . . . . . . . . . . . . . . . .  93
-       A.6.1.  Example of package with a mounted package . . . . . .  93
-       A.6.2.  Example of a package replacing the mounted schema . .  93
-   Authors' Addresses  . . . . . . . . . . . . . . . . . . . . . . .  93
-
-1.  Introduction
-
-   This document defines and describes the YANG [RFC7950] constructs
-   that are used to define and use YANG packages.
+               feature . . . . . . . . . . . . . . . . . . . . . . .  98
+     A.6.  Mounted Package Examples  . . . . . . . . . . . . . . . . 102
+       A.6.1.  Example of package with a mounted package . . . . . . 102
+       A.6.2.  Example of a package replacing the mounted schema . . 102
 
 
 
@@ -169,6 +169,13 @@ Wilton, et al.          Expires 24 December 2026                [Page 3]
 
 Internet-Draft                YANG Packages                    June 2026
 
+
+   Authors' Addresses  . . . . . . . . . . . . . . . . . . . . . . . 102
+
+1.  Introduction
+
+   This document defines and describes the YANG [RFC7950] constructs
+   that are used to define and use YANG packages.
 
    A YANG package is a versioned hierarchical organizational structure
    used to manage a set of YANG modules that collectively define a
@@ -205,6 +212,20 @@ Internet-Draft                YANG Packages                    June 2026
       with a set of modifications (e.g. additional modules, deviations,
       or features).
 
+
+
+
+
+
+
+
+
+
+Wilton, et al.          Expires 24 December 2026                [Page 4]
+
+Internet-Draft                YANG Packages                    June 2026
+
+
    *  Allowing datastore schema to be specified in a concise way rather
       than having each server explicitly list all modules, deviations,
       and features.  YANG package definitions can be defined in
@@ -217,14 +238,6 @@ Internet-Draft                YANG Packages                    June 2026
    *  YANG packages should be able to represent the equivalent structure
       as YANG library, but making use of a hierarchical resolution
       mechanism.
-
-
-
-
-Wilton, et al.          Expires 24 December 2026                [Page 4]
-
-Internet-Draft                YANG Packages                    June 2026
-
 
    *  YANG packages should be flexible enough to provide usable
       definitions representing collections of IETF YANG modules,
@@ -262,6 +275,13 @@ Internet-Draft                YANG Packages                    June 2026
 
    *  Using YANG library, along with YANG Instance Data files [RFC9195],
 
+
+
+Wilton, et al.          Expires 24 December 2026                [Page 5]
+
+Internet-Draft                YANG Packages                    June 2026
+
+
    *  Using git tags and version labels for modules maintained on
       github,
 
@@ -270,17 +290,6 @@ Internet-Draft                YANG Packages                    June 2026
       represent the set of YANG modules associated with a particular
       vendor release at the github repository at
       https://github.com/YangModels/yang
-
-
-
-
-
-
-
-Wilton, et al.          Expires 24 December 2026                [Page 5]
-
-Internet-Draft                YANG Packages                    June 2026
-
 
    Although these methods are quite simple, there are some disadvantages
    with various aspects of these methods: They are verbose, they don't
@@ -320,6 +329,15 @@ Internet-Draft                YANG Packages                    June 2026
 
    *  schema node
 
+
+
+
+
+Wilton, et al.          Expires 24 December 2026                [Page 6]
+
+Internet-Draft                YANG Packages                    June 2026
+
+
    Tree diagrams used in this document follow the notation defined in
    [RFC8340].
 
@@ -329,14 +347,6 @@ Internet-Draft                YANG Packages                    June 2026
       short hand to reference a particular revision of a YANG module,
       potentially identified by a YANG Semver version label or a
       revision-date.
-
-
-
-
-Wilton, et al.          Expires 24 December 2026                [Page 6]
-
-Internet-Draft                YANG Packages                    June 2026
-
 
    *  version (package): In the context of a YANG package, it refers to
       a particular version of a YANG package definition, identified by
@@ -377,22 +387,18 @@ Internet-Draft                YANG Packages                    June 2026
       identifies the implemented modules (with any deviations applied),
       import-only modules, enabled features, and schema mount points.
 
-   *  package schema: An alternative term for 'resolved package schema'.
-
-   *  enabled feature: A YANG module feature that a resolved package
-      schema identifies as mandatory to enable for all implementations
-      that conform to the package definition.
-
-
-
-
-
 
 
 Wilton, et al.          Expires 24 December 2026                [Page 7]
 
 Internet-Draft                YANG Packages                    June 2026
 
+
+   *  package schema: An alternative term for 'resolved package schema'.
+
+   *  enabled feature: A YANG module feature that a resolved package
+      schema identifies as mandatory to enable for all implementations
+      that conform to the package definition.
 
 3.  The YANG Package Definition
 
@@ -436,12 +442,6 @@ Internet-Draft                YANG Packages                    June 2026
        +-- version                pkg-version
        +-- version-description?   string
        +-- timestamp?             yang:date-and-time
-       +-- organization?          string
-       +-- contact?               string
-       +-- description?           string
-       +-- reference?             string
-       +-- complete?              boolean
-       +-- includes
 
 
 
@@ -450,6 +450,12 @@ Wilton, et al.          Expires 24 December 2026                [Page 8]
 Internet-Draft                YANG Packages                    June 2026
 
 
+       +-- organization?          string
+       +-- contact?               string
+       +-- description?           string
+       +-- reference?             string
+       +-- complete?              boolean
+       +-- includes
        |  +-- package* [name version]
        |  |  +-- name        pkg-name
        |  |  +-- version     pkg-version
@@ -492,12 +498,6 @@ Internet-Draft                YANG Packages                    June 2026
    For a YANG package to be valid, it MUST conform to all the following
    rules:
 
-   1.   Each (package name, version) pairing MUST define a globally
-        unique version of that package definition.
-
-   2.   Each YANG package name MUST be globally unique to avoid issues
-        with tools and caching, e.g., using the mechanisms specified in
-        Section 5.1.
 
 
 
@@ -505,6 +505,13 @@ Wilton, et al.          Expires 24 December 2026                [Page 9]
 
 Internet-Draft                YANG Packages                    June 2026
 
+
+   1.   Each (package name, version) pairing MUST define a globally
+        unique version of that package definition.
+
+   2.   Each YANG package name MUST be globally unique to avoid issues
+        with tools and caching, e.g., using the mechanisms specified in
+        Section 5.1.
 
    3.   YANG packages MUST be versioned using YANG Semver,
         [I-D.ietf-netmod-yang-semver].  Versioning YANG packages is
@@ -548,19 +555,15 @@ Internet-Draft                YANG Packages                    June 2026
         listed, but any extraneous import-only module versions SHOULD be
         removed.
 
-   11.  A package definition MUST NOT include the same module name in
-        both the 'includes/module' and 'excludes/module' lists.
-
-
-
-
-
 
 
 Wilton, et al.          Expires 24 December 2026               [Page 10]
 
 Internet-Draft                YANG Packages                    June 2026
 
+
+   11.  A package definition MUST NOT include the same module name in
+        both the 'includes/module' and 'excludes/module' lists.
 
    12.  A package definition MUST NOT include and exclude the same
         import-only module version.  If an 'excludes/import-only-module'
@@ -607,9 +610,6 @@ Internet-Draft                YANG Packages                    June 2026
    As defined in [RFC7950] and [I-D.ietf-netmod-yang-semver], YANG
    conformance and versioning is specified in terms of particular
    versions of YANG modules rather than for individual submodules.
-
-
-
 
 
 
@@ -4673,16 +4673,521 @@ Internet-Draft                YANG Packages                    June 2026
 
 A.3.  Package Versioning Examples
 
-   This section provides examples of versioning packages.
+   This section provides examples of versioning packages.  The examples
+   are non-normative, and for brevity only the relevant package
+   definition fields are shown in the package instance-data files.
 
-   The examples are non-normative, and for brevity, some expected
-   information (e.g., locations) are omitted.
+   The examples illustrate the history of a single package, "example-
+   versioned-routing".  Each example highlights whether the package
+   definition changes are backwards-compatible (BC), non-backwards-
+   compatible (NBC), or editorial.
 
-   TODO, line wrapping in examples.
+   The following diagram summarizes the version lineage illustrated by
+   the examples.  The lineage is linear because these examples focus on
+   successive updates to a single package definition.
 
-   TODO, should we also remove the instance-data wrapper around the
-   examples in this section, that would potentially help minimize
-   wrapping?
+       1.0.0 - Initial published version
+         |
+       1.1.0 - BC: add package, module, and mandatory features
+         |
+       2.0.0 - NBC: downref package and remove module
+         |
+       3.0.0 - NBC: add module containing deviations
+         |
+       4.0.0 - NBC: remove IPv4 feature, downref module, and add module
+         |
+       4.0.1 - Editorial: update module location information
+
+
+
+
+Wilton, et al.          Expires 24 December 2026               [Page 84]
+
+Internet-Draft                YANG Packages                    June 2026
+
+
+A.3.1.  Initial Package Version
+
+   The initial package version defines a small routing schema.  This
+   version is used as the starting point for the later examples.
+
+   <CODE BEGINS> file "example-versioned-routing@1.0.0.ypkg"
+   {
+     "ietf-yang-instance-data:instance-data-set": {
+       "content-data": {
+         "ietf-yang-package-instance:package": {
+           "name": "example-versioned-routing",
+           "version": "1.0.0",
+           "timestamp": "2026-06-22T00:00:00Z",
+           "description": "Example versioned routing package",
+           "reference": "XXX, draft-ietf-netmod-yang-packages",
+           "includes": {
+             "package": [
+               {
+                 "name": "example-network-device",
+                 "version": "1.1.2"
+               }
+             ],
+             "module": [
+               {
+                 "name": "example-routing-core",
+                 "version": "2.0.0"
+               },
+               {
+                 "name": "example-routing-acl",
+                 "version": "1.0.0"
+               }
+             ],
+             "feature": [
+               "example-routing-core:ipv4"
+             ]
+           }
+         }
+       }
+     }
+   }
+   <CODE ENDS>
+
+A.3.2.  Backwards-compatible Update
+
+   In version 1.1.0, a new included package, a new module, and new
+   mandatory features are added.  These are all backwards-compatible
+   changes, so the minor version is incremented.
+
+
+
+
+Wilton, et al.          Expires 24 December 2026               [Page 85]
+
+Internet-Draft                YANG Packages                    June 2026
+
+
+   <CODE BEGINS> file "example-versioned-routing@1.1.0.ypkg"
+   =============== NOTE: '\' line wrapping per RFC 8792 ================
+
+   {
+     "ietf-yang-instance-data:instance-data-set": {
+       "content-data": {
+         "ietf-yang-package-instance:package": {
+           "name": "example-versioned-routing",
+           "version": "1.1.0",
+           "version-description": "Adds telemetry, policy, and new \
+   features.",
+           "timestamp": "2026-06-22T00:00:00Z",
+           "description": "Example versioned routing package",
+           "reference": "XXX, draft-ietf-netmod-yang-packages",
+           "includes": {
+             "package": [
+               {
+                 "name": "example-network-device",
+                 "version": "1.1.2"
+               },
+               {
+                 "name": "example-routing-telemetry",
+                 "version": "1.0.0"
+               }
+             ],
+             "module": [
+               {
+                 "name": "example-routing-core",
+                 "version": "2.0.0"
+               },
+               {
+                 "name": "example-routing-acl",
+                 "version": "1.0.0"
+               },
+               {
+                 "name": "example-routing-policy",
+                 "version": "1.0.0"
+               }
+             ],
+             "feature": [
+               "example-routing-core:ipv4",
+               "example-routing-core:ipv6",
+               "example-routing-policy:statistics"
+             ]
+           }
+         }
+       }
+     }
+
+
+
+Wilton, et al.          Expires 24 December 2026               [Page 86]
+
+Internet-Draft                YANG Packages                    June 2026
+
+
+   }
+   <CODE ENDS>
+
+A.3.3.  Package Downref and Module Removal
+
+   In version 2.0.0, the "example-network-device" package reference is
+   changed to an older package version, and the previously included
+   "example-routing-acl" module is removed.  Both changes are NBC, so
+   the major version is incremented.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Wilton, et al.          Expires 24 December 2026               [Page 87]
+
+Internet-Draft                YANG Packages                    June 2026
+
+
+   <CODE BEGINS> file "example-versioned-routing@2.0.0.ypkg"
+   =============== NOTE: '\' line wrapping per RFC 8792 ================
+
+   {
+     "ietf-yang-instance-data:instance-data-set": {
+       "content-data": {
+         "ietf-yang-package-instance:package": {
+           "name": "example-versioned-routing",
+           "version": "2.0.0",
+           "version-description": "Downrefs a package and removes the \
+   ACL module.",
+           "timestamp": "2026-06-22T00:00:00Z",
+           "description": "Example versioned routing package",
+           "reference": "XXX, draft-ietf-netmod-yang-packages",
+           "includes": {
+             "package": [
+               {
+                 "name": "example-network-device",
+                 "version": "1.0.0"
+               },
+               {
+                 "name": "example-routing-telemetry",
+                 "version": "1.0.0"
+               }
+             ],
+             "module": [
+               {
+                 "name": "example-routing-core",
+                 "version": "2.0.0"
+               },
+               {
+                 "name": "example-routing-policy",
+                 "version": "1.0.0"
+               }
+             ],
+             "feature": [
+               "example-routing-core:ipv4",
+               "example-routing-core:ipv6",
+               "example-routing-policy:statistics"
+             ]
+           }
+         }
+       }
+     }
+   }
+   <CODE ENDS>
+
+
+
+
+
+Wilton, et al.          Expires 24 December 2026               [Page 88]
+
+Internet-Draft                YANG Packages                    June 2026
+
+
+A.3.4.  Adding a Deviations Module
+
+   In version 3.0.0, a new module containing deviations that modified
+   some data nodes and marked other data nodes as not-supported.  The
+   deviations remove or restrict nodes that were present in the previous
+   resolved schema.  The change is therefore NBC, and the major version
+   is incremented.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Wilton, et al.          Expires 24 December 2026               [Page 89]
+
+Internet-Draft                YANG Packages                    June 2026
+
+
+   <CODE BEGINS> file "example-versioned-routing@3.0.0.ypkg"
+   {
+     "ietf-yang-instance-data:instance-data-set": {
+       "content-data": {
+         "ietf-yang-package-instance:package": {
+           "name": "example-versioned-routing",
+           "version": "3.0.0",
+           "version-description": "Adds NBC vendor deviations.",
+           "timestamp": "2026-06-22T00:00:00Z",
+           "description": "Example versioned routing package",
+           "reference": "XXX, draft-ietf-netmod-yang-packages",
+           "includes": {
+             "package": [
+               {
+                 "name": "example-network-device",
+                 "version": "1.0.0"
+               },
+               {
+                 "name": "example-routing-telemetry",
+                 "version": "1.0.0"
+               }
+             ],
+             "module": [
+               {
+                 "name": "example-routing-core",
+                 "version": "2.0.0"
+               },
+               {
+                 "name": "example-routing-policy",
+                 "version": "1.0.0"
+               },
+               {
+                 "name": "vendor-routing-deviations",
+                 "version": "2026-06-22"
+               }
+             ],
+             "feature": [
+               "example-routing-core:ipv4",
+               "example-routing-core:ipv6",
+               "example-routing-policy:statistics"
+             ]
+           }
+         }
+       }
+     }
+   }
+   <CODE ENDS>
+
+
+
+
+Wilton, et al.          Expires 24 December 2026               [Page 90]
+
+Internet-Draft                YANG Packages                    June 2026
+
+
+A.3.5.  Mixed Backwards-compatible and NBC Changes
+
+   In version 4.0.0, the mandatory "example-routing-core:ipv4" feature
+   is removed and the "example-routing-core" module is changed to an
+   older version.  Both of these are NBC changes.  A new "example-isis"
+   module is also added, which would otherwise be a BC change, but the
+   overall package update is still NBC, so the major version is
+   incremented.
+
+   <CODE BEGINS> file "example-versioned-routing@4.0.0.ypkg"
+   =============== NOTE: '\' line wrapping per RFC 8792 ================
+
+   {
+     "ietf-yang-instance-data:instance-data-set": {
+       "content-data": {
+         "ietf-yang-package-instance:package": {
+           "name": "example-versioned-routing",
+           "version": "4.0.0",
+           "version-description": "Removes IPv4, downrefs core, adds \
+   ISIS.",
+           "timestamp": "2026-06-22T00:00:00Z",
+           "description": "Example versioned routing package",
+           "reference": "XXX, draft-ietf-netmod-yang-packages",
+           "includes": {
+             "package": [
+               {
+                 "name": "example-network-device",
+                 "version": "1.0.0"
+               },
+               {
+                 "name": "example-routing-telemetry",
+                 "version": "1.0.0"
+               }
+             ],
+             "module": [
+               {
+                 "name": "example-routing-core",
+                 "version": "1.5.0"
+               },
+               {
+                 "name": "example-routing-policy",
+                 "version": "1.0.0"
+               },
+               {
+                 "name": "vendor-routing-deviations",
+                 "version": "2026-06-22"
+               },
+               {
+
+
+
+Wilton, et al.          Expires 24 December 2026               [Page 91]
+
+Internet-Draft                YANG Packages                    June 2026
+
+
+                 "name": "example-isis",
+                 "version": "1.0.0"
+               }
+             ],
+             "feature": [
+               "example-routing-core:ipv6",
+               "example-routing-policy:statistics"
+             ]
+           }
+         }
+       }
+     }
+   }
+   <CODE ENDS>
+
+A.3.6.  Editorial Location Update
+
+   In version 4.0.1, the referenced module versions are unchanged, but
+   location information for "example-routing-core" is updated.  This
+   does not change the resolved schema, so it is an editorial package
+   update.  The same classification would apply if the module version
+   had already been resolved from an included package and the package
+   explicitly listed that same module version only to provide updated
+   location information.
+
+   <CODE BEGINS> file "example-versioned-routing@4.0.1.ypkg"
+   =============== NOTE: '\' line wrapping per RFC 8792 ================
+
+   {
+     "ietf-yang-instance-data:instance-data-set": {
+       "content-data": {
+         "ietf-yang-package-instance:package": {
+           "name": "example-versioned-routing",
+           "version": "4.0.1",
+           "version-description": "Updates module location \
+   information.",
+           "timestamp": "2026-06-22T00:00:00Z",
+           "description": "Example versioned routing package",
+           "reference": "XXX, draft-ietf-netmod-yang-packages",
+           "includes": {
+             "package": [
+               {
+                 "name": "example-network-device",
+                 "version": "1.0.0"
+               },
+               {
+                 "name": "example-routing-telemetry",
+                 "version": "1.0.0"
+
+
+
+Wilton, et al.          Expires 24 December 2026               [Page 92]
+
+Internet-Draft                YANG Packages                    June 2026
+
+
+               }
+             ],
+             "module": [
+               {
+                 "name": "example-routing-core",
+                 "version": "1.5.0",
+                 "location": [
+                   "https://example.org/yang/\
+   example-routing-core@1.5.0.yang"
+                 ]
+               },
+               {
+                 "name": "example-routing-policy",
+                 "version": "1.0.0"
+               },
+               {
+                 "name": "vendor-routing-deviations",
+                 "version": "2026-06-22"
+               },
+               {
+                 "name": "example-isis",
+                 "version": "1.0.0"
+               }
+             ],
+             "feature": [
+               "example-routing-core:ipv6",
+               "example-routing-policy:statistics"
+             ]
+           }
+         }
+       }
+     }
+   }
+   <CODE ENDS>
 
 A.4.  Package Resolution Examples
 
@@ -4700,8 +5205,7 @@ A.4.  Package Resolution Examples
 
 
 
-
-Wilton, et al.          Expires 24 December 2026               [Page 84]
+Wilton, et al.          Expires 24 December 2026               [Page 93]
 
 Internet-Draft                YANG Packages                    June 2026
 
@@ -4757,7 +5261,7 @@ A.4.1.  Example of package import conflict resolution
 
 
 
-Wilton, et al.          Expires 24 December 2026               [Page 85]
+Wilton, et al.          Expires 24 December 2026               [Page 94]
 
 Internet-Draft                YANG Packages                    June 2026
 
@@ -4813,7 +5317,7 @@ Internet-Draft                YANG Packages                    June 2026
 
 
 
-Wilton, et al.          Expires 24 December 2026               [Page 86]
+Wilton, et al.          Expires 24 December 2026               [Page 95]
 
 Internet-Draft                YANG Packages                    June 2026
 
@@ -4869,7 +5373,7 @@ Internet-Draft                YANG Packages                    June 2026
 
 
 
-Wilton, et al.          Expires 24 December 2026               [Page 87]
+Wilton, et al.          Expires 24 December 2026               [Page 96]
 
 Internet-Draft                YANG Packages                    June 2026
 
@@ -4925,7 +5429,7 @@ A.5.  Package Exclusion Examples
 
 
 
-Wilton, et al.          Expires 24 December 2026               [Page 88]
+Wilton, et al.          Expires 24 December 2026               [Page 97]
 
 Internet-Draft                YANG Packages                    June 2026
 
@@ -4981,7 +5485,7 @@ A.5.1.  Example of excluding modules and an enabled feature
 
 
 
-Wilton, et al.          Expires 24 December 2026               [Page 89]
+Wilton, et al.          Expires 24 December 2026               [Page 98]
 
 Internet-Draft                YANG Packages                    June 2026
 
@@ -5037,7 +5541,7 @@ Internet-Draft                YANG Packages                    June 2026
 
 
 
-Wilton, et al.          Expires 24 December 2026               [Page 90]
+Wilton, et al.          Expires 24 December 2026               [Page 99]
 
 Internet-Draft                YANG Packages                    June 2026
 
@@ -5093,7 +5597,7 @@ Internet-Draft                YANG Packages                    June 2026
 
 
 
-Wilton, et al.          Expires 24 December 2026               [Page 91]
+Wilton, et al.          Expires 24 December 2026              [Page 100]
 
 Internet-Draft                YANG Packages                    June 2026
 
@@ -5149,7 +5653,7 @@ Internet-Draft                YANG Packages                    June 2026
 
 
 
-Wilton, et al.          Expires 24 December 2026               [Page 92]
+Wilton, et al.          Expires 24 December 2026              [Page 101]
 
 Internet-Draft                YANG Packages                    June 2026
 
@@ -5205,7 +5709,7 @@ Authors' Addresses
 
 
 
-Wilton, et al.          Expires 24 December 2026               [Page 93]
+Wilton, et al.          Expires 24 December 2026              [Page 102]
 
 Internet-Draft                YANG Packages                    June 2026
 
@@ -5261,4 +5765,4 @@ Internet-Draft                YANG Packages                    June 2026
 
 
 
-Wilton, et al.          Expires 24 December 2026               [Page 94]
+Wilton, et al.          Expires 24 December 2026              [Page 103]
