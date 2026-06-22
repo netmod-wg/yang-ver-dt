@@ -3563,6 +3563,287 @@ ietf-ethertypes@2018-11-06.yang"
       </section>
     </section>
 
+    <section anchor="device-example" title="Device Implementation Examples">
+      <t>This section provides examples of how a device may implement YANG
+      packages, and advertise them to clients.  It reuses some of the example
+      packages defined in <xref target="basic_examples"/>, but extended with
+      device implementation specific modifications to those packages.</t>
+
+      <section anchor="device-routing-pkg" title="device-routing YANG package">
+        <t>This example illustrates a vendor's device-routing package that
+        includes the example-routing package, and hence all its dependencies,
+        but also removes a YANG module that is not implemented on the device,
+        removes enabled features that are not supported, adds a
+        YANG module containing deviations to other YANG modules, and adds a
+        vendor device-isis-extensions YANG module, version 1.2.3, that
+        augments the base ietf-isis package.</t>
+        <figure>
+          <artwork><![CDATA[
+<CODE BEGINS> file "device-routing@1.0.0.ypkg"
+{
+  "ietf-yang-instance-data:instance-data-set": {
+    "content-data": {
+      "ietf-yang-package-instance:package": {
+        "name": "device-routing",
+        "version": "1.0.0",
+        "timestamp": "2026-06-22T00:00:00Z",
+        "description": "Example vendor device routing package",
+        "reference": "XXX, draft-ietf-netmod-yang-packages",
+        "includes": {
+          "package": [
+            {
+              "name": "example-routing",
+              "version": "1.3.1"
+            }
+          ],
+          "module": [
+            {
+              "name": "vendor-ietf-bgp-deviations",
+              "version": "2026-06-22"
+            },
+            {
+              "name": "device-isis-extensions",
+              "version": "1.2.3"
+            }
+          ]
+        },
+        "excludes": {
+          "module": [
+            "ietf-if-l3-vlan"
+          ],
+          "feature": [
+            "ietf-system:radius",
+            "ietf-system:radius-authentication"
+          ]
+        }
+      }
+    }
+  }
+}
+<CODE ENDS>
+        ]]></artwork>
+        </figure>
+      </section>
+
+      <section anchor="device-routing-yang-library"
+               title="YANG library advertisement for device-routing">
+        <t>The following JSON fragment illustrates how the device may
+        advertise the datastore schema using YANG library and YANG package
+        bindings.  The YANG library "module-set" contains the resolved set of
+        modules for the device schema, but the module details are elided for
+        brevity.  The schema is bound to the "device-routing" package, and the
+        top-level package list advertises the directly referenced package and
+        all packages that it includes, recursively.  Again, the contents of the
+        packages have been elided for brevity, but the contents matches the
+        content previously illustrated in this document.</t>
+        <figure>
+          <artwork><![CDATA[
+<CODE BEGINS> file "device-routing-library.json"
+{
+  "ietf-yang-instance-data:instance-data-set": {
+    "name": "Device routing datastore schema",
+    "description": "YANG library and package advertisement",
+    "content-data": {
+      "ietf-yang-library:library": {
+        "module-set": [
+          {
+            "name": "device-module-set",
+            "module": [
+              "... implemented module details elided ..."
+            ],
+            "import-only-module": [
+              "... import-only module details elided ..."
+            ]
+          }
+        ],
+        "schema": [
+          {
+            "name": "device-routing datastore schema",
+            "module-set": [
+              "device-module-set"
+            ],
+            "ietf-yl-packages:package": [
+              {
+                "name": "device-routing",
+                "version": "1.0.0"
+              }
+            ]
+          }
+        ],
+        "content-id": "3a6f9c2d7e0b1845"
+      },
+      "ietf-yang-packages:packages": {
+        "package": [
+          {
+            "name": "device-routing",
+            "version": "1.0.0",
+            "description": "Example vendor device routing package",
+            "...": "package details elided"
+          },
+          {
+            "name": "example-routing",
+            "version": "1.3.1",
+            "description": "Example basic routing package",
+            "...": "package details elided"
+          },
+          {
+            "name": "example-network-device",
+            "version": "1.1.2",
+            "description": "Example network device package",
+            "...": "package details elided"
+          },
+          {
+            "name": "example-routing-types",
+            "version": "1.0.0",
+            "description": "Example routing types package",
+            "...": "package details elided"
+          },
+          {
+            "name": "example-base-types",
+            "version": "1.1.0",
+            "description": "Example updated base types package",
+            "...": "package details elided"
+          },
+          {
+            "name": "example-base-types",
+            "version": "1.0.0",
+            "description": "Example base types package",
+            "...": "package details elided"
+          }
+        ]
+      }
+    }
+  }
+}
+<CODE ENDS>
+        ]]></artwork>
+        </figure>
+      </section>
+
+      <section anchor="hotfix-pkg-example" title="Hotfix Package Example">
+        <t>This example illustrates how a vendor can advertise a small hotfix
+        package that updates one module in the device schema without publishing
+        a complete replacement for the baseline device package.  The hotfix
+        package is marked as incomplete (i.e., "complete" = "false") because it
+        contains only the updated device-isis-extensions module, and relies on
+        the other packages bound to the datastore schema to provide the rest of
+        the schema.</t>
+
+        <t>The updated device-isis-extensions module uses version
+        1.2.4_compatible.  This follows the YANG Semver versioning rules
+        described in <xref target="I-D.ietf-netmod-yang-semver"/>.  In this
+        example, it is assumed that version 1.3.0 was not usable because it had
+        previously been published with different content.</t>
+
+        <figure>
+          <artwork><![CDATA[
+<CODE BEGINS> file "vendor-isis-hotfix@1.0.0.ypkg"
+{
+  "ietf-yang-instance-data:instance-data-set": {
+    "content-data": {
+      "ietf-yang-package-instance:package": {
+        "name": "vendor-isis-hotfix",
+        "version": "1.0.0",
+        "timestamp": "2026-06-22T00:00:00Z",
+        "description": "Example vendor ISIS hotfix package",
+        "reference": "XXX, draft-ietf-netmod-yang-packages;",
+        "complete": false,
+        "includes": {
+          "module": [
+            {
+              "name": "device-isis-extensions",
+              "version": "1.2.4_compatible"
+            }
+          ]
+        }
+      }
+    }
+  }
+}
+<CODE ENDS>
+        ]]></artwork>
+        </figure>
+
+        <t>When the hotfix package is used, the YANG library schema package
+        binding lists both the baseline device package and the hotfix package,
+        making use of automatic conflict resolution, as per
+        <xref target="auto-module-version-resolution"/>, to automatically select
+        the later version (1.2.4_compatible) of the device-isis-extensions
+        YANG module.  The YANG library module-set contents would be updated so
+        that the "device-module-set" contains device-isis-extensions version
+        "1.2.4_compatible" rather than previous version, "1.2.3".  The YANG
+        library "content-id" would also change because the
+        YANG library content has changed, and a yang-library-update notification
+        would be generated.</t>
+        <t>However, the goal is that the client doesn't need to fetch the
+        updated YANG library information at all, and just rely on the advertised
+        schema package bindings and the location URLs to fetch the packages and
+        modules and fully resolve the schema off the device.</t>
+        <figure>
+          <artwork><![CDATA[
+<CODE BEGINS> file "device-routing-hotfix-library.json"
+{
+  "ietf-yang-instance-data:instance-data-set": {
+    "name": "Device routing datastore schema with ISIS hotfix",
+    "description": "YANG library and package advertisement",
+    "content-data": {
+      "ietf-yang-library:library": {
+        "module-set": [
+          {
+            "name": "device-module-set",
+            "module": [
+              {
+                "name": "device-isis-extensions",
+                "revision": "2026-06-22",
+                "ietf-yang-library-semver:version": "1.2.4_compatible"
+              },
+              "... other implemented module details elided ..."
+            ],
+            "import-only-module": [
+              "... import-only module details elided ..."
+            ]
+          }
+        ],
+        "schema": [
+          {
+            "name": "device-routing datastore schema",
+            "module-set": [
+              "device-module-set"
+            ],
+            "ietf-yl-packages:package": [
+              {
+                "name": "device-routing",
+                "version": "1.0.0"
+              },
+              {
+                "name": "vendor-isis-hotfix",
+                "version": "1.0.0"
+              }
+            ]
+          }
+        ],
+        "content-id": "9f2c6a0d4b8e7135"
+      },
+      "ietf-yang-packages:packages": {
+        "package": [
+          {
+            "name": "vendor-isis-hotfix",
+            "version": "1.0.0",
+            "description": "Example vendor ISIS hotfix package",
+            "...": "package details elided"
+          },
+          "... other advertised package entries elided ..."
+        ]
+      }
+    }
+  }
+}
+<CODE ENDS>
+        ]]></artwork>
+        </figure>
+      </section>
+    </section>
+
     <section anchor="versioning_examples" title="Package Versioning Examples">
       <t>This section provides examples of versioning packages.</t>
 
@@ -3916,17 +4197,6 @@ example-ab@0.1.0.ypkg"
         ]]></artwork>
         </figure>
       </section>
-    </section>
-
-    <section anchor="hotfix-pkg-example" title="Hotfix Package Example">
-      <t>TODO, provide an example of how a bugfix package on a device that works.
-      The example should illustrate how an incomplete package contains an
-      updated version of some particular module due to a bugfix, but it does not
-      include the dependencies, and hence it is marked as an incomplete package.  Both
-      the baseline server package and the bugfix package are advertised by the
-      server for the datastore schema and we rely on automatic module resolution
-      to pick up the bugfix module version.  Also note that it is not possible
-      to downrev a module using this hotfix mechanism.</t>
     </section>
 
     <section anchor="mounted_examples" title="Mounted Package Examples">

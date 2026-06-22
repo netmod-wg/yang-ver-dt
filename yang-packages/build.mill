@@ -339,6 +339,103 @@ object ExampleRoutingPkg extends ExamplePkgDefn {
     )
 }
 
+object DeviceRoutingPkg extends ExamplePkgDefn {
+  def name = "device-routing"
+  def version = "1.0.0"
+  override def timestamp = "2026-06-22T00:00:00Z"
+  def description =
+    "Example vendor device routing package"
+  def reference = "XXX, draft-ietf-netmod-yang-packages"
+
+  def includedPackages = Seq(ExampleRoutingPkg)
+  override def modules =
+    Seq(
+      yang.packages.tools.lib.Module(
+        "vendor-ietf-bgp-deviations",
+        ModuleVersion("2026-06-22"),
+        Seq()
+      ),
+      yang.packages.tools.lib.Module(
+        "device-isis-extensions",
+        ModuleVersion("1.2.3"),
+        Seq()
+      )
+    )
+  def excludedModules =
+    Seq("ietf-if-l3-vlan")
+  override def optionalFeatures =
+    Seq(
+      "ietf-system:radius",
+      "ietf-system:radius-authentication"
+    )
+
+  override def makePackage = Task:
+    val pkg = YangPackage(
+      name = PkgName(name),
+      version = PkgVersion(version),
+      versionDescription = versionDescription,
+      timestamp = timestamp,
+      organization = organization,
+      contact = contact,
+      description = description,
+      reference = reference,
+      complete = complete.getOrElse(true),
+      includes = Includes(
+        packages = Seq(
+          YangPackageRef(
+            PkgName(ExampleRoutingPkg.name),
+            PkgVersion(ExampleRoutingPkg.version),
+            Seq()
+          )
+        ),
+        modules = modules.collect:
+          case m: yang.packages.tools.lib.Module => m
+          case moduleRev: String =>
+            val (name, rev, locations) = moduleNameResolver(moduleRev)
+            yang.packages.tools.lib.Module(name, rev, locations),
+        importOnlyModules = importOnlyModules.collect:
+          case m: ImportOnlyModule => m
+          case moduleRev: String =>
+            val (name, rev, locations) = moduleNameResolver(moduleRev)
+            ImportOnlyModule(name, rev, locations),
+        features = mandatoryFeatures
+      ),
+      excludes = Excludes(
+        modules = excludedModules,
+        importOnlyModules = excludedImportOnlyModules.collect:
+          case m: ExcludedImportOnlyModules => m
+          case moduleRev: String =>
+            val (name, optVer) = moduleNameOptVerResolver(moduleRev)
+            ExcludedImportOnlyModules(name, optVer),
+        features = optionalFeatures
+      ),
+      mountedPackages = mountedPackages
+    )
+    val fileRef = Task.dest / Helper.packageFileName(pkg)
+    pkg.writeToFile(fileRef)
+    PathRef(fileRef)
+}
+
+object VendorIsisHotfixPkg extends ExamplePkgDefn {
+  def name = "vendor-isis-hotfix"
+  def version = "1.0.0"
+  override def timestamp = "2026-06-22T00:00:00Z"
+  override def complete = Some(false)
+  def description =
+    "Example vendor ISIS hotfix package"
+  def reference =
+    "XXX, draft-ietf-netmod-yang-packages;"
+
+  override def modules =
+    Seq(
+      yang.packages.tools.lib.Module(
+        "device-isis-extensions",
+        ModuleVersion("1.2.4_compatible"),
+        Seq()
+      )
+    )
+}
+
 object ExampleImport1Pkg extends ExamplePkgDefn {
   def name = "example-import-1"
   def version = "1.0.0"
@@ -406,6 +503,8 @@ object DraftXml extends mill.Module:
     ExampleNetworkDevicePkg,
     ExampleRoutingTypesPkg,
     ExampleRoutingPkg,
+    DeviceRoutingPkg,
+    VendorIsisHotfixPkg,
     ExampleImport1Pkg,
     ExampleImport2Pkg,
     Example3Pkg,
@@ -727,6 +826,8 @@ object DraftXml extends mill.Module:
       "example-routing-types",
       "example-network-device",
       "example-routing",
+      "device-routing",
+      "vendor-isis-hotfix",
       "example-ab",
       "example-c",
     )
