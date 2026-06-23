@@ -616,6 +616,161 @@ object ExampleVersionedRoutingPkg_4_0_1 extends ExampleVersionedRoutingPkg {
     )
 }
 
+trait ExampleResolutionPkg extends ExamplePkgDefn {
+  override def timestamp = "2026-06-22T00:00:00Z"
+  def reference = "XXX, draft-ietf-netmod-yang-packages"
+  def includedPackageRefs: Seq[(String, String)] = Seq()
+
+  override def makePackage = Task:
+    val pkg = YangPackage(
+      name = PkgName(name),
+      version = PkgVersion(version),
+      versionDescription = versionDescription,
+      timestamp = timestamp,
+      organization = organization,
+      contact = contact,
+      description = description,
+      reference = reference,
+      complete = complete.getOrElse(true),
+      includes = Includes(
+        packages = includedPackageRefs.map: (name, version) =>
+          YangPackageRef(PkgName(name), PkgVersion(version), Seq()),
+        modules = modules.collect:
+          case m: yang.packages.tools.lib.Module => m
+          case moduleRev: String =>
+            val (name, rev, locations) = moduleNameResolver(moduleRev)
+            yang.packages.tools.lib.Module(name, rev, locations),
+        importOnlyModules = importOnlyModules.collect:
+          case m: ImportOnlyModule => m
+          case moduleRev: String =>
+            val (name, rev, locations) = moduleNameResolver(moduleRev)
+            ImportOnlyModule(name, rev, locations),
+        features = mandatoryFeatures
+      ),
+      excludes = Excludes(
+        modules = excludedModules,
+        importOnlyModules = excludedImportOnlyModules.collect:
+          case m: ExcludedImportOnlyModules => m
+          case moduleRev: String =>
+            val (name, optVer) = moduleNameOptVerResolver(moduleRev)
+            ExcludedImportOnlyModules(name, optVer),
+        features = optionalFeatures
+      ),
+      mountedPackages = mountedPackages
+    )
+    val fileRef = Task.dest / Helper.packageFileName(pkg)
+    pkg.writeToFile(fileRef)
+    PathRef(fileRef)
+}
+
+object ExampleResolutionCommonPkg_1_0_0 extends ExampleResolutionPkg {
+  def name = "example-resolution-common"
+  def version = "1.0.0"
+  def description = "Example common package for resolution examples"
+  override def modules =
+    Seq(
+      yang.packages.tools.lib.Module("example-resolution-base", ModuleVersion("1.0.0"), Seq())
+    )
+  override def importOnlyModules =
+    Seq(
+      ImportOnlyModule("example-resolution-types", ModuleVersion("1.0.0"), Seq())
+    )
+  override def mandatoryFeatures =
+    Seq("example-resolution-base:basic")
+}
+
+object ExampleResolutionCommonPkg_1_4_0 extends ExampleResolutionPkg {
+  def name = "example-resolution-common"
+  def version = "1.4.0"
+  def description = "Updated common package for resolution examples"
+  override def modules =
+    Seq(
+      yang.packages.tools.lib.Module("example-resolution-base", ModuleVersion("1.4.0"), Seq()),
+      yang.packages.tools.lib.Module("example-resolution-telemetry", ModuleVersion("1.2.0"), Seq())
+    )
+  override def importOnlyModules =
+    Seq(
+      ImportOnlyModule("example-resolution-types", ModuleVersion("1.4.0"), Seq())
+    )
+  override def mandatoryFeatures =
+    Seq(
+      "example-resolution-base:basic",
+      "example-resolution-telemetry:events"
+    )
+}
+
+object ExampleResolutionAccessPkg extends ExampleResolutionPkg {
+  def name = "example-resolution-access"
+  def version = "2.0.0"
+  def description = "Example access package for resolution examples"
+  override def includedPackageRefs =
+    Seq("example-resolution-common" -> "1.0.0")
+  override def modules =
+    Seq(
+      yang.packages.tools.lib.Module(
+        "example-resolution-acl",
+        ModuleVersion("1.1.0"),
+        Seq("example:location-qux")
+      ),
+      yang.packages.tools.lib.Module(
+        "example-resolution-transport",
+        ModuleVersion("1.2.0"),
+        Seq(
+          "example:location-foo",
+          "example:location-bar"
+        )
+      )
+    )
+  override def mandatoryFeatures =
+    Seq("example-resolution-acl:ipv4")
+}
+
+object ExampleResolutionRoutingPkg extends ExampleResolutionPkg {
+  def name = "example-resolution-routing"
+  def version = "3.0.0"
+  def description = "Example routing package for resolution examples"
+  override def includedPackageRefs =
+    Seq("example-resolution-common" -> "1.4.0")
+  override def modules =
+    Seq(
+      yang.packages.tools.lib.Module("example-resolution-acl", ModuleVersion("1.3.0"), Seq()),
+      yang.packages.tools.lib.Module("example-resolution-routing", ModuleVersion("1.3.0"), Seq()),
+      yang.packages.tools.lib.Module(
+        "example-resolution-transport",
+        ModuleVersion("1.2.0"),
+        Seq(
+          "example:location-foo",
+          "example:location-baz"
+        )
+      )
+    )
+  override def mandatoryFeatures =
+    Seq("example-resolution-routing:statistics")
+}
+
+object ExampleResolutionDevicePkg extends ExampleResolutionPkg {
+  def name = "example-resolution-device"
+  def version = "4.0.0"
+  def description = "Top-level package for resolution examples"
+  override def includedPackageRefs =
+    Seq(
+      "example-resolution-access" -> "2.0.0",
+      "example-resolution-routing" -> "3.0.0"
+    )
+  override def modules =
+    Seq(
+      yang.packages.tools.lib.Module(
+        "example-resolution-acl",
+        ModuleVersion("1.1.0"),
+        Seq("example:location-quux")
+      )
+    )
+  override def excludedModules =
+    Seq("example-resolution-telemetry")
+  override def optionalFeatures =
+    Seq("example-resolution-routing:statistics")
+}
+
 object ExampleImport1Pkg extends ExamplePkgDefn {
   def name = "example-import-1"
   def version = "1.0.0"
@@ -691,6 +846,11 @@ object DraftXml extends mill.Module:
     ExampleVersionedRoutingPkg_3_0_0,
     ExampleVersionedRoutingPkg_4_0_0,
     ExampleVersionedRoutingPkg_4_0_1,
+    ExampleResolutionCommonPkg_1_0_0,
+    ExampleResolutionCommonPkg_1_4_0,
+    ExampleResolutionAccessPkg,
+    ExampleResolutionRoutingPkg,
+    ExampleResolutionDevicePkg,
     ExampleImport1Pkg,
     ExampleImport2Pkg,
     Example3Pkg,
@@ -1015,14 +1175,17 @@ object DraftXml extends mill.Module:
       "device-routing",
       "vendor-isis-hotfix",
       "example-versioned-routing",
+      "example-resolution-common",
+      "example-resolution-access",
+      "example-resolution-routing",
+      "example-resolution-device",
       "example-ab",
       "example-c",
     )
     val updatedPackages = packages
       .filter(p => packageBlocks.contains(p.pkg.name))
       .foldLeft(updatedSources)(replacePackageCodeBlock)
-    val updatedResolution = replaceResolutionExample(updatedPackages, packages)
-    os.write.over(xmlPath, updatedResolution)
+    os.write.over(xmlPath, updatedPackages)
     xmlPath
 
   def checkYang = Task:

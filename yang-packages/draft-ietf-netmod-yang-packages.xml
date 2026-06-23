@@ -535,7 +535,7 @@ module: ietf-yang-package-types
         <t>Step 1: recursively resolve each package in the
         "includes/package" list using this same two-step process.</t>
 
-        <t>Step 2: merge the resolved schemas from those included packages with
+        <t>Step 2: merge the resolved package schemas from those included packages with
         the local entries defined directly by this package.  The local entries
         are the contents of the "includes", "excludes", and "mount" containers
         in this package.  The merge is performed using the following rules:
@@ -849,7 +849,7 @@ module: ietf-yang-packages
           <t>If populated, the set of packages listed for a datastore schema
           combined with the leaf-list of additional-feature entries MUST resolve
           to a schema that exactly matches the schema defined by the YANG library
-          'schema/module-set' leaf-list, and the resolved schema MUST be
+          'schema/module-set' leaf-list, and the resolved package schema MUST be
           referentially complete.</t>
 
           <t>Since these nodes augment into YANG library, then as per
@@ -1111,14 +1111,14 @@ ietf-inet-types@2025-12-22.yang"
           <t>It is important to note that a non-backwards-compatible (NBC)
           change to a package definition (generally requiring a major version
           number increment) may not always result in an NBC change to the
-          resolved schema. For example, if a package replaces a module version
+          resolved package schema. For example, if a package replaces a module version
           1.0.0 with version 3.0.0, but the content of version 3.0.0 has been
           reverted to be functionally identical to version 1.0.0 (effectively
           backing out previous changes between the two), the schema difference
           between the package versions may be functionally compatible.
           Nevertheless, such changes must still follow the versioning rules
           defined above based on the package definition changes, not the
-          effective change to the resolved schema.</t>
+          effective change to the resolved package schema.</t>
 
           <section anchor="nbc_package_change"
                    title="Non-Backwards-compatible changes">
@@ -1319,7 +1319,7 @@ ietf-inet-types@2025-12-22.yang"
 
         <t>If an implementation doesn't support any functionality in a module
         then it should exclude the module rather than using deviations to
-        exclude all data nodes added by the module to the resolved schema.
+        exclude all data nodes added by the module to the resolved package schema.
         This gives a clearer indication to users of the package definition as to
         the intent.  However, be aware when combining two included packages,
         that a module removed by one package could still be readded by another
@@ -1475,7 +1475,7 @@ ietf-inet-types@2025-12-22.yang"
             together in an overarching package definition that relies on the
             automatic resolution of module versions.</t>
 
-            <t>The resolved schema representing a datastore MUST be
+            <t>The resolved package schema representing a datastore MUST be
             referentially complete.</t>
           </list></t>
       </section>
@@ -4079,8 +4079,8 @@ ACL module.",
         <t>In version 3.0.0, a new module containing deviations that modified
         some data nodes and marked other data nodes as not-supported.  The
         deviations remove or restrict nodes that were present in the previous
-        resolved schema.  The change is therefore NBC, and the major version is
-        incremented.</t>
+        resolved package schema.  The change is therefore NBC, and the major
+        version is incremented.</t>
         <figure>
           <artwork><![CDATA[
 <CODE BEGINS> file "example-versioned-routing@3.0.0.ypkg"
@@ -4206,7 +4206,7 @@ ISIS.",
                title="Editorial Location Update">
         <t>In version 4.0.1, the referenced module versions are unchanged, but
         location information for "example-routing-core" is updated.  This does
-        not change the resolved schema, so it is an editorial package update.
+        not change the resolved package schema, so it is an editorial package update.
         The same classification would apply if the module version had already
         been resolved from an included package and the package explicitly
         listed that same module version only to provide updated location
@@ -4277,156 +4277,56 @@ example-routing-core@1.5.0.yang"
     </section>
 
     <section anchor="resolution_examples" title="Package Resolution Examples">
-      <t>This section provides examples of package resolution.</t>
+      <t>This section provides examples of package resolution.  The examples
+      are non-normative, and for brevity the package instance data files omit
+      location information except where used to illustrate a specific point.</t>
 
-      <t>The examples are non-normative, and for brevity, some expected information
-      (e.g., locations) are omitted.</t>
-      <t>TODO, line wrapping in examples.</t>
-      <t>TODO, should we also remove the instance-data wrapper around the
-      examples in this section, that would potentially help minimize wrapping?</t>
+      <t>As described in <xref target="resolution"/>, resolving a set of
+      packages produces a YANG schema: a set of implemented modules,
+      import-only modules, enabled features, deviations, and mount points.
+      Included packages are recursively resolved first.  The resulting package
+      schemas are then combined using automatic module resolution, and finally
+      any local module, import-only-module, feature, or exclusion entries in
+      the including package are applied.</t>
 
-      <section anchor="resolved_example"
-               title="Example of package import conflict resolution">
-        <t>This section provides an example of how a package can resolve
-        conflicting module revisions from imported packages.</t>
-
-        <t>In this example, YANG package 'example-3' imports both
-        'example-import-1' and 'example-import-2' packages. However, the two
-        imported packages implement different revisions of 'example-module-A'
-        so the 'example-3' package selects version '1.2.3' to resolve the
-        conflict. Similarly, for import-only modules, the 'example-3'
-        package does not require both revisions of example-types-module-C to be
-        imported, so it indicates that it only imports revision '2018-11-26'
-        and not '2018-01-01'.</t>
+      <section anchor="resolution-recursive"
+               title="Recursive Package Resolution">
+        <t>The following examples define two versions of a common package.  The
+        access package includes version 1.0.0 of that common package, while the
+        routing package includes version 1.4.0.  This illustrates that package
+        resolution is performed on the resolved module sets, not by choosing
+        one package version and discarding the other package version.</t>
 
         <figure>
           <artwork><![CDATA[
-<CODE BEGINS> file "example-import-1@1.0.0.ypkg"
-{
-  "ietf-yang-instance-data:instance-data-set": {
-    "content-data": {
-      "ietf-yang-package-instance:package": {
-        "name": "example-import-1",
-        "version": "1.0.0",
-        "timestamp": "2018-01-01T00:00:00Z",
-        "description": "First imported example package",
-        "reference": "XXX, draft-ietf-netmod-yang-packages",
-        "includes": {
-          "module": [
-            {
-              "name": "example-module-A",
-              "version": "1.0.0"
-            },
-            {
-              "name": "example-module-B",
-              "version": "1.0.0"
-            }
-          ],
-          "import-only-module": [
-            {
-              "name": "example-types-module-C",
-              "version": "2018-01-01"
-            },
-            {
-              "name": "example-types-module-D",
-              "version": "2018-01-01"
-            }
-          ]
-        }
-      }
-    }
-  }
-}
-<CODE ENDS>
-        ]]></artwork>
-        </figure>
-
-        <figure>
-          <artwork><![CDATA[
-<CODE BEGINS> file "example-import-2@2.0.0.ypkg"
-{
-  "ietf-yang-instance-data:instance-data-set": {
-    "content-data": {
-      "ietf-yang-package-instance:package": {
-        "name": "example-import-2",
-        "version": "2.0.0",
-        "timestamp": "2018-11-26T00:00:00Z",
-        "description": "Second imported example package",
-        "reference": "XXX, draft-ietf-netmod-yang-packages",
-        "includes": {
-          "module": [
-            {
-              "name": "example-module-A",
-              "version": "1.2.3"
-            },
-            {
-              "name": "example-module-E",
-              "version": "1.1.0"
-            }
-          ],
-          "import-only-module": [
-            {
-              "name": "example-types-module-C",
-              "version": "2018-11-26"
-            },
-            {
-              "name": "example-types-module-D",
-              "version": "2018-11-26"
-            }
-          ]
-        }
-      }
-    }
-  }
-}
-<CODE ENDS>
-        ]]></artwork>
-        </figure>
-
-        <figure>
-          <artwork><![CDATA[
-<CODE BEGINS> file "example-3@1.0.0.ypkg"
+<CODE BEGINS> file "example-resolution-common@1.0.0.ypkg"
 =============== NOTE: '\' line wrapping per RFC 8792 ================
 
 {
   "ietf-yang-instance-data:instance-data-set": {
     "content-data": {
       "ietf-yang-package-instance:package": {
-        "name": "example-3",
+        "name": "example-resolution-common",
         "version": "1.0.0",
-        "timestamp": "2018-11-26T00:00:00Z",
-        "description": "Importing example package",
+        "timestamp": "2026-06-22T00:00:00Z",
+        "description": "Example common package for resolution \
+examples",
         "reference": "XXX, draft-ietf-netmod-yang-packages",
         "includes": {
-          "package": [
-            {
-              "name": "example-import-1",
-              "version": "1.0.0",
-              "location": [
-                "https://example.org/yang/packages/\
-example-import-1@1.0.0.ypkg"
-              ]
-            },
-            {
-              "name": "example-import-2",
-              "version": "2.0.0",
-              "location": [
-                "https://example.org/yang/packages/\
-example-import-2@2.0.0.ypkg"
-              ]
-            }
-          ],
           "module": [
             {
-              "name": "example-module-A",
-              "version": "1.2.3"
+              "name": "example-resolution-base",
+              "version": "1.0.0"
             }
           ],
           "import-only-module": [
             {
-              "name": "example-types-module-C",
-              "version": "2018-11-26"
+              "name": "example-resolution-types",
+              "version": "1.0.0"
             }
+          ],
+          "feature": [
+            "example-resolution-base:basic"
           ]
         }
       }
@@ -4436,6 +4336,308 @@ example-import-2@2.0.0.ypkg"
 <CODE ENDS>
         ]]></artwork>
         </figure>
+
+        <t>Resolved contents for "example-resolution-common" version 1.0.0:
+        <list style="symbols">
+          <t>Implemented modules: example-resolution-base@1.0.0.</t>
+          <t>Import-only modules: example-resolution-types@1.0.0.</t>
+          <t>Enabled features: example-resolution-base:basic.</t>
+        </list>
+        Since this package does not include any other packages, the resolved
+        package schema is the module, import-only module, and feature set that
+        it directly defines.</t>
+
+        <figure>
+          <artwork><![CDATA[
+<CODE BEGINS> file "example-resolution-common@1.4.0.ypkg"
+=============== NOTE: '\' line wrapping per RFC 8792 ================
+
+{
+  "ietf-yang-instance-data:instance-data-set": {
+    "content-data": {
+      "ietf-yang-package-instance:package": {
+        "name": "example-resolution-common",
+        "version": "1.4.0",
+        "timestamp": "2026-06-22T00:00:00Z",
+        "description": "Updated common package for resolution \
+examples",
+        "reference": "XXX, draft-ietf-netmod-yang-packages",
+        "includes": {
+          "module": [
+            {
+              "name": "example-resolution-base",
+              "version": "1.4.0"
+            },
+            {
+              "name": "example-resolution-telemetry",
+              "version": "1.2.0"
+            }
+          ],
+          "import-only-module": [
+            {
+              "name": "example-resolution-types",
+              "version": "1.4.0"
+            }
+          ],
+          "feature": [
+            "example-resolution-base:basic",
+            "example-resolution-telemetry:events"
+          ]
+        }
+      }
+    }
+  }
+}
+<CODE ENDS>
+        ]]></artwork>
+        </figure>
+
+        <t>Resolved contents for "example-resolution-common" version 1.4.0:
+        <list style="symbols">
+          <t>Implemented modules: example-resolution-base@1.4.0,
+          example-resolution-telemetry@1.2.0.</t>
+          <t>Import-only modules: example-resolution-types@1.4.0.</t>
+          <t>Enabled features: example-resolution-base:basic,
+          example-resolution-telemetry:events.</t>
+        </list>
+        This newer package version selects newer versions of the base and
+        types modules, and adds the telemetry module and its enabled feature.</t>
+
+        <figure>
+          <artwork><![CDATA[
+<CODE BEGINS> file "example-resolution-access@2.0.0.ypkg"
+=============== NOTE: '\' line wrapping per RFC 8792 ================
+
+{
+  "ietf-yang-instance-data:instance-data-set": {
+    "content-data": {
+      "ietf-yang-package-instance:package": {
+        "name": "example-resolution-access",
+        "version": "2.0.0",
+        "timestamp": "2026-06-22T00:00:00Z",
+        "description": "Example access package for resolution \
+examples",
+        "reference": "XXX, draft-ietf-netmod-yang-packages",
+        "includes": {
+          "package": [
+            {
+              "name": "example-resolution-common",
+              "version": "1.0.0"
+            }
+          ],
+          "module": [
+            {
+              "name": "example-resolution-acl",
+              "version": "1.1.0",
+              "location": [
+                "example:location-qux"
+              ]
+            },
+            {
+              "name": "example-resolution-transport",
+              "version": "1.2.0",
+              "location": [
+                "example:location-foo",
+                "example:location-bar"
+              ]
+            }
+          ],
+          "feature": [
+            "example-resolution-acl:ipv4"
+          ]
+        }
+      }
+    }
+  }
+}
+<CODE ENDS>
+        ]]></artwork>
+        </figure>
+
+        <t>Resolved contents for "example-resolution-access" version 2.0.0:
+        <list style="symbols">
+          <t>Included packages: example-resolution-common@1.0.0.</t>
+          <t>Implemented modules: example-resolution-base@1.0.0,
+          example-resolution-acl@1.1.0 [example:location-qux],
+          example-resolution-transport@1.2.0 [example:location-foo,
+          example:location-bar].</t>
+          <t>Import-only modules: example-resolution-types@1.0.0.</t>
+          <t>Enabled features: example-resolution-base:basic,
+          example-resolution-acl:ipv4.</t>
+        </list>
+        The included common package is resolved first, then the local ACL and
+        transport modules and ACL feature are added.  The ACL and transport
+        module entries include location information; the transport module uses
+        a shared primary location and an access-specific secondary location.</t>
+
+        <figure>
+          <artwork><![CDATA[
+<CODE BEGINS> file "example-resolution-routing@3.0.0.ypkg"
+=============== NOTE: '\' line wrapping per RFC 8792 ================
+
+{
+  "ietf-yang-instance-data:instance-data-set": {
+    "content-data": {
+      "ietf-yang-package-instance:package": {
+        "name": "example-resolution-routing",
+        "version": "3.0.0",
+        "timestamp": "2026-06-22T00:00:00Z",
+        "description": "Example routing package for resolution \
+examples",
+        "reference": "XXX, draft-ietf-netmod-yang-packages",
+        "includes": {
+          "package": [
+            {
+              "name": "example-resolution-common",
+              "version": "1.4.0"
+            }
+          ],
+          "module": [
+            {
+              "name": "example-resolution-acl",
+              "version": "1.3.0"
+            },
+            {
+              "name": "example-resolution-routing",
+              "version": "1.3.0"
+            },
+            {
+              "name": "example-resolution-transport",
+              "version": "1.2.0",
+              "location": [
+                "example:location-foo",
+                "example:location-baz"
+              ]
+            }
+          ],
+          "feature": [
+            "example-resolution-routing:statistics"
+          ]
+        }
+      }
+    }
+  }
+}
+<CODE ENDS>
+        ]]></artwork>
+        </figure>
+
+        <t>Resolved contents for "example-resolution-routing" version 3.0.0:
+        <list style="symbols">
+          <t>Included packages: example-resolution-common@1.4.0.</t>
+          <t>Implemented modules: example-resolution-base@1.4.0,
+          example-resolution-telemetry@1.2.0,
+          example-resolution-acl@1.3.0,
+          example-resolution-routing@1.3.0,
+          example-resolution-transport@1.2.0 [example:location-foo,
+          example:location-baz].</t>
+          <t>Import-only modules: example-resolution-types@1.4.0.</t>
+          <t>Enabled features: example-resolution-base:basic,
+          example-resolution-telemetry:events,
+          example-resolution-routing:statistics.</t>
+        </list>
+        The routing package includes the newer common package version, so its
+        resolved package schema contains the newer base and import-only type modules,
+        plus telemetry, routing, ACL, and transport modules.  The transport
+        module is the same version as in the access package, with the same
+        primary location and a routing-specific secondary location.</t>
+      </section>
+
+      <section anchor="resolution-top-level"
+               title="Local Entries and Exclusions">
+        <t>The top-level device package includes both the access and routing
+        packages.  Recursively, this also brings in both versions of
+        "example-resolution-common".  There is no mechanism to exclude an
+        included package.  Instead, resolution operates on the modules and
+        features contributed by those packages.  This package locally selects
+        version 1.1.0 of "example-resolution-acl", excludes the telemetry
+        module, and excludes the routing statistics feature.</t>
+
+        <figure>
+          <artwork><![CDATA[
+<CODE BEGINS> file "example-resolution-device@4.0.0.ypkg"
+{
+  "ietf-yang-instance-data:instance-data-set": {
+    "content-data": {
+      "ietf-yang-package-instance:package": {
+        "name": "example-resolution-device",
+        "version": "4.0.0",
+        "timestamp": "2026-06-22T00:00:00Z",
+        "description": "Top-level package for resolution examples",
+        "reference": "XXX, draft-ietf-netmod-yang-packages",
+        "includes": {
+          "package": [
+            {
+              "name": "example-resolution-access",
+              "version": "2.0.0"
+            },
+            {
+              "name": "example-resolution-routing",
+              "version": "3.0.0"
+            }
+          ],
+          "module": [
+            {
+              "name": "example-resolution-acl",
+              "version": "1.1.0",
+              "location": [
+                "example:location-quux"
+              ]
+            }
+          ]
+        },
+        "excludes": {
+          "module": [
+            "example-resolution-telemetry"
+          ],
+          "feature": [
+            "example-resolution-routing:statistics"
+          ]
+        }
+      }
+    }
+  }
+}
+<CODE ENDS>
+        ]]></artwork>
+        </figure>
+
+        <t>Resolved contents for "example-resolution-device" version 4.0.0:
+        <list style="symbols">
+          <t>Included packages: example-resolution-access@2.0.0,
+          example-resolution-routing@3.0.0, example-resolution-common@1.0.0,
+          example-resolution-common@1.4.0.</t>
+          <t>Implemented modules: example-resolution-base@1.4.0,
+          example-resolution-transport@1.2.0 [example:location-foo,
+          example:location-bar, example:location-baz],
+          example-resolution-acl@1.1.0 [example:location-quux],
+          example-resolution-routing@1.3.0.</t>
+          <t>Import-only modules: example-resolution-types@1.0.0,
+          example-resolution-types@1.4.0.</t>
+          <t>Enabled features: example-resolution-base:basic,
+          example-resolution-acl:ipv4.</t>
+        </list>
+        The common package is still listed at both versions because packages
+        themselves are not excluded during resolution; instead, automatic
+        module resolution selects example-resolution-base@1.4.0 from the two
+        common package versions.  The local module entry for
+        example-resolution-acl@1.1.0 overrides the newer ACL version inherited
+        from the routing package.  Since the local ACL module entry is
+        explicitly listed by the device package, its location list also replaces
+        the location list inherited from the access package for the same ACL
+        module version.  The telemetry module is removed by the excludes/module
+        list, which also removes its enabled feature.  The routing statistics
+        feature is explicitly removed by the excludes/feature list.</t>
+
+        <t>If multiple package entries contribute the same module at the same
+        version, the resulting module entry is only included once and the
+        location lists are merged.  In this example,
+        "example-resolution-transport" version 1.2.0 is included via both the
+        access and routing packages.  Both paths list the same primary location,
+        and each path also lists a different secondary location.  The resolved
+        module entry contains the de-duplicated union of those locations: the
+        shared primary location, the access-specific secondary location, and
+        the routing-specific secondary location.</t>
       </section>
     </section>
 
