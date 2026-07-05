@@ -329,6 +329,11 @@ module: ietf-yang-package-types
     |  |  +-- name       module-name
     |  |  +-- version*   version-or-rev-date
     |  +-- feature*              scoped-feature
+    +-- depends-on
+    |  +-- package* [name version]
+    |     +-- name        pkg-name
+    |     +-- version     pkg-version
+    |     +-- location*   inet:uri
     +-- mount* [mount-path]
        +-- mount-path            mount-ypath
        +-- inherit-packages?     boolean
@@ -438,6 +443,24 @@ module: ietf-yang-package-types
 
         <t>Also see <xref target="completeness-usage"/> for details on cases
         when referentially incomplete packages are helpful.</t>
+
+        <section anchor="incomplete-package-dependencies"
+          title="Incomplete package dependencies">
+          <t>When a package is referentially incomplete, the
+          "depends-on/package" list can identify other package versions that
+          are expected to be resolved along with the incomplete package to
+          produce a complete schema.  This provides a machine-readable
+          indication of the packages that supply missing import dependencies
+          or other schema context needed by the incomplete package.</t>
+
+          <t>The "depends-on/package" list is not equivalent to the
+          "includes/package" list.  Packages listed in "depends-on/package" are
+          not included as part of the incomplete package definition itself and
+          do not, by themselves, change the resolved schema represented by that
+          package.  Instead, they identify additional package definitions that
+          a server or client can use when constructing a complete schema from
+          the incomplete package.</t>
+        </section>
       </section>
 
       <section title="Submodule package considerations">
@@ -1998,6 +2021,36 @@ module ietf-yang-package-types {
 
     uses yang-pkg-exclusions;
 
+    container depends-on {
+      when "../complete = 'false'";
+      description
+        "Lists packages that are depended on by this 'incomplete'
+         package definition.
+
+         All packages listed in this list MUST be fetched and
+         resolved by the server or produce a complete package
+         definition.
+
+         This additional schema information SHOULD be provided by a
+         server to help a client resolve a complete schema in a
+         machine readable way.  The server MAY provide the
+         additional schema information in another way, e.g., via
+         user documentation, or if the dependencies are more
+         complex.";
+      reference
+        "RFC XXXX: YANG Packages, Section 4.";
+
+      list package {
+        key "name version";
+        description
+          "An entry in this list represents a package that is
+           depended on by this 'incomplete' package definition.";
+
+        uses yang-pkg-identification-leafs;
+        uses yang-pkg-location;
+      }
+    }
+
     list mount {
       key "mount-path";
       description
@@ -2669,7 +2722,10 @@ module ietf-yang-inst-data-pkg {
         "organization": "IETF",
         "contact": "IESG",
         "description": "Package schema to use for defining the \
-yang-inst-data-schema schema for YANG packages.",
+yang-inst-data-schema schema for YANG packages. TODO - RFC Editor, \
+plesae check semver and module versioning module revisions. RFC \
+Editor, please update this module version to 1.0.0 on publication \
+of the RFC.",
         "includes": {
           "module": [
             {

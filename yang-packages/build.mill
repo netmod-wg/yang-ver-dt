@@ -906,6 +906,9 @@ object DraftXml extends mill.Module:
     Seq("pyang", "-W", "error") ++
       depDirs.flatMap(p => Seq("-p", p.toString))
 
+  def yangSourceFiles = Task.Input:
+    modules.map(m => PathRef(dir / m.source))
+
   private def versionOf(text: String) =
     """(?m)^\s+ys:version\s+([^;]+);""".r.findFirstMatchIn(text)
       .map(_.group(1)).getOrElse(sys.error("missing ys:version"))
@@ -1189,15 +1192,16 @@ object DraftXml extends mill.Module:
     xmlPath
 
   def checkYang = Task:
-    run(pyangBase ++ modules.map(m => (dir / m.source).toString))
+    run(pyangBase ++ yangSourceFiles().map(_.path.toString))
 
   def generatedTreeFiles = Task:
     checkYang()
+    val sourceByModule = modules.zip(yangSourceFiles())
     val outDir = Task.dest / "tree"
     os.makeDir.all(outDir)
-    modules.map: m =>
+    sourceByModule.map: (m, source) =>
       val tree = run(pyangBase ++ Seq("-f", "tree", "--tree-line-length=69") ++
-        treeOptions(m) ++ Seq((dir / m.source).toString))
+        treeOptions(m) ++ Seq(source.path.toString))
       val body =
         if m.name == "ietf-yang-package-types" then packageTypesFigure(tree)
         else tree.trim
