@@ -6,22 +6,22 @@ Network Working Group                                  P. Andersson, Ed.
 Internet-Draft                                             Ionio Systems
 Updates: 7950 (if approved)                                    R. Wilton
 Intended status: Standards Track                     Cisco Systems, Inc.
-Expires: 28 November 2026                                       M. Vaško
+Expires: 4 January 2027                                         M. Vaško
                                                                   CESNET
-                                                             27 May 2026
+                                                             3 July 2026
 
 
                          YANG Schema Comparison
-              draft-ietf-netmod-yang-schema-comparison-08
+              draft-ietf-netmod-yang-schema-comparison-09
 
 Abstract
 
    This document specifies an algorithm for comparing two revisions of a
-   YANG schema to determine the scope of changes, and a list of changes,
-   between the revisions.  The output of the algorithm can be used to
-   help select an appropriate revision-label or YANG semantic version
-   number for a new revision.  Included is also a YANG module describing
-   possible output of this algorithm.
+   YANG schema to determine the scope of changes and produce a list of
+   the changes between the revisions.  The output of the algorithm can
+   be used to help select an appropriate revision-label or YANG semantic
+   version number for a new revision.  Included is also a YANG module
+   describing the possible output of this algorithm.
 
 Status of This Memo
 
@@ -38,7 +38,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 28 November 2026.
+   This Internet-Draft will expire on 4 January 2027.
 
 Copyright Notice
 
@@ -53,9 +53,9 @@ Copyright Notice
 
 
 
-Andersson, et al.       Expires 28 November 2026                [Page 1]
+Andersson, et al.        Expires 4 January 2027                 [Page 1]
 
-Internet-Draft           YANG Schema Comparison                 May 2026
+Internet-Draft           YANG Schema Comparison                July 2026
 
 
    extracted from this document must include Revised BSD License text as
@@ -89,14 +89,15 @@ Table of Contents
      11.2.  Informative References . . . . . . . . . . . . . . . . .  16
    Appendix A.  Schema Comparison Algorithm Output YANG Module . . .  16
    Appendix B.  Comparison Examples  . . . . . . . . . . . . . . . .  48
-     B.1.  Relaxed Length Module . . . . . . . . . . . . . . . . . .  48
-   Authors' Addresses  . . . . . . . . . . . . . . . . . . . . . . .  51
+     B.1.  New Leaves Module . . . . . . . . . . . . . . . . . . . .  48
+     B.2.  Relaxed Length Module . . . . . . . . . . . . . . . . . .  50
+   Authors' Addresses  . . . . . . . . . . . . . . . . . . . . . . .  54
 
 1.  Introduction
 
    This document defines the algorithm for comparing two revisions of a
-   YANG schema.  There are two kinds of YANG schemas: on-the-wire or
-   compiled schema and text or parsed schema.
+   YANG schema.  There are two kinds of YANG schemas: compiled schemas
+   (on-the-wire schema) and parsed schemas (textual schemas).
 
 
 
@@ -108,40 +109,41 @@ Table of Contents
 
 
 
-
-Andersson, et al.       Expires 28 November 2026                [Page 2]
+Andersson, et al.        Expires 4 January 2027                 [Page 2]
 
-Internet-Draft           YANG Schema Comparison                 May 2026
+Internet-Draft           YANG Schema Comparison                July 2026
 
 
-   The compiled schema is what tools use when working with any kinds of
+   The compiled schema is what tools use when working with any kind of
    YANG data.  Generally, in all the YANG modules, all the schema nodes
    need to be fully resolved and have their final form.  For example,
    every "uses" statement is replaced with the nodes from the
-   corresponding "grouping", every type referencing a "typedef" is
-   replaced with the type of the "typedef" and so on.  On the other
-   hand, the parsed schema is comprised of all the YANG modules together
-   as they are.  That means no statements are resolved and they remain
-   in exactly the same text form as present in the YANG modules.
+   corresponding "grouping", every type that references a "typedef" is
+   replaced with the referenced type and so on.  On the other hand, the
+   parsed schema is comprised of all the YANG modules together as they
+   are.  This means no statements are resolved and they remain exactly
+   as they appear in the YANG modules.
 
-   For determining whether a new revision of a YANG 1.1 module is or is
-   not backwards-compatible based on all the rules in [RFC7950] and
+   To determine whether a new revision of a YANG 1.1 module is or is not
+   backwards-compatible based on all the rules in [RFC7950] and
    [I-D.ietf-netmod-yang-module-versioning] , both of these schemas
-   would be required.  Similarly for YANG 1.0, the rules in [RFC6020] .
-   This document defines an algorithm for comparing either only the
-   compiled schema or both the parsed and compiled schema.
+   would be required.  Similarly, for YANG 1.0, the rules in [RFC6020]
+   apply.  This document defines an algorithm for comparing either only
+   the compiled schema or both the parsed and compiled schemas.
 
    The output of this algorithm can be utilized by tools processing YANG
-   instance data to determine what exact changes should they expect and
-   even how to transform instance data valid for an old revision of a
-   YANG module to be valid for a newer revision of the same YANG module.
-   Such tools are typically clients or servers of YANG-driven protocols,
-   e.g. NETCONF, RESTCONF, or gRPC.
+   instance data to determine what changes they should expect and even
+   how to transform instance data valid for an old revision of a YANG
+   module to make instance data that is valid for an older revision
+   valid for a newer revision of the same YANG module.  Such tools are
+   typically clients or servers of YANG-driven protocols, e.g. NETCONF,
+   RESTCONF, or gRPC.
 
    But, the generated data can also be used by YANG module authors to
-   check all the changes made between 2 revisions.  Additionally, it can
-   assist with deciding what semantic version should the new revision of
-   the module use based on the [I-D.ietf-netmod-yang-semver] document.
+   check all the changes made between two revisions.  Additionally, it
+   can assist with deciding which semantic version the new revision of
+   the module should use based on the [I-D.ietf-netmod-yang-semver]
+   document.
 
 2.  Terminology and Conventions
 
@@ -160,21 +162,21 @@ Internet-Draft           YANG Schema Comparison                 May 2026
 
    *  data node
 
-   *  data definition statement
 
 
 
-
-Andersson, et al.       Expires 28 November 2026                [Page 3]
+Andersson, et al.        Expires 4 January 2027                 [Page 3]
 
-Internet-Draft           YANG Schema Comparison                 May 2026
+Internet-Draft           YANG Schema Comparison                July 2026
 
+
+   *  data definition statement
 
 3.  Parsed schema tree
 
    When a YANG module is parsed and its contents stored in an internal
    representation without any statement resolution or modification, the
-   result is a parsed schema tree.  Such a schema tree can be printed
+   result is a parsed schema tree.  Such a schema tree can be written
    into a YANG module and it should be exactly the same as the loaded
    source YANG module.
 
@@ -185,7 +187,7 @@ Internet-Draft           YANG Schema Comparison                 May 2026
    tree with only data nodes.  Textual fields are kept as well because
    they may affect backwards compatibility of the whole YANG module.
 
-   The steps taken when compiling a parsed schema:
+   The steps taken when compiling a parsed schema are:
 
    *  "Import" statements are resolved by finding the referenced YANG
       modules and making their contents available.
@@ -209,22 +211,22 @@ Internet-Draft           YANG Schema Comparison                 May 2026
       "features" of implemented YANG modules and the disabled schema
       nodes are removed.
 
-   After the compilation the result is still a valid YANG module without
-   the following statements:
+   After the compilation, the result is still a valid YANG module
+   without the following statements:
 
    *  import
 
    *  include
 
-   *  revision
 
 
 
-
-Andersson, et al.       Expires 28 November 2026                [Page 4]
+Andersson, et al.        Expires 4 January 2027                 [Page 4]
 
-Internet-Draft           YANG Schema Comparison                 May 2026
+Internet-Draft           YANG Schema Comparison                July 2026
 
+
+   *  revision
 
    *  typedef
 
@@ -245,7 +247,7 @@ Internet-Draft           YANG Schema Comparison                 May 2026
 5.  YANG schema tree comparison algorithm
 
    This algorithm is defined for separate YANG modules.  When comparing
-   the compiled schema, all the non data node statements are first
+   the compiled schema, all the non-data-node statements are first
    considered and then all the data nodes, recursively.  These data
    definition statements that are not data nodes are skipped:
 
@@ -254,13 +256,14 @@ Internet-Draft           YANG Schema Comparison                 May 2026
    *  case
 
    When comparing the parsed schema, the algorithm operates in the same
-   fashion but compares all the YANG statements.  However, only in the
-   selected YANG module ignoring imported and included modules.
+   fashion but compares all the YANG statements.  However, only
+   statements in the selected YANG module are compared ignoring imported
+   and included modules.
 
    The non data definition statements are considered modified when their
    content is changed or any of their substatements are changed.  If a
    statement is present in the old revision of a module and missing in
-   the new revision, it is considered removed.  Vice-versa, if missing
+   the new revision, it is considered removed.  Conversely, if missing
    in the old revision but present in the new revision, it is considered
    added.
 
@@ -274,18 +277,15 @@ Internet-Draft           YANG Schema Comparison                 May 2026
 
 
 
-
-
-
-Andersson, et al.       Expires 28 November 2026                [Page 5]
+Andersson, et al.        Expires 4 January 2027                 [Page 5]
 
-Internet-Draft           YANG Schema Comparison                 May 2026
+Internet-Draft           YANG Schema Comparison                July 2026
 
 
 5.1.  Module identification
 
    When generating the comparison output of two compiled schemas, unique
-   identification of the modules in question in included.  For both the
+   identification of the modules in question is included.  For both the
    old and the new revision of the module, its name, revision, list of
    submodules, and a leaf-list of enabled features is included.  In
    addition, the same information is reported for all the imported YANG
@@ -295,32 +295,32 @@ Internet-Draft           YANG Schema Comparison                 May 2026
 
 5.2.  Change content
 
-   Non data definition statements are uniquely identified with their
+   Non-data-definition statements are uniquely identified with their
    YANG identifier and data definition statements with their absolute
    schema node-ids.
 
    For every change, the changed statement and the parent of the changed
-   statement are included.  While redundant in many cases, it allows to
-   uniquely report changes in nested statements, e.g. an extension
-   instance change in the type of a leaf statement.  Also, all the
-   unchanged substatements with their value or content are included for
-   every changed statement, for both older and newer revision of the
-   YANG module, if applicable.  This ensures that the output includes
-   all the possibly required information without relying on learning it
-   from the YANG modules themselves.
+   statement are included.  While redundant in many cases, it allows the
+   algorithm to uniquely report changes in nested statements, e.g. an
+   extension instance change in the type of a leaf statement.  Also, all
+   the unchanged substatements with their value or content are included
+   for every changed statement, for both the older and the newer
+   revision of the YANG module, if applicable.  This ensures that the
+   output includes all the possibly required information without relying
+   on learning it from the YANG modules themselves.
 
 5.3.  Change conformance
 
    Every change is classified as editorial, backwards-compatible or non-
-   backwards-compatible.  The classification is based on section 11. of
-   [RFC7950] that mentions most of the possible changes between 2
-   revisions of a YANG 1.1 module and section 3.1. of
+   backwards-compatible.  The classification is based on Section 11. of
+   [RFC7950] that mentions most of the possible changes between two
+   revisions of a YANG 1.1 module and Section 3.1. of
    [I-D.ietf-netmod-yang-module-versioning] adds more details about the
    exact conformance of statements with various "status" statement
    values.
 
-   The following text tries to establish general rules of how changes
-   conformance is selected.  Unless there are other statement-specific
+   The following text establishes general rules of how change
+   conformance is determined.  Unless there are other statement-specific
    rules in the aforementioned documents, these should always apply.
 
 
@@ -333,34 +333,34 @@ Internet-Draft           YANG Schema Comparison                 May 2026
 
 
 
-Andersson, et al.       Expires 28 November 2026                [Page 6]
+Andersson, et al.        Expires 4 January 2027                 [Page 6]
 
-Internet-Draft           YANG Schema Comparison                 May 2026
+Internet-Draft           YANG Schema Comparison                July 2026
 
 
 5.3.1.  Editorial change
 
    An editorial change MUST NOT affect valid YANG data of the YANG
-   module in any way.  Meaning it MUST NOT make the valid data value
-   space smaller or larger and it must be exactly the same as in the
+   module in any way.  That is, it MUST NOT make the valid data value
+   space smaller or larger and it MUST remain exactly the same as in the
    module revision without the change.  Also, for a change to be
    editorial, it MUST NOT affect any YANG module importing the changed
    YANG module.
 
-   Except for some obvious editorial changes such as fixing a typo in a
+   In addition to obvious editorial changes such as fixing a typo in a
    "description", changing the local "prefix" of the module is also
-   categorized as editorial because it does not strictly affect any
-   importing module.  Or, replacing a "uses" statement directly with the
-   nodes in the referenced "grouping" without any changes.
+   categorized as editorial because it does not directly affect
+   importing modules.  Or, replacing a "uses" statement directly with
+   the nodes in the referenced "grouping" without any changes.
 
 5.3.2.  Backwards-compatible change
 
    For a change to be backwards-compatible, it MUST expand the value
-   space of valid YANG data.  Meaning all the valid YANG data nodes and
+   space of valid YANG data.  That is, all the valid YANG data nodes and
    values before the change must remain valid but additional nodes or
    values can also become valid after the change.  Also, backwards-
    compatible changes may influence importing modules but MUST NOT cause
-   them to become invalid.  In other words, they may exhibit new
+   them to become invalid.  In other words, they may expose new
    statements whose removal would then be considered a non-backwards-
    compatible change but generally must not change the already exposed
    statements.
@@ -372,8 +372,8 @@ Internet-Draft           YANG Schema Comparison                 May 2026
 
    If a change is not editorial nor backwards-compatible, it MUST be
    categorized as non-backwards-compatible.  Such changes shrink the
-   value space of valid YANG data causing some previously valid nodes or
-   values to no longer be valid.  Also, any change that may cause an
+   value space of valid YANG data, causing some previously valid nodes
+   or values to no longer be valid.  Also, any change that may cause an
    importing module to become invalid according to the YANG
    specification MUST be non-backwards-compatible.
 
@@ -389,28 +389,28 @@ Internet-Draft           YANG Schema Comparison                 May 2026
 
 
 
-Andersson, et al.       Expires 28 November 2026                [Page 7]
+Andersson, et al.        Expires 4 January 2027                 [Page 7]
 
-Internet-Draft           YANG Schema Comparison                 May 2026
+Internet-Draft           YANG Schema Comparison                July 2026
 
 
-   Examples of a less common or obvious compatibility-breaking changes
-   are changing the "yang-version" of a YANG module or expanding the
-   size of a "type".  The former change may break importing modules
-   because of specific rules about "import" statement and the target
-   module's YANG version.  Changing a "type" of a leaf from "uint32" to
-   "uint64" may seem to fit the definition of a backwards-compatible
-   change, but it may not be so for some data encodings that use a fixed
-   binary data chunk (which would grow in size) or even a text format
-   that may use a different encoding for the two types.  Specifically,
-   the JSON YANG data format [RFC7951] encodes a "uint32" value as a
-   JSON number but a "uint64" as a JSON string.
+   Examples of less common or less obvious compatibility-breaking
+   changes are changing the "yang-version" of a YANG module or expanding
+   the size of a "type".  The former change may break importing modules
+   because of specific rules defined for the "import" statement and the
+   target module's YANG version.  Changing a "type" of a leaf from
+   "uint32" to "uint64" may seem to fit the definition of a backwards-
+   compatible change, but it may not be so for some data encodings that
+   use a fixed binary data chunk (which would grow in size) or even a
+   text format that may use a different encoding for the two types.
+   Specifically, the JSON YANG data format [RFC7951] encodes a "uint32"
+   value as a JSON number but a "uint64" as a JSON string.
 
 5.3.4.  Extensions
 
    There are cases when it may be impossible for tooling to accurately
-   determine the conformance of a change but there is always some
-   conformance assumed for every statement.  The affected ambiguous
+   determine the conformance of a change but a default conformance is
+   always assumed for every statement.  The affected ambiguous
    statements with their default conformances are:
 
    *  pattern - NBC
@@ -428,9 +428,9 @@ Internet-Draft           YANG Schema Comparison                 May 2026
    *  extension instance - BC
 
    Normally, any modification of these statements is reported as the
-   default assumed change conformance.  However, if the author of the
-   new revision of a YANG module determines that the change of an
-   aforementioned statement has a different conformance based on the
+   default change conformance.  However, if the author of the new
+   revision of a YANG module determines that the change of one of the
+   aforementioned statements has a different conformance based on the
    compatibility rules for the specific statement, they can decide to
    use the special extension instances to signify this fact.  These are:
 
@@ -445,44 +445,44 @@ Internet-Draft           YANG Schema Comparison                 May 2026
 
 
 
-Andersson, et al.       Expires 28 November 2026                [Page 8]
+Andersson, et al.        Expires 4 January 2027                 [Page 8]
 
-Internet-Draft           YANG Schema Comparison                 May 2026
+Internet-Draft           YANG Schema Comparison                July 2026
 
 
    They determine the conformance of the change of the marked statement
    to be editorial, backwards-compatible, or non-backwards-compatible,
    respectively.  The argument is a semantic version of the YANG module
    revision that introduced the specific change and these extension
-   instances are sticky meaning they remain in the module even in its
+   instances are sticky, meaning they remain in the module even in its
    later revisions.
 
 5.4.  Compiled and parsed schema changes
 
    Either only compiled data node changes are reported or both compiled
    and parsed statements are compared and their changes generated
-   depending on the enabled features of the "ietf-yang-schema-
+   depending on which features are enabled of the "ietf-yang-schema-
    comparison" YANG module.
 
    In the latter case, compiled data node changes are generated
    normally.  Then, all the other statements are compared in their
-   original parsed form skipping those that are compiled.  Specifically,
-   all the data node statements are found in the compiled schema tree
-   meaning they are not compared the second time as part of the parsed
-   schema tree comparison.
+   original parsed form skipping sattements already represented in the
+   compiled schema.  Specifically, all the data node statements are
+   found in the compiled schema tree meaning they are not compared the
+   second time as part of the parsed schema tree comparison.
 
 6.  Comparison tooling
 
    The "yanglint" tool from the libyang library (in separate Git branch
-   schema_comparison) is able to generate the "ietf-yang-schema-
-   comparison" YANG data of two revisions of a YANG module.
+   `schema_comparison`) is able to generate the "ietf-yang-schema-
+   comparison" YANG data describing two revisions of a YANG module.
 
 7.  Schema Comparison YANG Module
 
-   YANG module with extensions fine-tuning the classification of
+   YANG module with extensions for fine-tuning the classification of
    differences between two revisions of YANG schemas.
 
-   <CODE BEGINS> file "ietf-yang-schema-comparison@2026-05-27.yang"
+   <CODE BEGINS> file "ietf-yang-schema-comparison@2026-07-03.yang"
    module ietf-yang-schema-comparison {
      yang-version 1.1;
      namespace "urn:ietf:params:xml:ns:yang:ietf-yang-schema-comparison";
@@ -501,9 +501,9 @@ Internet-Draft           YANG Schema Comparison                 May 2026
 
 
 
-Andersson, et al.       Expires 28 November 2026                [Page 9]
+Andersson, et al.        Expires 4 January 2027                 [Page 9]
 
-Internet-Draft           YANG Schema Comparison                 May 2026
+Internet-Draft           YANG Schema Comparison                July 2026
 
 
                  <mailto:rwilton@cisco.com>
@@ -540,7 +540,7 @@ Internet-Draft           YANG Schema Comparison                 May 2026
      // RFC Ed.: replace XXXX (inc above) with actual RFC number and
      // remove this note.
 
-     revision 2026-05-27 {
+     revision 2026-07-03 {
        description
          "Initial revision.";
        reference
@@ -557,9 +557,9 @@ Internet-Draft           YANG Schema Comparison                 May 2026
 
 
 
-Andersson, et al.       Expires 28 November 2026               [Page 10]
+Andersson, et al.        Expires 4 January 2027                [Page 10]
 
-Internet-Draft           YANG Schema Comparison                 May 2026
+Internet-Draft           YANG Schema Comparison                July 2026
 
 
           module where the statement has been changed.
@@ -613,9 +613,9 @@ Internet-Draft           YANG Schema Comparison                 May 2026
 
 
 
-Andersson, et al.       Expires 28 November 2026               [Page 11]
+Andersson, et al.        Expires 4 January 2027                [Page 11]
 
-Internet-Draft           YANG Schema Comparison                 May 2026
+Internet-Draft           YANG Schema Comparison                July 2026
 
 
    }
@@ -624,9 +624,9 @@ Internet-Draft           YANG Schema Comparison                 May 2026
 8.  Contributors
 
    This document grew out of the YANG module versioning design team that
-   started after IETF 101.  The following individuals are (or have been)
-   members of the design team and have worked on the YANG versioning
-   project:
+   was formed after IETF 101.  The following individuals are (or have
+   been) members of the design team and have contributed on the YANG
+   versioning project:
 
    *  Balazs Lengyel
 
@@ -656,9 +656,9 @@ Internet-Draft           YANG Schema Comparison                 May 2026
 
    *  Per Andersson
 
-   The ideas for a tooling based comparison of YANG module revisions was
+   The idea of a tooling-based comparison of YANG module revisions was
    first described in [I-D.clacla-netmod-yang-model-update].  This
-   document extends upon those initial ideas.
+   document builds on those initial ideas.
 
 9.  Security Considerations
 
@@ -669,14 +669,16 @@ Internet-Draft           YANG Schema Comparison                 May 2026
 
 
 
-Andersson, et al.       Expires 28 November 2026               [Page 12]
+Andersson, et al.        Expires 4 January 2027                [Page 12]
 
-Internet-Draft           YANG Schema Comparison                 May 2026
+Internet-Draft           YANG Schema Comparison                July 2026
 
 
-   The YANG module specified in this document defines a schema for data
-   that is designed to be used by offline tooling to generate output for
-   differences in supplied YANG modules.
+   The YANG modules specified in this document define extensions ("ietf-
+   yang-schema-comparison") and a schema for data ("ietf-yang-schema-
+   comparison-output") that are designed to be used by offline tooling
+   to generate output describing the differences between two supplied
+   YANG modules.
 
    The YANG module specified in this document MAY be accessed via
    network management protocols such as NETCONF [RFC6241] or RESTCONF
@@ -690,14 +692,16 @@ Internet-Draft           YANG Schema Comparison                 May 2026
    RESTCONF users to a preconfigured subset of all available NETCONF or
    RESTCONF protocol operations and content.
 
-   When the module is used for offline tooling there are no security
+   When the module is used by offline tooling, there are no security
    considerations, since the user has full access to all YANG modules
-   used.
+   being used.
 
-   The structure "schema-comparison" contains all the groupings
-   reflecting the changes between YANG modules.  If the data of this
-   structure are published in online tooling, care needs to be taken so
-   that knowledge of YANG modules is not leaked.
+   The "schema-comparison" structure defined in the "ietf-yang-schema-
+   comparison-output" module contains all the groupings reflecting the
+   changes between YANG modules.  If instances of this structure are
+   generated or published by online tooling, care needs to be taken so
+   that information about non-public YANG modules is not inadvertently
+   disclosed.
 
    Since the module does not define any RPCs, actions, or notifications,
    the security considerations for such statements are not provided
@@ -707,15 +711,11 @@ Internet-Draft           YANG Schema Comparison                 May 2026
 
 10.1.  The "IETF XML" Registry
 
-   This document register one URI in the "ns" subregistry of the IETF
+   This document registers two URIs in the "ns" subregistry of the IETF
    XML Registry [RFC3688] maintained at
    https://www.iana.org/assignments/xml-registry/xml-registry.xhtml#ns.
-   Following the format in [RFC3688], the following registration is
-   requested:
-
-       URI: urn:ietf:params:xml:ns:yang:ietf-yang-schema-comparison
-       Registrant Contact: The IESG.
-       XML: N/A, the requested URI is an XML namespace.
+   Following the format defined in [RFC3688], the following
+   registrations are requested:
 
 
 
@@ -725,17 +725,25 @@ Internet-Draft           YANG Schema Comparison                 May 2026
 
 
 
-Andersson, et al.       Expires 28 November 2026               [Page 13]
+Andersson, et al.        Expires 4 January 2027                [Page 13]
 
-Internet-Draft           YANG Schema Comparison                 May 2026
+Internet-Draft           YANG Schema Comparison                July 2026
 
+
+    URI: urn:ietf:params:xml:ns:yang:ietf-yang-schema-comparison
+    Registrant Contact: The IESG.
+    XML: N/A, the requested URI is an XML namespace.
+
+    URI: urn:ietf:params:xml:ns:yang:ietf-yang-schema-comparison-output
+    Registrant Contact: The IESG.
+    XML: N/A, the requested URI is an XML namespace.
 
 10.2.  The "YANG Module Names" Registry
 
    This document registers two YANG modules in the YANG Module Names
    registry [RFC6020] maintained at https://www.iana.org/assignments/
    yang-parameters/yang-paramaters.xhtml.  Following the format defined
-   in [RFC6020], the below registrations are requested:
+   in [RFC6020], the following registrations are requested:
 
    Name: ietf-yang-schema-comparison
    XML Namespace: urn:ietf:params:xml:ns:yang:ietf-yang-schema-comparison
@@ -755,9 +763,9 @@ Internet-Draft           YANG Schema Comparison                 May 2026
               Wilton, R., Rahman, R., Lengyel, B., Clarke, J., and J.
               Sterne, "Updated YANG Module Revision Handling", Work in
               Progress, Internet-Draft, draft-ietf-netmod-yang-module-
-              versioning-16, 21 April 2026,
+              versioning-17, 29 June 2026,
               <https://datatracker.ietf.org/doc/html/draft-ietf-netmod-
-              yang-module-versioning-16>.
+              yang-module-versioning-17>.
 
    [I-D.ietf-netmod-yang-semver]
               Clarke, J., Wilton, R., Rahman, R., Lengyel, B., Sterne,
@@ -771,20 +779,16 @@ Internet-Draft           YANG Schema Comparison                 May 2026
               DOI 10.17487/RFC2119, March 1997,
               <https://www.rfc-editor.org/info/rfc2119>.
 
+
+
+Andersson, et al.        Expires 4 January 2027                [Page 14]
+
+Internet-Draft           YANG Schema Comparison                July 2026
+
+
    [RFC3688]  Mealling, M., "The IETF XML Registry", BCP 81, RFC 3688,
               DOI 10.17487/RFC3688, January 2004,
               <https://www.rfc-editor.org/info/rfc3688>.
-
-
-
-
-
-
-
-Andersson, et al.       Expires 28 November 2026               [Page 14]
-
-Internet-Draft           YANG Schema Comparison                 May 2026
-
 
    [RFC6020]  Bjorklund, M., Ed., "YANG - A Data Modeling Language for
               the Network Configuration Protocol (NETCONF)", RFC 6020,
@@ -830,17 +834,17 @@ Internet-Draft           YANG Schema Comparison                 May 2026
               DOI 10.17487/RFC8407, October 2018,
               <https://www.rfc-editor.org/info/rfc8407>.
 
+
+
+
+Andersson, et al.        Expires 4 January 2027                [Page 15]
+
+Internet-Draft           YANG Schema Comparison                July 2026
+
+
    [RFC8446]  Rescorla, E., "The Transport Layer Security (TLS) Protocol
               Version 1.3", RFC 8446, DOI 10.17487/RFC8446, August 2018,
               <https://www.rfc-editor.org/info/rfc8446>.
-
-
-
-
-Andersson, et al.       Expires 28 November 2026               [Page 15]
-
-Internet-Draft           YANG Schema Comparison                 May 2026
-
 
    [RFC8525]  Bierman, A., Bjorklund, M., Schoenwaelder, J., Watsen, K.,
               and R. Wilton, "YANG Library", RFC 8525,
@@ -862,15 +866,16 @@ Internet-Draft           YANG Schema Comparison                 May 2026
 
 Appendix A.  Schema Comparison Algorithm Output YANG Module
 
-   YANG module with specific output of the schema comparison algorithm
-   supporting comparison of compiled or parsed and compiled schema tree
-   of a YANG module.  The "ietf-yang-schema-comparison-output" YANG
-   module imports definitions from the "ietf-yang-types" module defined
-   in [RFC6991] and "ietf-yang-library" module defined in [RFC8525], and
-   "ietf-yang-structure-ext" module defined in [RFC8791].
+   This YANG module defines the specific output of the schema comparison
+   algorithm, supporting comparison of either the compiled schema tree
+   or both the parsed and compiled schema trees of a YANG module.  The
+   "ietf-yang-schema-comparison-output" YANG module imports definitions
+   from the "ietf-yang-types" module defined in [RFC6991], the "ietf-
+   yang-library" module defined in [RFC8525], and the "ietf-yang-
+   structure-ext" module defined in [RFC8791].
 
    <CODE BEGINS>
-     file "ietf-yang-schema-comparison-output@2026-05-27.yang"
+     file "ietf-yang-schema-comparison-output@2026-07-03.yang"
    module ietf-yang-schema-comparison-output {
      yang-version 1.1;
      namespace "urn:ietf:params:xml:ns:yang:ietf-yang-schema-comparison-output";
@@ -885,19 +890,19 @@ Appendix A.  Schema Comparison Algorithm Output YANG Module
        prefix yanglib;
        reference
          "RFC 8525: YANG Library";
+
+
+
+Andersson, et al.        Expires 4 January 2027                [Page 16]
+
+Internet-Draft           YANG Schema Comparison                July 2026
+
+
      }
      import ietf-yang-structure-ext {
        prefix sx;
        reference
          "RFC 8791: YANG Data Structure Extensions";
-
-
-
-Andersson, et al.       Expires 28 November 2026               [Page 16]
-
-Internet-Draft           YANG Schema Comparison                 May 2026
-
-
      }
 
      organization
@@ -941,22 +946,22 @@ Internet-Draft           YANG Schema Comparison                 May 2026
         'NOT RECOMMENDED', 'MAY', and 'OPTIONAL' in this document
         are to be interpreted as described in BCP 14 (RFC 2119)
         (RFC 8174) when, and only when, they appear in all
+
+
+
+Andersson, et al.        Expires 4 January 2027                [Page 17]
+
+Internet-Draft           YANG Schema Comparison                July 2026
+
+
         capitals, as shown here.";
 
      // RFC Ed.: update the date below with the date of RFC publication
      // and remove this note.
      // RFC Ed.: replace XXXX (inc above) with actual RFC number and
-
-
-
-Andersson, et al.       Expires 28 November 2026               [Page 17]
-
-Internet-Draft           YANG Schema Comparison                 May 2026
-
-
      // remove this note.
 
-     revision 2026-05-27 {
+     revision 2026-07-03 {
        description
          "Initial revision.";
        reference
@@ -997,19 +1002,19 @@ Internet-Draft           YANG Schema Comparison                 May 2026
          enum bit {
            description
              "YANG statement 'bit'.";
+
+
+
+Andersson, et al.        Expires 4 January 2027                [Page 18]
+
+Internet-Draft           YANG Schema Comparison                July 2026
+
+
          }
          enum config {
            description
              "YANG statement 'config'.";
          }
-
-
-
-Andersson, et al.       Expires 28 November 2026               [Page 18]
-
-Internet-Draft           YANG Schema Comparison                 May 2026
-
-
          enum contact {
            description
              "YANG statement 'contact'.";
@@ -1053,19 +1058,19 @@ Internet-Draft           YANG Schema Comparison                 May 2026
          enum feature {
            description
              "YANG statement 'feature'.";
+
+
+
+Andersson, et al.        Expires 4 January 2027                [Page 19]
+
+Internet-Draft           YANG Schema Comparison                July 2026
+
+
          }
          enum fraction-digits {
            description
              "YANG statement 'fraction-digits'.";
          }
-
-
-
-Andersson, et al.       Expires 28 November 2026               [Page 19]
-
-Internet-Draft           YANG Schema Comparison                 May 2026
-
-
          enum identity {
            description
              "YANG statement 'identity'.";
@@ -1109,19 +1114,19 @@ Internet-Draft           YANG Schema Comparison                 May 2026
               the parsed schema is also compared, it can additionally be
               'choice', 'case', 'input', 'output', 'uses', 'augment', or
               'grouping'.";
+
+
+
+Andersson, et al.        Expires 4 January 2027                [Page 20]
+
+Internet-Draft           YANG Schema Comparison                July 2026
+
+
          }
          enum ordered-by {
            description
              "YANG statement 'ordered-by'.";
          }
-
-
-
-Andersson, et al.       Expires 28 November 2026               [Page 20]
-
-Internet-Draft           YANG Schema Comparison                 May 2026
-
-
          enum organization {
            description
              "YANG statement 'organization'.";
@@ -1165,19 +1170,19 @@ Internet-Draft           YANG Schema Comparison                 May 2026
          enum status {
            description
              "YANG statement 'status'.";
+
+
+
+Andersson, et al.        Expires 4 January 2027                [Page 21]
+
+Internet-Draft           YANG Schema Comparison                July 2026
+
+
          }
          enum type {
            description
              "YANG statement 'type'.";
          }
-
-
-
-Andersson, et al.       Expires 28 November 2026               [Page 21]
-
-Internet-Draft           YANG Schema Comparison                 May 2026
-
-
          enum typedef {
            description
              "YANG statement 'typedef'.";
@@ -1221,19 +1226,19 @@ Internet-Draft           YANG Schema Comparison                 May 2026
          description
            "Value of an if-feature statement.";
        }
+
+
+
+Andersson, et al.        Expires 4 January 2027                [Page 22]
+
+Internet-Draft           YANG Schema Comparison                July 2026
+
+
      }
 
      grouping ext-instance-stmt {
        description
          "Describes changes of an extension instance.";
-
-
-
-Andersson, et al.       Expires 28 November 2026               [Page 22]
-
-Internet-Draft           YANG Schema Comparison                 May 2026
-
-
        leaf module {
          type yang:yang-identifier;
          mandatory true;
@@ -1277,19 +1282,19 @@ Internet-Draft           YANG Schema Comparison                 May 2026
              description
                "Current effective status of a statement.";
            }
+
+
+
+Andersson, et al.        Expires 4 January 2027                [Page 23]
+
+Internet-Draft           YANG Schema Comparison                July 2026
+
+
            enum deprecated {
              description
                "Deprecated effective status of a statement.";
            }
            enum obsolete {
-
-
-
-Andersson, et al.       Expires 28 November 2026               [Page 23]
-
-Internet-Draft           YANG Schema Comparison                 May 2026
-
-
              description
                "Obsolete effective status of a statement.";
            }
@@ -1333,19 +1338,19 @@ Internet-Draft           YANG Schema Comparison                 May 2026
            description
              "Description substatement value.";
          }
+
+
+
+Andersson, et al.        Expires 4 January 2027                [Page 24]
+
+Internet-Draft           YANG Schema Comparison                July 2026
+
+
          leaf reference {
            type string;
            description
              "Reference substatement value.";
          }
-
-
-
-Andersson, et al.       Expires 28 November 2026               [Page 24]
-
-Internet-Draft           YANG Schema Comparison                 May 2026
-
-
          uses status-stmt;
          uses ext-instance-stmts;
        }
@@ -1389,19 +1394,19 @@ Internet-Draft           YANG Schema Comparison                 May 2026
            enum int16 {
              description
                "YANG built-in type 'int16'.";
+
+
+
+Andersson, et al.        Expires 4 January 2027                [Page 25]
+
+Internet-Draft           YANG Schema Comparison                July 2026
+
+
            }
            enum int32 {
              description
                "YANG built-in type 'int32'.";
            }
-
-
-
-Andersson, et al.       Expires 28 November 2026               [Page 25]
-
-Internet-Draft           YANG Schema Comparison                 May 2026
-
-
            enum int64 {
              description
                "YANG built-in type 'int64'.";
@@ -1445,19 +1450,19 @@ Internet-Draft           YANG Schema Comparison                 May 2026
            enum binary {
              description
                "YANG built-in type 'binary'.";
+
+
+
+Andersson, et al.        Expires 4 January 2027                [Page 26]
+
+Internet-Draft           YANG Schema Comparison                July 2026
+
+
            }
            enum leafref {
              description
                "YANG built-in type 'leafref'.";
            }
-
-
-
-Andersson, et al.       Expires 28 November 2026               [Page 26]
-
-Internet-Draft           YANG Schema Comparison                 May 2026
-
-
            enum identityref {
              description
                "YANG built-in type 'identityref'.";
@@ -1501,19 +1506,19 @@ Internet-Draft           YANG Schema Comparison                 May 2026
          description
            "Length statement substatements.";
          list interval {
+
+
+
+Andersson, et al.        Expires 4 January 2027                [Page 27]
+
+Internet-Draft           YANG Schema Comparison                July 2026
+
+
            description
              "Intervals of a length statement.";
            leaf min {
              type uint64;
              description
-
-
-
-Andersson, et al.       Expires 28 November 2026               [Page 27]
-
-Internet-Draft           YANG Schema Comparison                 May 2026
-
-
                "Lower boundary of an interval of a length statement.";
            }
            leaf max {
@@ -1557,19 +1562,19 @@ Internet-Draft           YANG Schema Comparison                 May 2026
            type yang:yang-identifier;
            description
              "Enum statement name.";
+
+
+
+Andersson, et al.        Expires 4 January 2027                [Page 28]
+
+Internet-Draft           YANG Schema Comparison                July 2026
+
+
          }
          uses if-feature-stmts {
            if-feature "parsed-schema";
          }
          leaf description {
-
-
-
-Andersson, et al.       Expires 28 November 2026               [Page 28]
-
-Internet-Draft           YANG Schema Comparison                 May 2026
-
-
            type string;
            description
              "Description substatement value.";
@@ -1613,19 +1618,19 @@ Internet-Draft           YANG Schema Comparison                 May 2026
          }
          leaf position {
            type uint32;
+
+
+
+Andersson, et al.        Expires 4 January 2027                [Page 29]
+
+Internet-Draft           YANG Schema Comparison                July 2026
+
+
            description
              "Position substatement value.";
          }
          uses status-stmt;
          uses ext-instance-stmts;
-
-
-
-Andersson, et al.       Expires 28 November 2026               [Page 29]
-
-Internet-Draft           YANG Schema Comparison                 May 2026
-
-
        }
        leaf path {
          type string;
@@ -1669,19 +1674,19 @@ Internet-Draft           YANG Schema Comparison                 May 2026
          leaf restriction {
            type string;
            description
+
+
+
+Andersson, et al.        Expires 4 January 2027                [Page 30]
+
+Internet-Draft           YANG Schema Comparison                July 2026
+
+
              "Length argument substatement value.";
          }
          uses restriction-substmts;
        }
        leaf fraction-digits {
-
-
-
-Andersson, et al.       Expires 28 November 2026               [Page 30]
-
-Internet-Draft           YANG Schema Comparison                 May 2026
-
-
          type uint8;
          description
            "Fraction-digits substatement value.";
@@ -1725,19 +1730,19 @@ Internet-Draft           YANG Schema Comparison                 May 2026
          }
          leaf value {
            type int32;
+
+
+
+Andersson, et al.        Expires 4 January 2027                [Page 31]
+
+Internet-Draft           YANG Schema Comparison                July 2026
+
+
            description
              "Value substatement value.";
          }
          uses status-stmt;
          uses ext-instance-stmts;
-
-
-
-Andersson, et al.       Expires 28 November 2026               [Page 31]
-
-Internet-Draft           YANG Schema Comparison                 May 2026
-
-
        }
        list bit {
          key "name";
@@ -1781,18 +1786,19 @@ Internet-Draft           YANG Schema Comparison                 May 2026
        }
        leaf-list base {
          type yang:yang-identifier;
+
+
+
+Andersson, et al.        Expires 4 January 2027                [Page 32]
+
+Internet-Draft           YANG Schema Comparison                July 2026
+
+
          description
            "List of base substatement values.";
        }
        uses ext-instance-stmts;
      }
-
-
-
-Andersson, et al.       Expires 28 November 2026               [Page 32]
-
-Internet-Draft           YANG Schema Comparison                 May 2026
-
 
      grouping refine-deviate-node-substmts {
        description
@@ -1836,20 +1842,20 @@ Internet-Draft           YANG Schema Comparison                 May 2026
        leaf description {
          type string;
          description
+
+
+
+Andersson, et al.        Expires 4 January 2027                [Page 33]
+
+Internet-Draft           YANG Schema Comparison                July 2026
+
+
            "Description substatement value.";
        }
        leaf reference {
          type string;
          description
            "Reference substatement value.";
-
-
-
-Andersson, et al.       Expires 28 November 2026               [Page 33]
-
-Internet-Draft           YANG Schema Comparison                 May 2026
-
-
        }
        uses status-stmt;
        uses refine-deviate-node-substmts;
@@ -1892,20 +1898,20 @@ Internet-Draft           YANG Schema Comparison                 May 2026
            "List of unique substatements.";
          leaf-list node {
            type yang:yang-identifier;
+
+
+
+Andersson, et al.        Expires 4 January 2027                [Page 34]
+
+Internet-Draft           YANG Schema Comparison                July 2026
+
+
            description
              "List of nodes referenced by a unique substatement.";
          }
        }
        leaf presence {
          type boolean;
-
-
-
-Andersson, et al.       Expires 28 November 2026               [Page 34]
-
-Internet-Draft           YANG Schema Comparison                 May 2026
-
-
          description
            "Indicates whether a presence substatement is defined for
             the container in the compiled schema. The textual argument
@@ -1948,20 +1954,20 @@ Internet-Draft           YANG Schema Comparison                 May 2026
          }
          leaf revision-date {
            type yanglib:revision-identifier;
+
+
+
+Andersson, et al.        Expires 4 January 2027                [Page 35]
+
+Internet-Draft           YANG Schema Comparison                July 2026
+
+
            description
              "Imported module revision-date.";
          }
          leaf description {
            type string;
            description
-
-
-
-Andersson, et al.       Expires 28 November 2026               [Page 35]
-
-Internet-Draft           YANG Schema Comparison                 May 2026
-
-
              "Description substatement value.";
          }
          leaf reference {
@@ -2004,20 +2010,20 @@ Internet-Draft           YANG Schema Comparison                 May 2026
          type string;
          description
            "Organization substatement value.";
+
+
+
+Andersson, et al.        Expires 4 January 2027                [Page 36]
+
+Internet-Draft           YANG Schema Comparison                July 2026
+
+
        }
        leaf contact {
          type string;
          description
            "Contact substatement value.";
        }
-
-
-
-Andersson, et al.       Expires 28 November 2026               [Page 36]
-
-Internet-Draft           YANG Schema Comparison                 May 2026
-
-
        leaf description {
          type string;
          description
@@ -2060,20 +2066,20 @@ Internet-Draft           YANG Schema Comparison                 May 2026
        }
        container feature {
          if-feature "parsed-schema";
+
+
+
+Andersson, et al.        Expires 4 January 2027                [Page 37]
+
+Internet-Draft           YANG Schema Comparison                July 2026
+
+
          presence
            "Exists only when there is a difference in this feature.";
          description
            "Feature substatements.";
          leaf name {
            type yang:yang-identifier;
-
-
-
-Andersson, et al.       Expires 28 November 2026               [Page 37]
-
-Internet-Draft           YANG Schema Comparison                 May 2026
-
-
            mandatory true;
            description
              "Feature name.";
@@ -2116,20 +2122,20 @@ Internet-Draft           YANG Schema Comparison                 May 2026
          if-feature "parsed-schema";
          presence
            "Exists only when there is a difference in this deviation.";
+
+
+
+Andersson, et al.        Expires 4 January 2027                [Page 38]
+
+Internet-Draft           YANG Schema Comparison                July 2026
+
+
          description
            "Deviation substatements.";
          leaf target {
            type string;
            mandatory true;
            description
-
-
-
-Andersson, et al.       Expires 28 November 2026               [Page 38]
-
-Internet-Draft           YANG Schema Comparison                 May 2026
-
-
              "Deviation target argument.";
          }
          list deviate {
@@ -2172,20 +2178,20 @@ Internet-Draft           YANG Schema Comparison                 May 2026
            }
            leaf units {
              type string;
+
+
+
+Andersson, et al.        Expires 4 January 2027                [Page 39]
+
+Internet-Draft           YANG Schema Comparison                July 2026
+
+
              description
                "Units substatement value.";
            }
            list unique {
              description
                "List of unique substatements.";
-
-
-
-Andersson, et al.       Expires 28 November 2026               [Page 39]
-
-Internet-Draft           YANG Schema Comparison                 May 2026
-
-
              leaf-list node {
                type yang:yang-identifier;
                description
@@ -2228,20 +2234,20 @@ Internet-Draft           YANG Schema Comparison                 May 2026
          description
            "Description substatement value.";
        }
+
+
+
+Andersson, et al.        Expires 4 January 2027                [Page 40]
+
+Internet-Draft           YANG Schema Comparison                July 2026
+
+
        leaf reference {
          type string;
          description
            "Reference substatement value.";
        }
        uses status-stmt;
-
-
-
-Andersson, et al.       Expires 28 November 2026               [Page 40]
-
-Internet-Draft           YANG Schema Comparison                 May 2026
-
-
        uses refine-deviate-node-substmts;
        container type {
          description
@@ -2284,19 +2290,20 @@ Internet-Draft           YANG Schema Comparison                 May 2026
                "Non-backwards-compatible change.";
            }
          }
+
+
+
+Andersson, et al.        Expires 4 January 2027                [Page 41]
+
+Internet-Draft           YANG Schema Comparison                July 2026
+
+
          mandatory true;
          description
            "Conformance information of a change in the compared YANG
             modules.";
        }
      }
-
-
-
-Andersson, et al.       Expires 28 November 2026               [Page 41]
-
-Internet-Draft           YANG Schema Comparison                 May 2026
-
 
      grouping change-info {
        description
@@ -2339,6 +2346,14 @@ Internet-Draft           YANG Schema Comparison                 May 2026
            mandatory true;
            description
              "Type of change of the statement.";
+
+
+
+Andersson, et al.        Expires 4 January 2027                [Page 42]
+
+Internet-Draft           YANG Schema Comparison                July 2026
+
+
          }
          uses conformance-type;
        }
@@ -2346,14 +2361,6 @@ Internet-Draft           YANG Schema Comparison                 May 2026
 
      grouping module-params {
        description
-
-
-
-Andersson, et al.       Expires 28 November 2026               [Page 42]
-
-Internet-Draft           YANG Schema Comparison                 May 2026
-
-
          "Identification details of a processed YANG module.";
        leaf module {
          type yang:yang-identifier;
@@ -2395,6 +2402,14 @@ Internet-Draft           YANG Schema Comparison                 May 2026
        description
          "Information about all the changed parsed-only statements.";
        list parsed-comparison {
+
+
+
+Andersson, et al.        Expires 4 January 2027                [Page 43]
+
+Internet-Draft           YANG Schema Comparison                July 2026
+
+
          description
            "Information about parsed-only statement changes.";
          leaf parent-path {
@@ -2402,14 +2417,6 @@ Internet-Draft           YANG Schema Comparison                 May 2026
            description
              "Path to the parent statement. Not set if a direct
               substatement of module or submodule.";
-
-
-
-Andersson, et al.       Expires 28 November 2026               [Page 43]
-
-Internet-Draft           YANG Schema Comparison                 May 2026
-
-
          }
          leaf identifier {
            type string;
@@ -2451,6 +2458,14 @@ Internet-Draft           YANG Schema Comparison                 May 2026
                description
                  "YANG statement 'refine' node.";
              }
+
+
+
+Andersson, et al.        Expires 4 January 2027                [Page 44]
+
+Internet-Draft           YANG Schema Comparison                July 2026
+
+
              enum typedef {
                description
                  "YANG statement 'typedef'.";
@@ -2458,14 +2473,6 @@ Internet-Draft           YANG Schema Comparison                 May 2026
            }
            mandatory true;
            description
-
-
-
-Andersson, et al.       Expires 28 November 2026               [Page 44]
-
-Internet-Draft           YANG Schema Comparison                 May 2026
-
-
              "Type of the changed data-definition statement.";
          }
          uses change-info;
@@ -2507,6 +2514,14 @@ Internet-Draft           YANG Schema Comparison                 May 2026
              }
              enum leaf {
                description
+
+
+
+Andersson, et al.        Expires 4 January 2027                [Page 45]
+
+Internet-Draft           YANG Schema Comparison                July 2026
+
+
                  "YANG statement 'leaf' node.";
              }
              enum leaf-list {
@@ -2514,14 +2529,6 @@ Internet-Draft           YANG Schema Comparison                 May 2026
                  "YANG statement 'leaf-list' node.";
              }
              enum list {
-
-
-
-Andersson, et al.       Expires 28 November 2026               [Page 45]
-
-Internet-Draft           YANG Schema Comparison                 May 2026
-
-
                description
                  "YANG statement 'list' node.";
              }
@@ -2563,6 +2570,14 @@ Internet-Draft           YANG Schema Comparison                 May 2026
               module.";
            uses node-substmts;
          }
+
+
+
+Andersson, et al.        Expires 4 January 2027                [Page 46]
+
+Internet-Draft           YANG Schema Comparison                July 2026
+
+
        }
      }
 
@@ -2570,14 +2585,6 @@ Internet-Draft           YANG Schema Comparison                 May 2026
        description
          "Schema comparison details.";
        list schema {
-
-
-
-Andersson, et al.       Expires 28 November 2026               [Page 46]
-
-Internet-Draft           YANG Schema Comparison                 May 2026
-
-
          description
            "Instance of a schema comparison of 2 YANG modules in different
             revisions with all their imports.";
@@ -2619,6 +2626,14 @@ Internet-Draft           YANG Schema Comparison                 May 2026
              description
                "Changed statements in the newer revision of the YANG
                 module.";
+
+
+
+Andersson, et al.        Expires 4 January 2027                [Page 47]
+
+Internet-Draft           YANG Schema Comparison                July 2026
+
+
              uses module-substmts;
            }
          }
@@ -2626,14 +2641,6 @@ Internet-Draft           YANG Schema Comparison                 May 2026
            if-feature "parsed-schema";
          }
          uses node-info;
-
-
-
-Andersson, et al.       Expires 28 November 2026               [Page 47]
-
-Internet-Draft           YANG Schema Comparison                 May 2026
-
-
        }
      }
    }
@@ -2641,26 +2648,163 @@ Internet-Draft           YANG Schema Comparison                 May 2026
 
 Appendix B.  Comparison Examples
 
-   This section provides various examples of the output of the
-   comparison algorithm defined in this document to illustrate it on
-   actual YANG modules.
+   This section provides several examples of the output from the
+   comparison algorithm defined in this document to illustrate its
+   behavior on actual YANG modules.
 
-B.1.  Relaxed Length Module
+B.1.  New Leaves Module
 
-   An example module comparison with a typedef length restriction
-   relaxed and a new leaf added.
+   In this example, two new leaves are added to the module.
+
+   In the generated output, there are only compiled changes because
+   leaves are always found in the compiled schema tree.  The changes are
+   backward-compatible because the new nodes are added without affecting
+   the order of the existing schema nodes.
+
+   module mod1 {
+       namespace "urn:mod1";
+       prefix m1;
+       yang-version 1.1;
+
+       revision 2025-01-01;
+
+       container cont {
+           leaf l1 {
+               type string;
+           }
+       }
+   }
+
+
+
+
+
+
+
+
+
+
+
+Andersson, et al.        Expires 4 January 2027                [Page 48]
+
+Internet-Draft           YANG Schema Comparison                July 2026
+
+
+   module mod1 {
+       namespace "urn:mod1";
+       prefix m1;
+       yang-version 1.1;
+
+       revision 2025-06-01;
+       revision 2025-01-01;
+
+       container cont {
+           leaf l1 {
+               type string;
+           }
+           leaf l2 {
+               type decimal64 {
+                   fraction-digits 4;
+               }
+           }
+       }
+
+       leaf l3 {
+           type uint8;
+       }
+   }
+
+   {
+     "ietf-yang-schema-comparison-output:schema-comparison": {
+       "schema": [
+         {
+           "source": {
+             "module": "mod1",
+             "revision": "2025-01-01"
+           },
+           "target": {
+             "module": "mod1",
+             "revision": "2025-06-01"
+           },
+           "conformance": "backwards-compatible",
+           "node-comparison": [
+             {
+               "node": "/mod1:cont/l2",
+               "node-type": "leaf",
+               "changed": [
+                 {
+                   "stmt": "node",
+                   "change": "added",
+                   "conformance": "backwards-compatible"
+                 }
+               ],
+
+
+
+Andersson, et al.        Expires 4 January 2027                [Page 49]
+
+Internet-Draft           YANG Schema Comparison                July 2026
+
+
+               "new": {
+                 "status": "current",
+                 "config": true,
+                 "mandatory": false,
+                 "type": {
+                   "base-type": "decimal64",
+                   "fraction-digits": 4
+                 }
+               }
+             },
+             {
+               "node": "/mod1:l3",
+               "node-type": "leaf",
+               "changed": [
+                 {
+                   "stmt": "node",
+                   "change": "added",
+                   "conformance": "backwards-compatible"
+                 }
+               ],
+               "new": {
+                 "status": "current",
+                 "config": true,
+                 "mandatory": false,
+                 "type": {
+                   "base-type": "uint8"
+                 }
+               }
+             }
+           ]
+         }
+       ]
+     }
+   }
+
+B.2.  Relaxed Length Module
+
+   An example module comparison in which a typedef length restriction is
+   relaxed and a new leaf is added.
 
    The generated diff includes both parsed and compiled changes.  In the
-   parsed comparison the specific range change is reported as backwards-
-   compatible since the restriction was loosened.  In the compiled node
-   comparison the exact same change is reported because the leaf is
-   using the same typedef, whose change also affects the leaf.  The new
-   added leaf is also reported and marked as backwards-compatible.
+   parsed comparison, the specific range change is reported as backward-
+   compatible because the restriction was relaxed.  In the compiled node
+   comparison, the exact same change is reported because the leaf uses
+   the same typedef, whose change also affects the leaf.  The newly
+   added leaf is also reported and marked as backward-compatible.
 
-   <CODE BEGINS> file "mod@2025-01-01.yang"
-   module mod {
-       namespace "urn:mod";
-       prefix m;
+
+
+
+
+Andersson, et al.        Expires 4 January 2027                [Page 50]
+
+Internet-Draft           YANG Schema Comparison                July 2026
+
+
+   module mod1 {
+       namespace "urn:mod2";
+       prefix m2;
        yang-version 1.1;
 
        revision 2025-01-01;
@@ -2677,23 +2821,10 @@ B.1.  Relaxed Length Module
            }
        }
    }
-   <CODE ENDS>
 
-
-
-
-
-
-
-Andersson, et al.       Expires 28 November 2026               [Page 48]
-
-Internet-Draft           YANG Schema Comparison                 May 2026
-
-
-   <CODE BEGINS> file "mod@2025-06-01.yang"
-   module mod {
-       namespace "urn:mod";
-       prefix m;
+   module mod1 {
+       namespace "urn:mod2";
+       prefix m2;
        yang-version 1.1;
 
        revision 2025-06-01;
@@ -2715,19 +2846,28 @@ Internet-Draft           YANG Schema Comparison                 May 2026
            }
        }
    }
-   <CODE ENDS>
 
-   <CODE BEGINS> file "mod_comparison.json"
+
+
+
+
+
+
+Andersson, et al.        Expires 4 January 2027                [Page 51]
+
+Internet-Draft           YANG Schema Comparison                July 2026
+
+
    {
-     "ietf-yang-schema-comparison:schema-comparison": {
+     "ietf-yang-schema-comparison-output:schema-comparison": {
        "schema": [
          {
            "source": {
-             "module": "mod",
+             "module": "mod2",
              "revision": "2025-01-01"
            },
            "target": {
-             "module": "mod",
+             "module": "mod2",
              "revision": "2025-06-01"
            },
            "conformance": "backwards-compatible",
@@ -2738,14 +2878,6 @@ Internet-Draft           YANG Schema Comparison                 May 2026
                "stmt-type": "typedef",
                "changed": [
                  {
-
-
-
-Andersson, et al.       Expires 28 November 2026               [Page 49]
-
-Internet-Draft           YANG Schema Comparison                 May 2026
-
-
                    "stmt": "length",
                    "parent-stmt": "typedef",
                    "change": "modified",
@@ -2772,8 +2904,16 @@ Internet-Draft           YANG Schema Comparison                 May 2026
            ],
            "node-comparison": [
              {
-               "node": "/mod:cont/l",
+               "node": "/mod2:cont/l",
                "node-type": "leaf",
+
+
+
+Andersson, et al.        Expires 4 January 2027                [Page 52]
+
+Internet-Draft           YANG Schema Comparison                July 2026
+
+
                "changed": [
                  {
                    "stmt": "length",
@@ -2794,14 +2934,6 @@ Internet-Draft           YANG Schema Comparison                 May 2026
                          "max": "10"
                        }
                      ]
-
-
-
-Andersson, et al.       Expires 28 November 2026               [Page 50]
-
-Internet-Draft           YANG Schema Comparison                 May 2026
-
-
                    }
                  }
                },
@@ -2823,13 +2955,21 @@ Internet-Draft           YANG Schema Comparison                 May 2026
                }
              },
              {
-               "node": "/mod:cont/l2",
+               "node": "/mod2:cont/l2",
                "node-type": "leaf",
                "changed": [
                  {
                    "stmt": "node",
                    "change": "added",
                    "conformance": "backwards-compatible"
+
+
+
+Andersson, et al.        Expires 4 January 2027                [Page 53]
+
+Internet-Draft           YANG Schema Comparison                July 2026
+
+
                  }
                ],
                "new": {
@@ -2846,17 +2986,8 @@ Internet-Draft           YANG Schema Comparison                 May 2026
        ]
      }
    }
-   <CODE ENDS>
 
 Authors' Addresses
-
-
-
-
-Andersson, et al.       Expires 28 November 2026               [Page 51]
-
-Internet-Draft           YANG Schema Comparison                 May 2026
-
 
    Per Andersson (editor)
    Ionio Systems
@@ -2890,23 +3021,4 @@ Internet-Draft           YANG Schema Comparison                 May 2026
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-Andersson, et al.       Expires 28 November 2026               [Page 52]
+Andersson, et al.        Expires 4 January 2027                [Page 54]
