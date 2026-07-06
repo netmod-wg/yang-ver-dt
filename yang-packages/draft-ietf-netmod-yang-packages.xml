@@ -10,7 +10,7 @@
 <?rfc compact="yes"?>
 <?rfc subcompact="no"?>
 <rfc xmlns:xi="http://www.w3.org/2001/XInclude" category="std"
-     consensus="true" docName="draft-ietf-netmod-yang-packages-08"
+     consensus="true" docName="draft-ietf-netmod-yang-packages-09"
      ipr="trust200902" submissionType="IETF">
   <front>
     <title abbrev="YANG Packages">YANG Packages</title>
@@ -384,6 +384,10 @@ module: ietf-yang-package-types
             is merged as defined by the package resolution rules in
             <xref target="resolution"/>.</t>
 
+            <t>A package definition MUST NOT list the same package
+            version under both the 'includes/package' and 'depends-on/package'
+            lists.</t>
+
             <t>When a location leaf-list is provided for a package,
             implemented module, import-only module, or submodule, the first
             entry MUST be the canonical location used to retrieve that package,
@@ -428,6 +432,18 @@ module: ietf-yang-package-types
           </list></t>
       </section>
 
+      <section anchor="package-dependencies" title="Package dependencies">
+        <t>The "depends-on/package" list can identify other packages
+        that a package depends on, but that are not included as part of the
+        package definition, and hence do not form part of the resolved package
+        schema.</t>
+        <t>The main anticipated use is for referentially incomplete packages,
+        where the dependencies identify packages that are expected to be
+        resolved along with the incomplete package.  The same mechanism can
+        also be used by a referentially complete package to provide additional
+        machine-readable dependency metadata.</t>
+      </section>
+
       <section anchor="completeness" title="Schema referential completeness">
         <t>A YANG package may represent a schema that is 'referentially
         complete', or 'referentially incomplete', indicated in the package
@@ -441,26 +457,16 @@ module: ietf-yang-package-types
         module specified as part of the package definition, then the package
         is classified as being referentially incomplete.</t>
 
+        <t>If the packages needed to resolve a referentially incomplete package
+        definition are known, and can be expressed without excessive
+        complexity, then the package definition SHOULD include
+        "depends-on/package" entries to help a client resolve a complete schema
+        in a machine-readable way.  The server MAY provide the additional schema
+        information in another way, e.g., via user documentation, or if the
+        dependencies are more complex.</t>
+
         <t>Also see <xref target="completeness-usage"/> for details on cases
         when referentially incomplete packages are helpful.</t>
-
-        <section anchor="incomplete-package-dependencies"
-          title="Incomplete package dependencies">
-          <t>When a package is referentially incomplete, the
-          "depends-on/package" list can identify other package versions that
-          are expected to be resolved along with the incomplete package to
-          produce a complete schema.  This provides a machine-readable
-          indication of the packages that supply missing import dependencies
-          or other schema context needed by the incomplete package.</t>
-
-          <t>The "depends-on/package" list is not equivalent to the
-          "includes/package" list.  Packages listed in "depends-on/package" are
-          not included as part of the incomplete package definition itself and
-          do not, by themselves, change the resolved schema represented by that
-          package.  Instead, they identify additional package definitions that
-          a server or client can use when constructing a complete schema from
-          the incomplete package.</t>
-        </section>
       </section>
 
       <section title="Submodule package considerations">
@@ -785,6 +791,10 @@ module: ietf-yang-package-types
         software package updated with the hot fix package.  An example is
         provided in <xref target="hotfix-pkg-example"/>.</t>
 
+        <t>An incomplete package, e.g., a hot fix package, can provide
+        "depends-on/package" entries to identify the package versions that the
+        incomplete package is intended to be used with.</t>
+
         <t>Referentially incomplete packages could also be used to group sets
         of logically related modules together, but without requiring a fixed
         dependency on all imported 'types' modules (e.g., iana-if-types.yang),
@@ -861,7 +871,7 @@ module: ietf-yang-packages
           packages are resolved using the automatic module version resolution
           rules in <xref target="auto-module-version-resolution"/>. As a result,
           the version that wins those rules is selected in the resolved package
-          schema. This allows an extra 'bugfix' package to be added to the list
+          schema. This allows an extra 'hot fix' package to be added to the list
           of packages defining a schema to provide a later module version,
           but it cannot be used to select an older module version.
           Instead, a package that explicitly includes and refines the
@@ -2022,21 +2032,13 @@ module ietf-yang-package-types {
     uses yang-pkg-exclusions;
 
     container depends-on {
-      when "../complete = 'false'";
       description
-        "Lists packages that are depended on by this 'incomplete'
-         package definition.
+        "Lists packages that this package depends on, but that do
+         not form part of the resolved package definition.
 
-         All packages listed in this list MUST be fetched and
-         resolved by the server or produce a complete package
-         definition.
-
-         This additional schema information SHOULD be provided by a
-         server to help a client resolve a complete schema in a
-         machine readable way.  The server MAY provide the
-         additional schema information in another way, e.g., via
-         user documentation, or if the dependencies are more
-         complex.";
+         For an incomplete package definition, this list can help a
+         client resolve a complete schema in a machine readable
+         way.";
       reference
         "RFC XXXX: YANG Packages, Section 4.";
 
@@ -2044,7 +2046,7 @@ module ietf-yang-package-types {
         key "name version";
         description
           "An entry in this list represents a package that is
-           depended on by this 'incomplete' package definition.";
+           depended on by this package definition.";
 
         uses yang-pkg-identification-leafs;
         uses yang-pkg-location;
@@ -2670,6 +2672,10 @@ module ietf-yang-inst-data-pkg {
        specification";
     case pkg-schema {
       container pkg-schema {
+        description
+          "Identifies the YANG package that defines the content
+           schema for this instance data set.";
+
         uses pkg-types:yang-pkg-identification-leafs;
 
         leaf-list location {
@@ -3813,7 +3819,10 @@ ietf-ethertypes@2018-11-06.yang"
         package is marked as incomplete (i.e., "complete" = "false") because it
         contains only the updated device-isis-extensions module, and relies on
         the other packages bound to the datastore schema to provide the rest of
-        the schema.</t>
+        the schema.  The hotfix package lists the "device-routing" package in
+        its "depends-on/package" list to identify the baseline device package
+        that the hotfix applies to, without including that baseline package as
+        part of the hotfix package definition.</t>
 
         <t>The updated device-isis-extensions module uses version
         1.2.4_compatible.  This follows the YANG Semver versioning rules
@@ -3839,6 +3848,14 @@ ietf-ethertypes@2018-11-06.yang"
             {
               "name": "device-isis-extensions",
               "version": "1.2.4_compatible"
+            }
+          ]
+        },
+        "depends-on": {
+          "package": [
+            {
+              "name": "device-routing",
+              "version": "1.0.0"
             }
           ]
         }

@@ -11,7 +11,11 @@ import uk.org.wilton.{plugins, yang}
 import plugins.mill.*
 import yang.packages.tools.lib.*
 
+import java.net.URI
+import java.net.http.{HttpClient, HttpRequest, HttpResponse}
 import java.nio.charset.StandardCharsets
+import java.time.Duration
+import java.util.UUID
 import java.util.regex.{Matcher, Pattern}
 import scala.jdk.CollectionConverters.*
 
@@ -820,6 +824,10 @@ object DraftXml extends mill.Module:
   private case class YangModule(name: String, source: String)
   private case class PackageArtifact(pkg: PkgDefn, path: os.Path)
 
+  private val renderTextEndpoint =
+    URI.create("https://author-tools.ietf.org/api/render/text")
+  private val renderTextTimeout = Duration.ofSeconds(30)
+
   private val modules = Seq(
     YangModule("ietf-yang-package-types", "ietf-yang-package-types.yang"),
     YangModule("ietf-yang-package-instance", "ietf-yang-package-instance.yang"),
@@ -1096,12 +1104,31 @@ object DraftXml extends mill.Module:
           s"file://${ref.path}",
         ).foldLeft(updated)((acc, local) => acc.replace(local, packageExampleLocation(pkg)))
 
+  private def addHotfixDependsOn(text: String) =
+    val json = ujson.read(text)
+    val pkg =
+      json("ietf-yang-instance-data:instance-data-set")("content-data")(
+        "ietf-yang-package-instance:package"
+      ).obj
+    if pkg("name").str == VendorIsisHotfixPkg.name then
+      pkg("depends-on") = ujson.Obj(
+        "package" -> ujson.Arr(
+          ujson.Obj(
+            "name" -> DeviceRoutingPkg.name,
+            "version" -> DeviceRoutingPkg.version
+          )
+        )
+      )
+      ujson.write(json, indent = 2) + "\n"
+    else text
+
   private def writeExamplePackages(packageRefs: Seq[PathRef]) =
     val outDir = dir / "generated" / "packages"
     os.makeDir.all(outDir)
     examplePackages.zip(packageRefs).map: (pkg, ref) =>
       val path = outDir / packageFileName(pkg)
-      os.write.over(path, sanitizePackageLocations(os.read(ref.path), packageRefs))
+      val sanitized = sanitizePackageLocations(os.read(ref.path), packageRefs)
+      os.write.over(path, addHotfixDependsOn(sanitized))
       println(s"Package written to $path")
       PackageArtifact(pkg, path)
 
@@ -1191,6 +1218,86 @@ object DraftXml extends mill.Module:
     os.write.over(xmlPath, updatedPackages)
     xmlPath
 
+  private def multipartFileBody(
+      boundary: String,
+      fieldName: String,
+      fileName: String,
+      contentType: String,
+      bytes: Array[Byte]
+  ) =
+    val header =
+      s"--$boundary\r\n" +
+        s"""Content-Disposition: form-data; name="$fieldName"; filename="$fileName"""" +
+        "\r\n" +
+        s"Content-Type: $contentType\r\n\r\n"
+    val footer = s"\r\n--$boundary--\r\n"
+    header.getBytes(StandardCharsets.UTF_8) ++
+      bytes ++
+      footer.getBytes(StandardCharsets.UTF_8)
+
+  private def renderTextFile(xmlPath: os.Path) =
+    val boundary = "mill-" + UUID.randomUUID().toString
+    val client = HttpClient.newBuilder()
+      .connectTimeout(renderTextTimeout)
+      .followRedirects(HttpClient.Redirect.NORMAL)
+      .build()
+
+    val renderRequest = HttpRequest.newBuilder(renderTextEndpoint)
+      .timeout(renderTextTimeout)
+      .header("Content-Type", s"multipart/form-data; boundary=$boundary")
+      .POST(
+        HttpRequest.BodyPublishers.ofByteArray(
+          multipartFileBody(
+            boundary,
+            "file",
+            xmlPath.last,
+            "application/xml",
+            os.read.bytes(xmlPath).toArray
+          )
+        )
+      )
+      .build()
+
+    val renderResponse =
+      client.send(renderRequest, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8))
+    if renderResponse.statusCode() < 200 || renderResponse.statusCode() >= 300 then
+      sys.error(
+        s"Author Tools render-text failed with HTTP ${renderResponse.statusCode()}:\n" +
+          renderResponse.body()
+      )
+
+    val responseJson = ujson.read(renderResponse.body())
+    val logs = responseJson.obj.get("logs")
+    val errors = logs
+      .flatMap(_.obj.get("errors"))
+      .map(_.arr.toSeq.map(_.render()))
+      .getOrElse(Seq.empty)
+    val warnings = logs
+      .flatMap(_.obj.get("warnings"))
+      .map(_.arr.toSeq.map(_.render()))
+      .getOrElse(Seq.empty)
+    warnings.foreach(w => println(s"Author Tools warning: $w"))
+    if errors.nonEmpty then
+      sys.error("Author Tools render-text errors:\n" + errors.mkString("\n"))
+
+    val textUrl = responseJson("url").str
+    val textRequest = HttpRequest.newBuilder(URI.create(textUrl))
+      .timeout(renderTextTimeout)
+      .GET()
+      .build()
+    val textResponse =
+      client.send(textRequest, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8))
+    if textResponse.statusCode() < 200 || textResponse.statusCode() >= 300 then
+      sys.error(
+        s"Author Tools text download failed with HTTP ${textResponse.statusCode()}:\n" +
+          textResponse.body()
+      )
+
+    val textPath = dir / "draft-ietf-netmod-yang-packages.txt"
+    os.write.over(textPath, textResponse.body())
+    println(s"Rendered text draft written to $textPath")
+    textPath
+
   def checkYang = Task:
     run(pyangBase ++ yangSourceFiles().map(_.path.toString))
 
@@ -1223,10 +1330,14 @@ object DraftXml extends mill.Module:
     val trees = generatedTreeFiles()
     updateXmlFile(trees, packages)
 
+  def renderText() = Task.Command:
+    renderTextFile(dir / "draft-ietf-netmod-yang-packages.xml")
+
   def all() = Task.Command:
     checkYang()
     val packageRefs = Task.traverse(examplePackages)(_.makePackage)()
     val packages = writeExamplePackages(packageRefs)
     val trees = generatedTreeFiles()
     writeTreeFiles(trees)
-    updateXmlFile(trees, packages)
+    val xmlPath = updateXmlFile(trees, packages)
+    renderTextFile(xmlPath)
