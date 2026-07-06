@@ -1,0 +1,81 @@
+#!/usr/bin/env -S scala-cli
+//> using dep "com.lihaoyi::ujson:4.4.2"
+
+import scala.sys.process.*
+import scala.util.Try
+
+object ListOpenPackageIssues:
+  private def escapeMd(value: String): String =
+    value.replace("|", "\\|").replace("\n", " ").trim
+
+  private def runGh(cmd: Seq[String]): Either[String, String] =
+    Try(cmd.!!).toEither.left.map(_.getMessage)
+
+  private def asString(v: ujson.Value): String = v match
+    case ujson.Str(s) => s
+    case ujson.Num(n) if n.isValidInt => n.toInt.toString
+    case ujson.Num(n) => n.toString
+    case ujson.Bool(b) => b.toString
+    case ujson.Null => ""
+    case other => other.toString
+
+  def main(args: Array[String]): Unit =
+    var repo: Option[String] = None
+    var label = "packages"
+    var limit = 200
+
+    val it = args.iterator
+    while it.hasNext do
+      it.next() match
+        case "--repo" if it.hasNext => repo = Some(it.next())
+        case "--label" if it.hasNext => label = it.next()
+        case "--limit" if it.hasNext =>
+          limit = it.next().toIntOption.getOrElse(limit)
+        case unknown =>
+          System.err.println(s"Unknown arg: $unknown")
+          return
+
+    val base = Seq(
+      "gh",
+      "issue",
+      "list",
+      "--state",
+      "open",
+      "--label",
+      label,
+      "--json",
+      "number,title,labels,updatedAt",
+      "--limit",
+      limit.toString,
+    )
+    val cmd = repo.map(r => base ++ Seq("--repo", r)).getOrElse(base)
+
+    runGh(cmd) match
+      case Left(err) =>
+        System.err.println(err)
+        return
+      case Right(output) =>
+        val json = ujson.read(output)
+        val issues = json.arrOpt.getOrElse(Seq.empty)
+
+        if issues.isEmpty then
+          println(s"No open issues labeled '$label'.")
+          return
+
+        println("| Issue # | Title | Tags | Last Updated |")
+        println("| --- | --- | --- | --- |")
+
+        issues.foreach { issue =>
+          val number = asString(issue("number"))
+          val title = escapeMd(asString(issue("title")))
+          val tags = issue("labels").arrOpt
+            .getOrElse(Seq.empty)
+            .flatMap(label => label.objOpt.flatMap(_.get("name")))
+            .map(asString)
+            .filter(_.nonEmpty)
+            .sorted
+            .mkString(", ")
+          val updatedRaw = asString(issue("updatedAt"))
+          val updated = updatedRaw.split("T", 2).headOption.getOrElse("")
+          println(s"| $number | $title | ${escapeMd(tags)} | $updated |")
+        }

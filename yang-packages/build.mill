@@ -1,8 +1,8 @@
-//| mill-version: 1.0.0-RC1
+//| mill-version: 1.1.2
 //| mill-jvm-version: temurin:21.0.1
 //| mvnDeps:
-//| - uk.org.wilton::yang-pkg-lib:0.0.8
-//| - uk.org.wilton::yang-pkg-mill-plugin::0.0.8
+//| - uk.org.wilton::yang-pkg-lib:0.0.13
+//| - uk.org.wilton::yang-pkg-mill-plugin::0.0.13
 package build
 
 import mill._
@@ -10,6 +10,20 @@ import mill._
 import uk.org.wilton.{plugins, yang}
 import plugins.mill.*
 import yang.packages.tools.lib.*
+
+import java.net.URI
+import java.net.http.{HttpClient, HttpRequest, HttpResponse}
+import java.nio.charset.StandardCharsets
+import java.time.Duration
+import java.util.UUID
+import java.util.regex.{Matcher, Pattern}
+import scala.jdk.CollectionConverters.*
+
+private def descriptionText(text: String) =
+  text.stripMargin.linesIterator
+    .map(_.trim)
+    .filter(_.nonEmpty)
+    .mkString(" ")
 
 /**
   * IETF Common YANG Package Definitions.
@@ -27,7 +41,7 @@ trait ExamplePkgDefn extends PkgDefn:
   * Any core common types that are commonly used across all IETF packages.
   */
 // object ExampleBasePkg extends IetfPkgDefn {
-//   def name = "example-base-pkg"
+//   def name = "example-base"
 //   def version = "0.1.0"
 //   def description =
 //     "Example package containing base IETF and IANA type modules"
@@ -40,55 +54,132 @@ trait ExamplePkgDefn extends PkgDefn:
 //         "ietf-netconf-acm@2018-02-14")
 // }
 
+object YangInstDataSchemaPkg_0_2_0 extends IetfPkgDefn:
+  def name = "yang-inst-data-schema"
+  def version = "0.2.0"
+  override def timestamp = "2026-03-20T17:52:47.188253Z"
+  def description =
+    descriptionText("""|Package schema to use for defining the yang-inst-data-schema
+       |schema for YANG packages.
+       |
+       |TODO - RFC Editor, plesae check semver and module versioning
+       |module revisions.
+       |
+       |RFC Editor, please update this module version to 1.0.0 on
+       |publication of the RFC.""")
+
+  def reference = ""
+
+  def modules = Seq("ietf-yang-package-instance@0.10.0")
+  def importOnlyModules =
+    Seq("ietf-yang-package-types@0.10.0",
+        "ietf-yang-revisions@2025-09-16",
+        "ietf-yang-semver@2025-09-29",
+        "ietf-yang-types@2025-12-22",
+        "ietf-inet-types@2025-12-22",
+        "ietf-yang-structure-ext@2020-06-17")
+
 object ExampleBaseTypesPkg_1_0_0 extends ExamplePkgDefn {
-  def name = "example-base-types-pkg"
+  def name = "example-base-types"
   def version = "1.0.0"
+  override def timestamp = "2026-03-20T17:52:47.188322Z"
+  override def organization = "IETF NETMOD Working Group"
+  override def contact =
+    "WG Web:   <http://tools.ietf.org/wg/netmod/>, " +
+      "WG List:  <mailto:netmod@ietf.org>"
   def description =
     "Example package containing base IETF and IANA type modules"
-  def reference = "RFC 6021, RFC 6536"
+  def reference = "XXX, draft-ietf-netmod-yang-packages"
 
   def modules = Seq()
-  def importOnlyModules =
-    Seq("ietf-yang-types@2010-09-24",
-        "ietf-inet-types@2010-09-24",
-        "ietf-netconf-acm@2012-02-22")
+  override def importOnlyModules =
+    Seq(
+      ImportOnlyModule(
+        "ietf-yang-types",
+        ModuleVersion("2010-09-24"),
+        Seq("https://www.iana.org/assignments/yang-parameters/ietf-yang-types@2010-09-24.yang")
+      ),
+      ImportOnlyModule(
+        "ietf-inet-types",
+        ModuleVersion("2010-09-24"),
+        Seq("https://www.iana.org/assignments/yang-parameters/ietf-inet-types@2010-09-24.yang")
+      ),
+      ImportOnlyModule(
+        "ietf-netconf-acm",
+        ModuleVersion("2012-02-22"),
+        Seq("https://www.iana.org/assignments/yang-parameters/ietf-netconf-acm@2012-02-22.yang")
+      )
+    )
 }
 
 // Same as above but with updated RFC references and module versions.
-object ExampleBaseTypesPkg extends ExamplePkgDefn {
-  def name = "example-base-types-pkg"
+object ExampleBaseTypesPkg_1_1_0 extends ExamplePkgDefn {
+  def name = "example-base-types"
   def version = "1.1.0"
+  override def versionDescription =
+    "Updated to 2025 RFC module versions"
+  override def timestamp = "2026-03-20T17:52:47.188373Z"
   def description =
     "Example package containing base IETF and IANA type modules"
-  def reference = "RFC 6991, RFC 8341"
+  def reference = "XXX, draft-ietf-netmod-yang-packages"
 
   def modules = Seq()
-  def importOnlyModules =
-    Seq("ietf-yang-types@2013-07-15",
-        "ietf-inet-types@2013-07-15",
-        "ietf-netconf-acm@2018-02-14")
+  override def importOnlyModules =
+    Seq(
+      ImportOnlyModule(
+        "ietf-yang-types",
+        ModuleVersion("2025-12-22"),
+        Seq("https://www.iana.org/assignments/yang-parameters/ietf-yang-types@2025-12-22.yang")
+      ),
+      ImportOnlyModule(
+        "ietf-inet-types",
+        ModuleVersion("2025-12-22"),
+        Seq("https://www.iana.org/assignments/yang-parameters/ietf-inet-types@2025-12-22.yang")
+      ),
+      ImportOnlyModule(
+        "ietf-netconf-acm",
+        ModuleVersion("2018-02-14"),
+        Seq("https://www.iana.org/assignments/yang-parameters/ietf-netconf-acm@2018-02-14.yang")
+      )
+    )
 }
 
-object ExampleRoutingTypesPkg extends ExamplePkgDefn {
-  def name = "example-routing-types-pkg"
-  def version = "0.1.0"
+object ExampleDiagnosticsSchemaPkg extends ExamplePkgDefn {
+  def name = "example-diagnostics-schema"
+  def version = "1.0.0"
+  override def timestamp = "2018-01-25T17:00:38Z"
   def description =
-    "Example package containing routing types modules"
-  def reference = ""
+    "Example schema package for NETCONF monitoring instance data."
+  def reference = "RFC 6022"
 
-  def includedPackages = Seq(ExampleBaseTypesPkg)
-  def modules = Seq()
-  def importOnlyModules =
-    Seq("ietf-routing-types@2017-12-04",
-        "iana-routing-types@2025-02-18",
-        "iana-bfd-types@2021-10-21",
-        "ietf-bfd-types@2022-09-22",
-        "ietf-routing@2018-03-13")
+  override def modules =
+    Seq(
+      yang.packages.tools.lib.Module(
+        "ietf-netconf-monitoring",
+        ModuleVersion("2010-10-04"),
+        Seq("https://www.iana.org/assignments/yang-parameters/ietf-netconf-monitoring@2010-10-04.yang")
+      )
+    )
+
+  override def importOnlyModules =
+    Seq(
+      ImportOnlyModule(
+        "ietf-yang-types",
+        ModuleVersion("2025-12-22"),
+        Seq("https://www.iana.org/assignments/yang-parameters/ietf-yang-types@2025-12-22.yang")
+      ),
+      ImportOnlyModule(
+        "ietf-inet-types",
+        ModuleVersion("2025-12-22"),
+        Seq("https://www.iana.org/assignments/yang-parameters/ietf-inet-types@2025-12-22.yang")
+      )
+    )
 }
 
 object ExampleAbPackage extends ExamplePkgDefn {
-  def name = "example-ab-pkg"
+  def name = "example-ab"
   def version = "0.1.0"
+  override def timestamp = "2026-03-20T17:52:47.188303Z"
   def description =
     "Example package defining modules A, B and associated types"
   def reference = ""
@@ -107,8 +198,9 @@ object ExampleAbPackage extends ExamplePkgDefn {
 
 
 object ExampleCPackage extends ExamplePkgDefn {
-  def name = "example-c-pkg"
+  def name = "example-c"
   def version = "0.1.0"
+  override def timestamp = "2026-03-20T17:52:47.202747Z"
   def description =
     "Example package importing A, removing B and adding C"
   def reference = ""
@@ -124,8 +216,1131 @@ object ExampleCPackage extends ExamplePkgDefn {
     Seq("example-module-b:bar")
 }
 
+object ExampleNetworkDevicePkg extends ExamplePkgDefn {
+  def name = "example-network-device"
+  def version = "1.1.2"
+  override def timestamp = "2018-12-13T17:00:00Z"
+  def organization = "IETF NETMOD Working Group"
+  def contact =
+    "WG Web:   <http://tools.ietf.org/wg/netmod/>, " +
+      "WG List:  <mailto:netmod@ietf.org>"
+  def description =
+    descriptionText("""|Example IETF network device YANG package.
+       |
+       |This package defines a small sample set of YANG modules that could
+       |represent the basic set of modules that a standard network device might
+       |be expected to support.""")
+  def reference = "XXX, draft-ietf-netmod-yang-packages"
+  def includedPackages = Seq(ExampleBaseTypesPkg_1_0_0)
+
+  private def ietfModule(name: String, revision: String) =
+    yang.packages.tools.lib.Module(
+      name,
+      ModuleVersion(revision),
+      Seq(s"https://www.iana.org/assignments/yang-parameters/$name@$revision.yang")
+    )
+
+  override def modules =
+    Seq(
+      ietfModule("iana-crypt-hash", "2014-08-06"),
+      ietfModule("ietf-system", "2014-08-06"),
+      ietfModule("iana-if-type", "2026-03-17"),
+      ietfModule("ietf-interfaces", "2018-02-20"),
+      ietfModule("ietf-netconf-acm", "2018-02-14"),
+      ietfModule("ietf-key-chain", "2017-06-15"),
+      ietfModule("ietf-ip", "2018-02-22"),
+    )
+  override def mandatoryFeatures =
+    Seq(
+      "ietf-system:authentication",
+      "ietf-system:local-users",
+      "ietf-system:radius",
+      "ietf-system:radius-authentication",
+      "ietf-ip:ipv6-privacy-autoconf"
+    )
+}
+
+object ExampleRoutingTypesPkg extends ExamplePkgDefn {
+  def name = "example-routing-types"
+  def version = "1.0.0"
+  override def timestamp = "2026-03-20T17:52:47.202513Z"
+  def description =
+    "Example package containing routing types modules"
+  def reference = ""
+
+  def includedPackages = Seq(ExampleBaseTypesPkg_1_1_0)
+  override def modules =
+    Seq(
+      yang.packages.tools.lib.Module(
+        "ietf-routing-types",
+        ModuleVersion("2017-12-04"),
+        Seq("https://www.iana.org/assignments/yang-parameters/ietf-routing-types@2017-12-04.yang")
+      ),
+      yang.packages.tools.lib.Module(
+        "ietf-bgp-types",
+        ModuleVersion("2018-05-09"),
+        Seq("https://www.iana.org/assignments/yang-parameters/ietf-bgp-types@2018-05-09.yang")
+      )
+    )
+  override def importOnlyModules =
+    Seq(
+      ImportOnlyModule(
+        "iana-routing-types",
+        ModuleVersion("2017-12-04"),
+        Seq("https://www.iana.org/assignments/yang-parameters/iana-routing-types@2017-12-04.yang")
+      )
+    )
+}
+
+object ExampleRoutingPkg extends ExamplePkgDefn {
+  def name = "example-routing"
+  def version = "1.3.1"
+  override def timestamp = "2018-12-13T17:00:00Z"
+  def description =
+    descriptionText("""|This package defines a small sample set of IETF routing YANG modules
+       |that could represent the set of IETF routing functionality that a basic
+       |IP network device might be expected to support.""")
+  def reference = "XXX, draft-ietf-netmod-yang-packages"
+  def includedPackages = Seq(ExampleNetworkDevicePkg, ExampleRoutingTypesPkg)
+
+  private def ietfModule(name: String, revision: String, hasLocation: Boolean = true) =
+    yang.packages.tools.lib.Module(
+      name,
+      ModuleVersion(revision),
+      Seq(s"https://www.iana.org/assignments/yang-parameters/$name@$revision.yang")
+    )
+
+  override def modules =
+    Seq(
+      ietfModule("ietf-routing", "2018-03-13"),
+      ietfModule("ietf-ipv4-unicast-routing", "2018-03-13"),
+      ietfModule("ietf-ipv6-unicast-routing", "2018-03-13"),
+      ietfModule("ietf-isis", "2018-12-11", hasLocation = false),
+      ietfModule("ietf-interfaces-common", "2018-07-02", hasLocation = false),
+      ietfModule("ietf-if-l3-vlan", "2017-10-30", hasLocation = false),
+      ietfModule("ietf-routing-policy", "2018-10-19", hasLocation = false),
+      ietfModule("ietf-bgp", "2018-05-09", hasLocation = false),
+      ietfModule("ietf-access-control-list", "2018-11-06", hasLocation = false),
+    )
+
+  override def importOnlyModules =
+    Seq(
+      ImportOnlyModule(
+        "ietf-packet-fields",
+        ModuleVersion("2018-11-06"),
+        Seq("https://www.iana.org/assignments/yang-parameters/ietf-packet-fields@2018-11-06.yang")
+      ),
+      ImportOnlyModule(
+        "ietf-ethertypes",
+        ModuleVersion("2018-11-06"),
+        Seq("https://www.iana.org/assignments/yang-parameters/ietf-ethertypes@2018-11-06.yang")
+      ),
+    )
+  override def mandatoryFeatures =
+    Seq(
+      "ietf-access-control-list:match-on-ipv6",
+      "ietf-access-control-list:ipv6"
+    )
+}
+
+object DeviceRoutingPkg extends ExamplePkgDefn {
+  def name = "device-routing"
+  def version = "1.0.0"
+  override def timestamp = "2026-06-22T00:00:00Z"
+  def description =
+    "Example vendor device routing package"
+  def reference = "XXX, draft-ietf-netmod-yang-packages"
+
+  def includedPackages = Seq(ExampleRoutingPkg)
+  override def modules =
+    Seq(
+      yang.packages.tools.lib.Module(
+        "vendor-ietf-bgp-deviations",
+        ModuleVersion("2026-06-22"),
+        Seq()
+      ),
+      yang.packages.tools.lib.Module(
+        "device-isis-extensions",
+        ModuleVersion("1.2.3"),
+        Seq()
+      )
+    )
+  def excludedModules =
+    Seq("ietf-if-l3-vlan")
+  override def optionalFeatures =
+    Seq(
+      "ietf-system:radius",
+      "ietf-system:radius-authentication"
+    )
+
+  override def makePackage = Task:
+    val pkg = YangPackage(
+      name = PkgName(name),
+      version = PkgVersion(version),
+      versionDescription = versionDescription,
+      timestamp = timestamp,
+      organization = organization,
+      contact = contact,
+      description = description,
+      reference = reference,
+      complete = complete.getOrElse(true),
+      includes = Includes(
+        packages = Seq(
+          YangPackageRef(
+            PkgName(ExampleRoutingPkg.name),
+            PkgVersion(ExampleRoutingPkg.version),
+            Seq()
+          )
+        ),
+        modules = modules.collect:
+          case m: yang.packages.tools.lib.Module => m
+          case moduleRev: String =>
+            val (name, rev, locations) = moduleNameResolver(moduleRev)
+            yang.packages.tools.lib.Module(name, rev, locations),
+        importOnlyModules = importOnlyModules.collect:
+          case m: ImportOnlyModule => m
+          case moduleRev: String =>
+            val (name, rev, locations) = moduleNameResolver(moduleRev)
+            ImportOnlyModule(name, rev, locations),
+        features = mandatoryFeatures
+      ),
+      excludes = Excludes(
+        modules = excludedModules,
+        importOnlyModules = excludedImportOnlyModules.collect:
+          case m: ExcludedImportOnlyModules => m
+          case moduleRev: String =>
+            val (name, optVer) = moduleNameOptVerResolver(moduleRev)
+            ExcludedImportOnlyModules(name, optVer),
+        features = optionalFeatures
+      ),
+      mountedPackages = mountedPackages
+    )
+    val fileRef = Task.dest / Helper.packageFileName(pkg)
+    pkg.writeToFile(fileRef)
+    PathRef(fileRef)
+}
+
+object VendorIsisHotfixPkg extends ExamplePkgDefn {
+  def name = "vendor-isis-hotfix"
+  def version = "1.0.0"
+  override def timestamp = "2026-06-22T00:00:00Z"
+  override def complete = Some(false)
+  def description =
+    "Example vendor ISIS hotfix package"
+  def reference =
+    "XXX, draft-ietf-netmod-yang-packages;"
+
+  override def modules =
+    Seq(
+      yang.packages.tools.lib.Module(
+        "device-isis-extensions",
+        ModuleVersion("1.2.4_compatible"),
+        Seq()
+      )
+    )
+}
+
+trait ExampleVersionedRoutingPkg extends ExamplePkgDefn {
+  def name = "example-versioned-routing"
+  override def timestamp = "2026-06-22T00:00:00Z"
+  def description = "Example versioned routing package"
+  def reference = "XXX, draft-ietf-netmod-yang-packages"
+
+  def includedPackageRefs: Seq[(String, String)]
+
+  override def makePackage = Task:
+    val pkg = YangPackage(
+      name = PkgName(name),
+      version = PkgVersion(version),
+      versionDescription = versionDescription,
+      timestamp = timestamp,
+      organization = organization,
+      contact = contact,
+      description = description,
+      reference = reference,
+      complete = complete.getOrElse(true),
+      includes = Includes(
+        packages = includedPackageRefs.map: (name, version) =>
+          YangPackageRef(PkgName(name), PkgVersion(version), Seq()),
+        modules = modules.collect:
+          case m: yang.packages.tools.lib.Module => m
+          case moduleRev: String =>
+            val (name, rev, locations) = moduleNameResolver(moduleRev)
+            yang.packages.tools.lib.Module(name, rev, locations),
+        importOnlyModules = importOnlyModules.collect:
+          case m: ImportOnlyModule => m
+          case moduleRev: String =>
+            val (name, rev, locations) = moduleNameResolver(moduleRev)
+            ImportOnlyModule(name, rev, locations),
+        features = mandatoryFeatures
+      ),
+      excludes = Excludes(
+        modules = excludedModules,
+        importOnlyModules = excludedImportOnlyModules.collect:
+          case m: ExcludedImportOnlyModules => m
+          case moduleRev: String =>
+            val (name, optVer) = moduleNameOptVerResolver(moduleRev)
+            ExcludedImportOnlyModules(name, optVer),
+        features = optionalFeatures
+      ),
+      mountedPackages = mountedPackages
+    )
+    val fileRef = Task.dest / Helper.packageFileName(pkg)
+    pkg.writeToFile(fileRef)
+    PathRef(fileRef)
+}
+
+object ExampleVersionedRoutingPkg_1_0_0 extends ExampleVersionedRoutingPkg {
+  def version = "1.0.0"
+  def includedPackageRefs = Seq("example-network-device" -> "1.1.2")
+  override def modules =
+    Seq(
+      yang.packages.tools.lib.Module("example-routing-core", ModuleVersion("2.0.0"), Seq()),
+      yang.packages.tools.lib.Module("example-routing-acl", ModuleVersion("1.0.0"), Seq())
+    )
+  override def mandatoryFeatures =
+    Seq("example-routing-core:ipv4")
+}
+
+object ExampleVersionedRoutingPkg_1_1_0 extends ExampleVersionedRoutingPkg {
+  def version = "1.1.0"
+  override def versionDescription =
+    "Adds telemetry, policy, and new features."
+  def includedPackageRefs =
+    Seq(
+      "example-network-device" -> "1.1.2",
+      "example-routing-telemetry" -> "1.0.0"
+    )
+  override def modules =
+    Seq(
+      yang.packages.tools.lib.Module("example-routing-core", ModuleVersion("2.0.0"), Seq()),
+      yang.packages.tools.lib.Module("example-routing-acl", ModuleVersion("1.0.0"), Seq()),
+      yang.packages.tools.lib.Module("example-routing-policy", ModuleVersion("1.0.0"), Seq())
+    )
+  override def mandatoryFeatures =
+    Seq(
+      "example-routing-core:ipv4",
+      "example-routing-core:ipv6",
+      "example-routing-policy:statistics"
+    )
+}
+
+object ExampleVersionedRoutingPkg_2_0_0 extends ExampleVersionedRoutingPkg {
+  def version = "2.0.0"
+  override def versionDescription =
+    "Downrefs a package and removes the ACL module."
+  def includedPackageRefs =
+    Seq(
+      "example-network-device" -> "1.0.0",
+      "example-routing-telemetry" -> "1.0.0"
+    )
+  override def modules =
+    Seq(
+      yang.packages.tools.lib.Module("example-routing-core", ModuleVersion("2.0.0"), Seq()),
+      yang.packages.tools.lib.Module("example-routing-policy", ModuleVersion("1.0.0"), Seq())
+    )
+  override def mandatoryFeatures =
+    Seq(
+      "example-routing-core:ipv4",
+      "example-routing-core:ipv6",
+      "example-routing-policy:statistics"
+    )
+}
+
+object ExampleVersionedRoutingPkg_3_0_0 extends ExampleVersionedRoutingPkg {
+  def version = "3.0.0"
+  override def versionDescription =
+    "Adds NBC vendor deviations."
+  def includedPackageRefs =
+    Seq(
+      "example-network-device" -> "1.0.0",
+      "example-routing-telemetry" -> "1.0.0"
+    )
+  override def modules =
+    Seq(
+      yang.packages.tools.lib.Module("example-routing-core", ModuleVersion("2.0.0"), Seq()),
+      yang.packages.tools.lib.Module("example-routing-policy", ModuleVersion("1.0.0"), Seq()),
+      yang.packages.tools.lib.Module("vendor-routing-deviations", ModuleVersion("2026-06-22"), Seq())
+    )
+  override def mandatoryFeatures =
+    Seq(
+      "example-routing-core:ipv4",
+      "example-routing-core:ipv6",
+      "example-routing-policy:statistics"
+    )
+}
+
+object ExampleVersionedRoutingPkg_4_0_0 extends ExampleVersionedRoutingPkg {
+  def version = "4.0.0"
+  override def versionDescription =
+    "Removes IPv4, downrefs core, adds ISIS."
+  def includedPackageRefs =
+    Seq(
+      "example-network-device" -> "1.0.0",
+      "example-routing-telemetry" -> "1.0.0"
+    )
+  override def modules =
+    Seq(
+      yang.packages.tools.lib.Module("example-routing-core", ModuleVersion("1.5.0"), Seq()),
+      yang.packages.tools.lib.Module("example-routing-policy", ModuleVersion("1.0.0"), Seq()),
+      yang.packages.tools.lib.Module("vendor-routing-deviations", ModuleVersion("2026-06-22"), Seq()),
+      yang.packages.tools.lib.Module("example-isis", ModuleVersion("1.0.0"), Seq())
+    )
+  override def mandatoryFeatures =
+    Seq(
+      "example-routing-core:ipv6",
+      "example-routing-policy:statistics"
+    )
+}
+
+object ExampleVersionedRoutingPkg_4_0_1 extends ExampleVersionedRoutingPkg {
+  def version = "4.0.1"
+  override def versionDescription =
+    "Updates module location information."
+  def includedPackageRefs =
+    Seq(
+      "example-network-device" -> "1.0.0",
+      "example-routing-telemetry" -> "1.0.0"
+    )
+  override def modules =
+    Seq(
+      yang.packages.tools.lib.Module(
+        "example-routing-core",
+        ModuleVersion("1.5.0"),
+        Seq("https://example.org/yang/example-routing-core@1.5.0.yang")
+      ),
+      yang.packages.tools.lib.Module("example-routing-policy", ModuleVersion("1.0.0"), Seq()),
+      yang.packages.tools.lib.Module("vendor-routing-deviations", ModuleVersion("2026-06-22"), Seq()),
+      yang.packages.tools.lib.Module("example-isis", ModuleVersion("1.0.0"), Seq())
+    )
+  override def mandatoryFeatures =
+    Seq(
+      "example-routing-core:ipv6",
+      "example-routing-policy:statistics"
+    )
+}
+
+trait ExampleResolutionPkg extends ExamplePkgDefn {
+  override def timestamp = "2026-06-22T00:00:00Z"
+  def reference = "XXX, draft-ietf-netmod-yang-packages"
+  def includedPackageRefs: Seq[(String, String)] = Seq()
+
+  override def makePackage = Task:
+    val pkg = YangPackage(
+      name = PkgName(name),
+      version = PkgVersion(version),
+      versionDescription = versionDescription,
+      timestamp = timestamp,
+      organization = organization,
+      contact = contact,
+      description = description,
+      reference = reference,
+      complete = complete.getOrElse(true),
+      includes = Includes(
+        packages = includedPackageRefs.map: (name, version) =>
+          YangPackageRef(PkgName(name), PkgVersion(version), Seq()),
+        modules = modules.collect:
+          case m: yang.packages.tools.lib.Module => m
+          case moduleRev: String =>
+            val (name, rev, locations) = moduleNameResolver(moduleRev)
+            yang.packages.tools.lib.Module(name, rev, locations),
+        importOnlyModules = importOnlyModules.collect:
+          case m: ImportOnlyModule => m
+          case moduleRev: String =>
+            val (name, rev, locations) = moduleNameResolver(moduleRev)
+            ImportOnlyModule(name, rev, locations),
+        features = mandatoryFeatures
+      ),
+      excludes = Excludes(
+        modules = excludedModules,
+        importOnlyModules = excludedImportOnlyModules.collect:
+          case m: ExcludedImportOnlyModules => m
+          case moduleRev: String =>
+            val (name, optVer) = moduleNameOptVerResolver(moduleRev)
+            ExcludedImportOnlyModules(name, optVer),
+        features = optionalFeatures
+      ),
+      mountedPackages = mountedPackages
+    )
+    val fileRef = Task.dest / Helper.packageFileName(pkg)
+    pkg.writeToFile(fileRef)
+    PathRef(fileRef)
+}
+
+object ExampleResolutionCommonPkg_1_0_0 extends ExampleResolutionPkg {
+  def name = "example-resolution-common"
+  def version = "1.0.0"
+  def description = "Example common package for resolution examples"
+  override def modules =
+    Seq(
+      yang.packages.tools.lib.Module("example-resolution-base", ModuleVersion("1.0.0"), Seq())
+    )
+  override def importOnlyModules =
+    Seq(
+      ImportOnlyModule("example-resolution-types", ModuleVersion("1.0.0"), Seq())
+    )
+  override def mandatoryFeatures =
+    Seq("example-resolution-base:basic")
+}
+
+object ExampleResolutionCommonPkg_1_4_0 extends ExampleResolutionPkg {
+  def name = "example-resolution-common"
+  def version = "1.4.0"
+  def description = "Updated common package for resolution examples"
+  override def modules =
+    Seq(
+      yang.packages.tools.lib.Module("example-resolution-base", ModuleVersion("1.4.0"), Seq()),
+      yang.packages.tools.lib.Module("example-resolution-telemetry", ModuleVersion("1.2.0"), Seq())
+    )
+  override def importOnlyModules =
+    Seq(
+      ImportOnlyModule("example-resolution-types", ModuleVersion("1.4.0"), Seq())
+    )
+  override def mandatoryFeatures =
+    Seq(
+      "example-resolution-base:basic",
+      "example-resolution-telemetry:events"
+    )
+}
+
+object ExampleResolutionAccessPkg extends ExampleResolutionPkg {
+  def name = "example-resolution-access"
+  def version = "2.0.0"
+  def description = "Example access package for resolution examples"
+  override def includedPackageRefs =
+    Seq("example-resolution-common" -> "1.0.0")
+  override def modules =
+    Seq(
+      yang.packages.tools.lib.Module(
+        "example-resolution-acl",
+        ModuleVersion("1.1.0"),
+        Seq("example:location-qux")
+      ),
+      yang.packages.tools.lib.Module(
+        "example-resolution-transport",
+        ModuleVersion("1.2.0"),
+        Seq(
+          "example:location-foo",
+          "example:location-bar"
+        )
+      )
+    )
+  override def mandatoryFeatures =
+    Seq("example-resolution-acl:ipv4")
+}
+
+object ExampleResolutionRoutingPkg extends ExampleResolutionPkg {
+  def name = "example-resolution-routing"
+  def version = "3.0.0"
+  def description = "Example routing package for resolution examples"
+  override def includedPackageRefs =
+    Seq("example-resolution-common" -> "1.4.0")
+  override def modules =
+    Seq(
+      yang.packages.tools.lib.Module("example-resolution-acl", ModuleVersion("1.3.0"), Seq()),
+      yang.packages.tools.lib.Module("example-resolution-routing", ModuleVersion("1.3.0"), Seq()),
+      yang.packages.tools.lib.Module(
+        "example-resolution-transport",
+        ModuleVersion("1.2.0"),
+        Seq(
+          "example:location-foo",
+          "example:location-baz"
+        )
+      )
+    )
+  override def mandatoryFeatures =
+    Seq("example-resolution-routing:statistics")
+}
+
+object ExampleResolutionDevicePkg extends ExampleResolutionPkg {
+  def name = "example-resolution-device"
+  def version = "4.0.0"
+  def description = "Top-level package for resolution examples"
+  override def includedPackageRefs =
+    Seq(
+      "example-resolution-access" -> "2.0.0",
+      "example-resolution-routing" -> "3.0.0"
+    )
+  override def modules =
+    Seq(
+      yang.packages.tools.lib.Module(
+        "example-resolution-acl",
+        ModuleVersion("1.1.0"),
+        Seq("example:location-quux")
+      )
+    )
+  override def excludedModules =
+    Seq("example-resolution-telemetry")
+  override def optionalFeatures =
+    Seq("example-resolution-routing:statistics")
+}
+
+object ExampleImport1Pkg extends ExamplePkgDefn {
+  def name = "example-import-1"
+  def version = "1.0.0"
+  override def timestamp = "2018-01-01T00:00:00Z"
+  def description = "First imported example package"
+  def reference = "XXX, draft-ietf-netmod-yang-packages"
+
+  override def modules =
+    Seq("example-module-A@1.0.0", "example-module-B@1.0.0")
+
+  override def importOnlyModules =
+    Seq("example-types-module-C@2018-01-01", "example-types-module-D@2018-01-01")
+}
+
+object ExampleImport2Pkg extends ExamplePkgDefn {
+  def name = "example-import-2"
+  def version = "2.0.0"
+  override def timestamp = "2018-11-26T00:00:00Z"
+  def description = "Second imported example package"
+  def reference = "XXX, draft-ietf-netmod-yang-packages"
+
+  override def modules =
+    Seq("example-module-A@1.2.3", "example-module-E@1.1.0")
+
+  override def importOnlyModules =
+    Seq("example-types-module-C@2018-11-26", "example-types-module-D@2018-11-26")
+}
+
+object Example3Pkg extends ExamplePkgDefn {
+  def name = "example-3"
+  def version = "1.0.0"
+  override def timestamp = "2018-11-26T00:00:00Z"
+  def description = "Importing example package"
+  def reference = "XXX, draft-ietf-netmod-yang-packages"
+  def includedPackages = Seq(ExampleImport1Pkg, ExampleImport2Pkg)
+
+  override def modules =
+    Seq("example-module-A@1.2.3")
+
+  override def importOnlyModules =
+    Seq("example-types-module-C@2018-11-26")
+}
 
 
-// def all = Task {
-//   Seq(ExampleBasePkg, ExampleBasePkg2).map(_.writePackage)
-// }
+
+object DraftXml extends mill.Module:
+  private case class YangModule(name: String, source: String)
+  private case class PackageArtifact(pkg: PkgDefn, path: os.Path)
+
+  private val renderTextEndpoint =
+    URI.create("https://author-tools.ietf.org/api/render/text")
+  private val renderTextTimeout = Duration.ofSeconds(30)
+
+  private val modules = Seq(
+    YangModule("ietf-yang-package-types", "ietf-yang-package-types.yang"),
+    YangModule("ietf-yang-package-instance", "ietf-yang-package-instance.yang"),
+    YangModule("ietf-yang-packages", "ietf-yang-packages.yang"),
+    YangModule("ietf-yl-packages", "ietf-yl-packages.yang"),
+    YangModule("ietf-yang-inst-data-pkg", "ietf-yang-inst-data-pkg.yang"),
+  )
+
+  private val examplePackages: Seq[PkgDefn] = Seq(
+    YangInstDataSchemaPkg_0_2_0,
+    ExampleBaseTypesPkg_1_0_0,
+    ExampleBaseTypesPkg_1_1_0,
+    ExampleDiagnosticsSchemaPkg,
+    ExampleAbPackage,
+    ExampleCPackage,
+    ExampleNetworkDevicePkg,
+    ExampleRoutingTypesPkg,
+    ExampleRoutingPkg,
+    DeviceRoutingPkg,
+    VendorIsisHotfixPkg,
+    ExampleVersionedRoutingPkg_1_0_0,
+    ExampleVersionedRoutingPkg_1_1_0,
+    ExampleVersionedRoutingPkg_2_0_0,
+    ExampleVersionedRoutingPkg_3_0_0,
+    ExampleVersionedRoutingPkg_4_0_0,
+    ExampleVersionedRoutingPkg_4_0_1,
+    ExampleResolutionCommonPkg_1_0_0,
+    ExampleResolutionCommonPkg_1_4_0,
+    ExampleResolutionAccessPkg,
+    ExampleResolutionRoutingPkg,
+    ExampleResolutionDevicePkg,
+    ExampleImport1Pkg,
+    ExampleImport2Pkg,
+    Example3Pkg,
+  )
+
+  private def dir =
+    Iterator.iterate(os.pwd)(_ / os.up).take(20)
+      .find(p => os.exists(p / "draft-ietf-netmod-yang-packages.xml"))
+      .getOrElse(sys.error("cannot find yang-packages directory"))
+
+  private def depDirs =
+    val repo = dir / os.up
+    val fromEnv = sys.env.get("YANG_MODPATH").toSeq.flatMap(_.split(":"))
+      .filter(_.nonEmpty).map(os.Path(_, os.pwd))
+    (Seq(dir, repo / "yang-module-versioning", repo / "yang-semver",
+      repo / "common-dependencies") ++ fromEnv).filter(os.exists)
+
+  private def pyangEnv =
+    val configured = sys.env.get("PYANG_ENV_SH").map(os.Path(_, os.pwd))
+    configured.orElse(Some(os.Path("/Users/rwilton/git/pyang/env.sh")))
+      .filter(os.exists)
+
+  private def shellQuote(value: String) =
+    "'" + value.replace("'", "'\"'\"'") + "'"
+
+  private def sourcedCommand(cmd: Seq[String], cwd: os.Path) =
+    pyangEnv match
+      case Some(env) =>
+        val envDir = env / os.up
+        Seq(
+          "sh",
+          "-lc",
+          Seq(
+            "cd " + shellQuote(envDir.toString),
+            ". " + shellQuote(env.toString),
+            "cd " + shellQuote(cwd.toString),
+            "exec " + cmd.map(shellQuote).mkString(" ")
+          ).mkString(" && ")
+        )
+      case None => cmd
+
+  private def run(cmd: Seq[String], cwd: os.Path = dir): String =
+    val effectiveCmd = sourcedCommand(cmd, cwd)
+    val process = new ProcessBuilder(effectiveCmd.asJava).directory(cwd.toIO).start()
+    val out = new String(process.getInputStream.readAllBytes, StandardCharsets.UTF_8)
+    val err = new String(process.getErrorStream.readAllBytes, StandardCharsets.UTF_8)
+    val code = process.waitFor()
+    if code != 0 || err.trim.nonEmpty then
+      throw RuntimeException((effectiveCmd.mkString(" ") + "\n" + err + out).trim)
+    out
+
+  private def pyangBase =
+    Seq("pyang", "-W", "error") ++
+      depDirs.flatMap(p => Seq("-p", p.toString))
+
+  def yangSourceFiles = Task.Input:
+    modules.map(m => PathRef(dir / m.source))
+
+  private def versionOf(text: String) =
+    """(?m)^\s+ys:version\s+([^;]+);""".r.findFirstMatchIn(text)
+      .map(_.group(1)).getOrElse(sys.error("missing ys:version"))
+
+  private def oneReplace(text: String, regex: String, replacement: Matcher => String) =
+    val matcher = Pattern.compile(regex, Pattern.DOTALL).matcher(text)
+    if !matcher.find() then sys.error(s"no XML block matched: $regex")
+    val start = matcher.start()
+    val end = matcher.end()
+    val value = replacement(matcher)
+    if matcher.find() then sys.error(s"more than one XML block matched: $regex")
+    text.substring(0, start) + value + text.substring(end)
+
+  private def packageTypesFigure(tree: String) =
+    val lines = tree.linesIterator.toVector
+    val start = lines.indexWhere(_.contains("grouping yang-pkg-instance:"))
+    if start == -1 then sys.error("yang-pkg-instance grouping not found")
+    val end = lines.indexWhere(_.startsWith("  grouping "), start + 1)
+    val block = lines.slice(start, if end == -1 then lines.length else end)
+    (lines.take(2) ++ block).mkString("\n")
+
+  private def xmlTreeFigure(module: YangModule, tree: String) =
+    module.name match
+      case "ietf-yang-package-instance" =>
+        """module: ietf-yang-package-instance
+          |
+          |  structure package:
+          |    // Uses the yang-package-instance grouping defined in
+          |    // ietf-yang-package-types.yang
+          |    +-- name                  pkg-name
+          |    +-- version               pkg-version
+          |    ... remainder of yang-package-instance grouping ...""".stripMargin
+      case "ietf-yang-packages" =>
+        """module: ietf-yang-packages
+          |  +--ro packages
+          |     +--ro package* [name version]
+          |        // Uses the yang-package-instance grouping defined in
+          |        // ietf-yang-package-types.yang.
+          |        +--ro name                  pkg-name
+          |        +--ro version               pkg-version
+          |        ... remainder of yang-package-instance grouping ...""".stripMargin
+      case "ietf-yang-inst-data-pkg" =>
+        """module: ietf-yang-inst-data-pkg
+          |
+          |  augment-structure /yid:instance-data-set/...
+          |    +--:(pkg-schema)
+          |       +-- pkg-schema
+          |          +-- name        pkg-name
+          |          +-- version     pkg-version
+          |          +-- location*   inet:uri""".stripMargin
+      case _ => tree.trim
+
+  private def treeOptions(module: YangModule) =
+    module.name match
+      case "ietf-yang-package-types" => Seq("--tree-print-groupings")
+      case "ietf-yang-package-instance" | "ietf-yang-inst-data-pkg" =>
+        Seq("--tree-print-structures")
+      case _ => Seq.empty
+
+  private enum FoldingStyle:
+    case SingleBackslash, DoubleBackslash
+
+  private val singleBackslashHeader =
+    "NOTE: '" + "\\" + "' line wrapping per RFC 8792"
+  private val doubleBackslashHeader =
+    "NOTE: '" + "\\\\" + "' line wrapping per RFC 8792"
+
+  private def headerText(style: FoldingStyle) =
+    style match
+      case FoldingStyle.SingleBackslash => singleBackslashHeader
+      case FoldingStyle.DoubleBackslash => doubleBackslashHeader
+
+  private def foldingHeader(style: FoldingStyle, maxCol: Int) =
+    val text = headerText(style)
+    val length = text.length + 2
+    val left = (maxCol - length) / 2
+    val right = maxCol - length - left
+    ("=" * left) + " " + text + " " + ("=" * right)
+
+  private def foldSplitIndex(line: String, foldCol: Int, spaceWindow: Int = 20) =
+    val limit = math.min(foldCol, line.length)
+    val firstCandidate = math.max(0, limit - spaceWindow)
+    (limit - 1 to firstCandidate by -1)
+      .find(idx => line.charAt(idx) == ' ')
+      .map(_ + 1)
+      .orElse:
+        val tokenStart = line.lastIndexWhere(_.isWhitespace, limit - 1) + 1
+        (limit - 1 to tokenStart by -1)
+          .find(idx => line.charAt(idx) == '/')
+          .map(_ + 1)
+      .getOrElse(limit)
+
+  private def foldSingleBackslash(lines: Vector[String], maxCol: Int) =
+    if lines.exists(_.endsWith("\\")) then None
+    else
+      val foldCol = maxCol - 1
+
+      def foldLine(line: String): Option[Vector[String]] =
+        if line.length <= maxCol then Some(Vector(line))
+        else
+          val (head, tail) = line.splitAt(foldSplitIndex(line, foldCol))
+          foldLine(tail).map((head + "\\") +: _)
+
+      lines.foldLeft(Option(Vector.empty[String])):
+        case (Some(acc), line) => foldLine(line).map(acc ++ _)
+        case (None, _) => None
+
+  private def foldDoubleBackslash(lines: Vector[String], maxCol: Int) =
+    if lines.sliding(2).exists:
+        case Seq(a, b) => a.endsWith("\\") && b.dropWhile(_ == ' ').startsWith("\\")
+        case _ => false
+      then None
+    else
+      val foldCol = maxCol - 1
+      def foldLine(line: String): Vector[String] =
+        if line.length <= maxCol then Vector(line)
+        else
+          val (head, tail) = line.splitAt(foldSplitIndex(line, foldCol))
+          (head + "\\") +: foldLine("\\" + tail)
+      Some(lines.flatMap(foldLine))
+
+  private def foldLongLines(text: String, maxCol: Int = 72) =
+    val lines = text.linesIterator.toVector
+    if lines.forall(_.length <= maxCol) then text
+    else
+      if lines.exists(_.contains('\t')) then
+        sys.error("cannot fold example containing TAB characters")
+
+      val folded =
+        foldSingleBackslash(lines, maxCol)
+          .map(FoldingStyle.SingleBackslash -> _)
+          .orElse(foldDoubleBackslash(lines, maxCol)
+            .map(FoldingStyle.DoubleBackslash -> _))
+          .getOrElse(sys.error("cannot fold example using RFC 8792"))
+
+      val (style, body) = folded
+      (Vector(foldingHeader(style, maxCol), "") ++ body).mkString("\n") + "\n"
+
+  private def unfoldLongLines(text: String) =
+    val trailingNewline = text.endsWith("\n")
+    val lines = text.linesIterator.toVector
+    val style =
+      lines.headOption.collect:
+        case line if line.contains(singleBackslashHeader) =>
+          FoldingStyle.SingleBackslash
+        case line if line.contains(doubleBackslashHeader) =>
+          FoldingStyle.DoubleBackslash
+
+    def finish(unfolded: Vector[String]) =
+      unfolded.mkString("\n") + (if trailingNewline then "\n" else "")
+
+    style match
+      case None => text
+      case Some(FoldingStyle.SingleBackslash) =>
+        finish(lines.drop(2).foldLeft(Vector.empty[String]):
+          case (acc, line) if acc.lastOption.exists(_.endsWith("\\")) =>
+            acc.init :+ (acc.last.dropRight(1) + line.dropWhile(_ == ' '))
+          case (acc, line) => acc :+ line)
+      case Some(FoldingStyle.DoubleBackslash) =>
+        finish(lines.drop(2).foldLeft(Vector.empty[String]):
+          case (acc, line)
+              if acc.lastOption.exists(_.endsWith("\\"))
+                && line.dropWhile(_ == ' ').startsWith("\\") =>
+            val continuation = line.dropWhile(_ == ' ').drop(1)
+            acc.init :+ (acc.last.dropRight(1) + continuation)
+          case (acc, line) => acc :+ line)
+
+  private def packageFileName(pkg: PkgDefn) =
+    s"${pkg.name}@${pkg.version}.ypkg"
+
+  private def packageExampleLocation(pkg: PkgDefn) =
+    s"https://example.org/yang/packages/${packageFileName(pkg)}"
+
+  private def packageCodeBlock(artifact: PackageArtifact) =
+    s"""<CODE BEGINS> file "${packageFileName(artifact.pkg)}"
+       |${foldLongLines(os.read(artifact.path).trim, maxCol = 69).trim}
+       |<CODE ENDS>""".stripMargin
+
+  private def sanitizePackageLocations(text: String, packageRefs: Seq[PathRef]) =
+    examplePackages.zip(packageRefs).foldLeft(text):
+      case (updated, (pkg, ref)) =>
+        Seq(
+          ref.path.toIO.toURI.toString,
+          s"file:${ref.path}",
+          s"file://${ref.path}",
+        ).foldLeft(updated)((acc, local) => acc.replace(local, packageExampleLocation(pkg)))
+
+  private def addHotfixDependsOn(text: String) =
+    val json = ujson.read(text)
+    val pkg =
+      json("ietf-yang-instance-data:instance-data-set")("content-data")(
+        "ietf-yang-package-instance:package"
+      ).obj
+    if pkg("name").str == VendorIsisHotfixPkg.name then
+      pkg("depends-on") = ujson.Obj(
+        "package" -> ujson.Arr(
+          ujson.Obj(
+            "name" -> DeviceRoutingPkg.name,
+            "version" -> DeviceRoutingPkg.version
+          )
+        )
+      )
+      ujson.write(json, indent = 2) + "\n"
+    else text
+
+  private def writeExamplePackages(packageRefs: Seq[PathRef]) =
+    val outDir = dir / "generated" / "packages"
+    os.makeDir.all(outDir)
+    examplePackages.zip(packageRefs).map: (pkg, ref) =>
+      val path = outDir / packageFileName(pkg)
+      val sanitized = sanitizePackageLocations(os.read(ref.path), packageRefs)
+      os.write.over(path, addHotfixDependsOn(sanitized))
+      println(s"Package written to $path")
+      PackageArtifact(pkg, path)
+
+  private def writeTreeFiles(trees: Seq[PathRef]) =
+    val outDir = dir / "generated" / "tree"
+    os.makeDir.all(outDir)
+    trees.map: ref =>
+      val path = outDir / ref.path.last
+      os.copy.over(ref.path, path)
+      println(s"Tree diagram written to $path")
+      PathRef(path)
+
+  private def packageBlockLabels(pkg: PkgDefn) =
+    val generated = packageFileName(pkg)
+    val unversioned = s"${pkg.name}.ypkg"
+    val previousLabels =
+      if pkg.name == "yang-inst-data-schema" then Seq("yang-inst-data-schema@0.1.0.ypkg")
+      else Seq()
+    (Seq(generated, unversioned) ++ previousLabels).distinct
+
+  private def replacePackageCodeBlock(xml: String, artifact: PackageArtifact) =
+    val labels = packageBlockLabels(artifact.pkg).map(Pattern.quote).mkString("|")
+    oneReplace(
+      xml,
+      s"(<artwork><!\\[CDATA\\[\\s*)<CODE BEGINS> file \"(?:$labels)\"\\n" +
+        ".*?<CODE ENDS>\\n[\\r\\n]*(\\h*)\\]\\]></artwork>",
+      m => s"${m.group(1)}${packageCodeBlock(artifact)}\n${m.group(2)}]]></artwork>"
+    )
+
+  private def replaceResolutionExample(xml: String, artifacts: Seq[PackageArtifact]) =
+    val byName = artifacts.map(a => a.pkg.name -> a).toMap
+    val body =
+      Seq("example-import-1", "example-import-2", "example-3")
+        .map: name =>
+          s"""        <figure>
+             |          <artwork><![CDATA[
+             |${packageCodeBlock(byName(name))}
+             |        ]]></artwork>
+             |        </figure>""".stripMargin
+        .mkString("\n\n")
+    oneReplace(
+      xml,
+      "(<section anchor=\"resolved_example\".*?)(\\s*<figure>\\s*<artwork><!\\[CDATA\\[\\s*)" +
+        ".*?(\\n      </section>)",
+      m => s"${m.group(1)}\n\n$body${m.group(3)}"
+    )
+
+  private def updateXmlFile(trees: Seq[PathRef], packages: Seq[PackageArtifact]) =
+    val treeByModule = modules.zip(trees.map(t => os.read(t.path)))
+    val xmlPath = dir / "draft-ietf-netmod-yang-packages.xml"
+    val updatedTrees = treeByModule.foldLeft(os.read(xmlPath)):
+      case (xml, (module, tree)) =>
+        oneReplace(
+          xml,
+          s"(<artwork><!\\[CDATA\\[\\s*)module: ${Pattern.quote(module.name)}.*?\\n[\\r\\n]*(\\h*)\\]\\]></artwork>",
+          m => s"${m.group(1)}${xmlTreeFigure(module, tree)}\n${m.group(2)}]]></artwork>"
+        )
+    val updatedSources = modules.foldLeft(updatedTrees):
+      case (xml, m) =>
+        val source = os.read(dir / m.source).trim
+        val version = versionOf(source)
+        oneReplace(
+          xml,
+          s"(<artwork><!\\[CDATA\\[\\s*)<CODE BEGINS> file " +
+            s""""${Pattern.quote(m.name)}#[^"]+\\.yang""" +
+            ".*?<CODE ENDS>\\n[\\r\\n]*(\\h*)\\]\\]></artwork>",
+          mtch => s"${mtch.group(1)}<CODE BEGINS> file \"${m.name}#$version.yang\"\n" +
+            source + s"\n<CODE ENDS>\n${mtch.group(2)}]]></artwork>"
+        )
+    val packageBlocks = Seq(
+      "yang-inst-data-schema",
+      "example-base-types",
+      "example-diagnostics-schema",
+      "example-routing-types",
+      "example-network-device",
+      "example-routing",
+      "device-routing",
+      "vendor-isis-hotfix",
+      "example-versioned-routing",
+      "example-resolution-common",
+      "example-resolution-access",
+      "example-resolution-routing",
+      "example-resolution-device",
+      "example-ab",
+      "example-c",
+    )
+    val updatedPackages = packages
+      .filter(p => packageBlocks.contains(p.pkg.name))
+      .foldLeft(updatedSources)(replacePackageCodeBlock)
+    os.write.over(xmlPath, updatedPackages)
+    xmlPath
+
+  private def multipartFileBody(
+      boundary: String,
+      fieldName: String,
+      fileName: String,
+      contentType: String,
+      bytes: Array[Byte]
+  ) =
+    val header =
+      s"--$boundary\r\n" +
+        s"""Content-Disposition: form-data; name="$fieldName"; filename="$fileName"""" +
+        "\r\n" +
+        s"Content-Type: $contentType\r\n\r\n"
+    val footer = s"\r\n--$boundary--\r\n"
+    header.getBytes(StandardCharsets.UTF_8) ++
+      bytes ++
+      footer.getBytes(StandardCharsets.UTF_8)
+
+  private def renderTextFile(xmlPath: os.Path) =
+    val boundary = "mill-" + UUID.randomUUID().toString
+    val client = HttpClient.newBuilder()
+      .connectTimeout(renderTextTimeout)
+      .followRedirects(HttpClient.Redirect.NORMAL)
+      .build()
+
+    val renderRequest = HttpRequest.newBuilder(renderTextEndpoint)
+      .timeout(renderTextTimeout)
+      .header("Content-Type", s"multipart/form-data; boundary=$boundary")
+      .POST(
+        HttpRequest.BodyPublishers.ofByteArray(
+          multipartFileBody(
+            boundary,
+            "file",
+            xmlPath.last,
+            "application/xml",
+            os.read.bytes(xmlPath).toArray
+          )
+        )
+      )
+      .build()
+
+    val renderResponse =
+      client.send(renderRequest, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8))
+    if renderResponse.statusCode() < 200 || renderResponse.statusCode() >= 300 then
+      sys.error(
+        s"Author Tools render-text failed with HTTP ${renderResponse.statusCode()}:\n" +
+          renderResponse.body()
+      )
+
+    val responseJson = ujson.read(renderResponse.body())
+    val logs = responseJson.obj.get("logs")
+    val errors = logs
+      .flatMap(_.obj.get("errors"))
+      .map(_.arr.toSeq.map(_.render()))
+      .getOrElse(Seq.empty)
+    val warnings = logs
+      .flatMap(_.obj.get("warnings"))
+      .map(_.arr.toSeq.map(_.render()))
+      .getOrElse(Seq.empty)
+    warnings.foreach(w => println(s"Author Tools warning: $w"))
+    if errors.nonEmpty then
+      sys.error("Author Tools render-text errors:\n" + errors.mkString("\n"))
+
+    val textUrl = responseJson("url").str
+    val textRequest = HttpRequest.newBuilder(URI.create(textUrl))
+      .timeout(renderTextTimeout)
+      .GET()
+      .build()
+    val textResponse =
+      client.send(textRequest, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8))
+    if textResponse.statusCode() < 200 || textResponse.statusCode() >= 300 then
+      sys.error(
+        s"Author Tools text download failed with HTTP ${textResponse.statusCode()}:\n" +
+          textResponse.body()
+      )
+
+    val textPath = dir / "draft-ietf-netmod-yang-packages.txt"
+    os.write.over(textPath, textResponse.body())
+    println(s"Rendered text draft written to $textPath")
+    textPath
+
+  def checkYang = Task:
+    run(pyangBase ++ yangSourceFiles().map(_.path.toString))
+
+  def generatedTreeFiles = Task:
+    checkYang()
+    val sourceByModule = modules.zip(yangSourceFiles())
+    val outDir = Task.dest / "tree"
+    os.makeDir.all(outDir)
+    sourceByModule.map: (m, source) =>
+      val tree = run(pyangBase ++ Seq("-f", "tree", "--tree-line-length=69") ++
+        treeOptions(m) ++ Seq(source.path.toString))
+      val body =
+        if m.name == "ietf-yang-package-types" then packageTypesFigure(tree)
+        else tree.trim
+      val path = outDir / s"${m.name}.tree"
+      os.write.over(path, body + "\n")
+      PathRef(path)
+
+  def treeFiles() = Task.Command:
+    writeTreeFiles(generatedTreeFiles())
+
+  def buildExamples() = Task.Command:
+    val packageRefs = Task.traverse(examplePackages)(_.makePackage)()
+    writeExamplePackages(packageRefs)
+    ()
+
+  def updateXml() = Task.Command:
+    val packageRefs = Task.traverse(examplePackages)(_.makePackage)()
+    val packages = writeExamplePackages(packageRefs)
+    val trees = generatedTreeFiles()
+    updateXmlFile(trees, packages)
+
+  def renderText() = Task.Command:
+    renderTextFile(dir / "draft-ietf-netmod-yang-packages.xml")
+
+  def all() = Task.Command:
+    checkYang()
+    val packageRefs = Task.traverse(examplePackages)(_.makePackage)()
+    val packages = writeExamplePackages(packageRefs)
+    val trees = generatedTreeFiles()
+    writeTreeFiles(trees)
+    val xmlPath = updateXmlFile(trees, packages)
+    renderTextFile(xmlPath)
