@@ -81,7 +81,7 @@ Table of Contents
      3.4.  Submodule package considerations  . . . . . . . . . . . .  12
      3.5.  Package Mount Points  . . . . . . . . . . . . . . . . . .  12
      3.6.  Exclusions  . . . . . . . . . . . . . . . . . . . . . . .  13
-   4.  Package Resolution  . . . . . . . . . . . . . . . . . . . . .  13
+   4.  Package Resolution  . . . . . . . . . . . . . . . . . . . . .  14
      4.1.  Automatic Module Version Resolution . . . . . . . . . . .  16
    5.  YANG Package Usage  . . . . . . . . . . . . . . . . . . . . .  17
      5.1.  Achieving package name uniqueness . . . . . . . . . . . .  18
@@ -488,7 +488,7 @@ Internet-Draft                YANG Packages               September 2026
        |     +-- location*   inet:uri
        +-- mount* [mount-path]
           +-- mount-path            mount-ypath
-          +-- inherit-packages?     boolean
+          +-- inherit-mounted-packages?   boolean
           +-- package* [name version]
           |  +-- name        pkg-name
           |  +-- version     pkg-version
@@ -691,7 +691,7 @@ Internet-Draft                YANG Packages               September 2026
       are exported from any included packages are also exported at the
       same mount point for this specific package, unless package
       inheritance is explicitly disabled by a 'mount' list entry for the
-      same mount point with 'inherit-packages' set to 'false'.
+      same mount point with 'inherit-mounted-packages' set to 'false'.
 
    *  A package definition can add mounted packages, additional
       features, and parent-references to a mount point by listing them
@@ -700,9 +700,10 @@ Internet-Draft                YANG Packages               September 2026
       is listed with a different version, then both package versions are
       retained.  I.e., a package definition can remove inherited mounted
       packages, modules, enabled features, or parent-references only by
-      setting 'inherit-packages' to 'false' and explicitly listing the
-      packages, features, and parent-references that define the complete
-      mounted schema.  Examples of this are given in Appendix A.6.2.
+      setting 'inherit-mounted-packages' to 'false' and explicitly
+      listing the packages, features, and parent-references that define
+      the complete mounted schema.  Examples of this are given in
+      Appendix A.6.2.
 
    If a server implements the YANG library package bindings defined in
    Section 5.4.3 for a mounted schema, then the YANG library data
@@ -716,12 +717,11 @@ Internet-Draft                YANG Packages               September 2026
    mechanism for this is described in Section 4, and the conformance
    implications are described in Section 7.
 
-4.  Package Resolution
 
-   Package resolution is the process of taking a YANG package definition
-   and converting it to a specification for a YANG schema, e.g., as may
-   be implemented by a device for a particular datastore.  A YANG schema
-   can be thought of as comprising:
+
+
+
+
 
 
 
@@ -729,6 +729,13 @@ Wilton, et al.            Expires 2 April 2027                 [Page 13]
 
 Internet-Draft                YANG Packages               September 2026
 
+
+4.  Package Resolution
+
+   Package resolution is the process of taking a YANG package definition
+   and converting it to a specification for a YANG schema, e.g., as may
+   be implemented by a device for a particular datastore.  A YANG schema
+   can be thought of as comprising:
 
       A set of implemented modules at specific versions,
 
@@ -771,13 +778,6 @@ Internet-Draft                YANG Packages               September 2026
           automatically as per Section 4.1, then overwritten (including
           submodule and location information) by any entries in the
           "includes/module" list, and finally filtered by any entries in
-          "excludes/module" list.  Location leaf-lists for duplicate
-          inherited module references are merged using the location-
-          lists rule.
-
-       *  import-only-modules: The set of import-only modules is the
-          union of all import-only modules in the resolved included
-          packages.  Location leaf-lists for duplicate inherited import-
 
 
 
@@ -786,6 +786,13 @@ Wilton, et al.            Expires 2 April 2027                 [Page 14]
 Internet-Draft                YANG Packages               September 2026
 
 
+          "excludes/module" list.  Location leaf-lists for duplicate
+          inherited module references are merged using the location-
+          lists rule.
+
+       *  import-only-modules: The set of import-only modules is the
+          union of all import-only modules in the resolved included
+          packages.  Location leaf-lists for duplicate inherited import-
           only module references are merged using the location-lists
           rule.  The set is then overwritten (including submodule and
           location information) by any entries in the "includes/import-
@@ -807,23 +814,33 @@ Internet-Draft                YANG Packages               September 2026
           packages, "mount/additional-feature" entries, and mount
           parent-references.  The mounts are then updated by processing
           any entries in the package's "mount" list.  If "inherit-
-          packages" is true, or absent, the local "mount/package",
-          "mount/additional-feature", and "mount/parent-reference"
-          entries are added to the inherited mounted schema for that
-          mount point.  If the same package version is present in both
-          the inherited and local "mount/package" entries, then the
-          local entry overwrites the inherited entry, including location
-          information.  If the same package name is present with
-          different package versions, then all package versions are
-          retained.  If "inherit-packages" is false, the inherited
-          mounted packages, additional features, and parent-references
-          for that mount point are discarded, and the local "mount"
-          entry defines the mounted schema for that mount point.
+          mounted-packages" is true, or absent, the local "mount/
+          package", "mount/additional-feature", and "mount/parent-
+          reference" entries are added to the inherited mounted schema
+          for that mount point.  If the same package version is present
+          in both the inherited and local "mount/package" entries, then
+          the local entry overwrites the inherited entry, including
+          location information.  If the same package name is present
+          with different package versions, then all package versions are
+          retained.  If "inherit-mounted-packages" is false, the
+          inherited mounted packages, additional features, and parent-
+          references for that mount point are discarded, and the local
+          "mount" entry defines the mounted schema for that mount point.
 
        *  submodules: Submodules are ignored for resolution purposes,
           only the module version is considered and compared.  For
           duplicate inherited references to the same submodule version,
           location leaf-lists are merged using the location-lists rule.
+
+
+
+
+
+
+Wilton, et al.            Expires 2 April 2027                 [Page 15]
+
+Internet-Draft                YANG Packages               September 2026
+
 
        *  location-lists: This rule applies when duplicate inherited
           package, module, import-only module, or submodule references
@@ -834,14 +851,6 @@ Internet-Draft                YANG Packages               September 2026
           For each pairwise merge, values from the second location leaf-
           list are appended to the first location leaf-list, except that
           values already present in the first location leaf-list are
-
-
-
-Wilton, et al.            Expires 2 April 2027                 [Page 15]
-
-Internet-Draft                YANG Packages               September 2026
-
-
           ignored.  Hence, the first occurrence of each location is
           retained and the relative order of non-duplicate locations is
           preserved.
@@ -882,21 +891,19 @@ Internet-Draft                YANG Packages               September 2026
        Semver format, then the module with the most recent revision-date
        is chosen.
 
-   4.  If there is no difference in version or revision-dates to
-       distinguish between two modules then:
-
-       i   Submodule information, if present, for both module
-           definitions is assumed to be equivalent and hence either can
-           be used.
-
-
-
 
 
 Wilton, et al.            Expires 2 April 2027                 [Page 16]
 
 Internet-Draft                YANG Packages               September 2026
 
+
+   4.  If there is no difference in version or revision-dates to
+       distinguish between two modules then:
+
+       i   Submodule information, if present, for both module
+           definitions is assumed to be equivalent and hence either can
+           be used.
 
        ii  the location leaf-lists for the module definitions are merged
            using the location-lists rule.
@@ -939,13 +946,6 @@ Internet-Draft                YANG Packages               September 2026
    It is RECOMMENDED that organizations publishing YANG modules also
    publish YANG package definition that group and version those modules
    into units of related functionality.  This increases interoperability
-   by encouraging different implementations to coalesce around use the
-   same collections of YANG modules versions.  Using packages also makes
-   it easier to understand relationship between modules, and enables
-   functionality to be described on a more abstract level than
-   individual modules.
-
-
 
 
 
@@ -953,6 +953,12 @@ Wilton, et al.            Expires 2 April 2027                 [Page 17]
 
 Internet-Draft                YANG Packages               September 2026
 
+
+   by encouraging different implementations to coalesce around use the
+   same collections of YANG modules versions.  Using packages also makes
+   it easier to understand relationship between modules, and enables
+   functionality to be described on a more abstract level than
+   individual modules.
 
    Where possible, package definitions SHOULD be made available offline
    in Package Instance Data files, see Section 5.5, but also on the
@@ -997,18 +1003,15 @@ Internet-Draft                YANG Packages               September 2026
       automatic module version selection between different packages, as
       per Section 4.1.
 
-      As per [RFC7950] section 9.10.2, identities are only available for
-      use by the server for implemented modules.
-
-
-
-
 
 
 Wilton, et al.            Expires 2 April 2027                 [Page 18]
 
 Internet-Draft                YANG Packages               September 2026
 
+
+      As per [RFC7950] section 9.10.2, identities are only available for
+      use by the server for implemented modules.
 
       If a module defines data nodes and types and the server only wants
       to use the types but not implement any data nodes from the module
@@ -1054,9 +1057,6 @@ Internet-Draft                YANG Packages               September 2026
    then resolves the listed packages, together with any 'additional-
    feature' entries to construct the complete datastore schema, as
    described in Section 5.4.3.
-
-
-
 
 
 
@@ -2467,7 +2467,7 @@ Internet-Draft                YANG Packages               September 2026
 
 
             found at the specified mount point, or, if
-            'inherit-packages' is 'false', replacement of the
+            'inherit-mounted-packages' is 'false', replacement of the
             inherited schema found at the specified mount point.";
 
          leaf "mount-path" {
@@ -2501,15 +2501,15 @@ Internet-Draft                YANG Packages               September 2026
                 entries in the module list.";
          }
 
-         leaf inherit-packages {
+         leaf inherit-mounted-packages {
            type boolean;
            default true;
            description
              "Indicates whether the packages, additional features, and
               parent-references available at the mount point for this
-              package definition automatically include all packages,
-              additional features, and parent-references mounted at the
-              same mount path in any 'includes/package' entries.
+              package definition automatically include the packages,
+              additional-feature entries, and parent-references mounted
+              at the same mount path in any 'includes/package' entries.
 
               If set to true (the default), the schema is defined
               as the union of the resolved package schema at the mount
@@ -2551,16 +2551,16 @@ Internet-Draft                YANG Packages               September 2026
              for example, to update location information for package
              versions inherited from included packages.
 
-             If 'inherit-packages' is true, or absent, then these
-             packages are mounted in addition to the mounted packages
-             from the 'includes/package' list.
+             With mounted-package inheritance enabled (the default),
+             these packages are mounted in addition to the mounted
+             packages from the 'includes/package' list.
 
-             If 'inherit-packages' is false, then these packages,
-             together with any additional features and
-             parent-references in the same 'mount' entry, define the
-             mounted package schema at this mount point.
+             With mounted-package inheritance disabled, these packages,
+             together with any additional features and parent-references
+             in the same 'mount' entry, define the mounted package
+             schema at this mount point.
 
-             Also see the 'inherit-packages' leaf.";
+             Also see the 'inherit-mounted-packages' leaf.";
            reference
              "RFC XXXX: YANG Packages, Section 4.";
            uses yang-pkg-identification-leafs;

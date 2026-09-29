@@ -59,7 +59,7 @@ package content.
       Reference: `yang-packages/draft-ietf-netmod-yang-packages.xml:1172`
 
 - [ ] Extend package versioning rules to cover changes to `complete`,
-      `mount/inherit-packages`, `mount/additional-feature`,
+      `mount/inherit-mounted-packages`, `mount/additional-feature`,
       `mount/parent-reference`, and adding/removing mounted packages.
       Reference: `yang-packages/draft-ietf-netmod-yang-packages.xml:1051`
 
