@@ -65,11 +65,13 @@ def render(xml_path: Path, output_path: Path) -> None:
 
     rendered.decode("utf-8")  # Fail before replacing the existing output if the response is not text.
     output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_mode = output_path.stat().st_mode & 0o777 if output_path.exists() else 0o644
     temp_path = None
     try:
         with tempfile.NamedTemporaryFile(dir=output_path.parent, delete=False) as temp_file:
             temp_path = Path(temp_file.name)
             temp_file.write(rendered)
+        os.chmod(temp_path, output_mode)
         os.replace(temp_path, output_path)
     finally:
         if temp_path is not None and temp_path.exists():
