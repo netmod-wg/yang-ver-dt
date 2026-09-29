@@ -884,10 +884,23 @@ object DraftXml extends mill.Module:
   private def shellQuote(value: String) =
     "'" + value.replace("'", "'\"'\"'") + "'"
 
+  private def pyangPython(envDir: os.Path) =
+    val configured = sys.env.get("PYANG_PYTHON").map(os.Path(_, os.pwd))
+      .filter(os.exists)
+    configured.orElse(
+      Seq(envDir / ".venv" / "bin" / "python", envDir / "venv" / "bin" / "python")
+        .find(os.exists)
+    )
+
   private def sourcedCommand(cmd: Seq[String], cwd: os.Path) =
     pyangEnv match
       case Some(env) =>
         val envDir = env / os.up
+        val envCmd =
+          if cmd.headOption.contains("pyang") then
+            pyangPython(envDir).fold(cmd): python =>
+              Seq(python.toString, (envDir / "bin" / "pyang").toString) ++ cmd.drop(1)
+          else cmd
         Seq(
           "sh",
           "-lc",
@@ -895,7 +908,7 @@ object DraftXml extends mill.Module:
             "cd " + shellQuote(envDir.toString),
             ". " + shellQuote(env.toString),
             "cd " + shellQuote(cwd.toString),
-            "exec " + cmd.map(shellQuote).mkString(" ")
+            "exec " + envCmd.map(shellQuote).mkString(" ")
           ).mkString(" && ")
         )
       case None => cmd
