@@ -33,7 +33,7 @@ package content.
       Reference: `yang-packages/draft-ietf-netmod-yang-packages.xml:386`
 
 - [ ] Tighten deterministic resolution edge cases: merge order across multiple
-      included packages, duplicate suppression for mount `additional-feature`
+      included packages, duplicate suppression for mount `feature`
       and `parent-reference`, and conflict handling for non-equivalent duplicate
       metadata.
       Reference: `yang-packages/draft-ietf-netmod-yang-packages.xml:524`
@@ -59,7 +59,7 @@ package content.
       Reference: `yang-packages/draft-ietf-netmod-yang-packages.xml:1172`
 
 - [ ] Extend package versioning rules to cover changes to `complete`,
-      `mount/inherit-mounted-packages`, `mount/additional-feature`,
+      `mount/inherit-mounted-packages`, `mount/feature`,
       `mount/parent-reference`, and adding/removing mounted packages.
       Reference: `yang-packages/draft-ietf-netmod-yang-packages.xml:1051`
 

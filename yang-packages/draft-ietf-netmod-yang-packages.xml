@@ -341,7 +341,7 @@ module: ietf-yang-package-types
        |  +-- name        pkg-name
        |  +-- version     pkg-version
        |  +-- location*   inet:uri
-       +-- additional-feature*         scoped-feature
+       +-- feature*                    scoped-feature
        +-- parent-reference*           mount-ypath
         ]]></artwork>
         </figure>
@@ -527,7 +527,7 @@ module: ietf-yang-package-types
         <t>If a server implements the YANG library package bindings defined in
         <xref target="yang-lib-binding"/> for a mounted schema, then the
         YANG library data provided at the mount point MUST include the
-        'package' list, and any applicable 'additional-feature' leaf-list
+        'package' list, and any applicable 'feature' leaf-list
         entries, defined by the "ietf-yl-packages" module,
         <xref target="yang-lib-binding"/>.</t>
       </section>
@@ -607,12 +607,15 @@ module: ietf-yang-package-types
             union of the mounts in the resolved included packages, where for a
             given mount-path that is present in more than one included package
             (exact same path and bound list keys) then it takes the union of
-            the mounted packages, "mount/additional-feature" entries, and mount
+            the mounted packages, "mount/feature" entries, and mount
             parent-references.  The mounts are then updated by processing any
             entries in the package's "mount" list.  If "inherit-mounted-packages" is
             true, or absent, the local "mount/package",
-            "mount/additional-feature", and "mount/parent-reference" entries
-            are added to the inherited mounted schema for that mount point.  If
+            "mount/feature", and "mount/parent-reference" entries
+            are added to the inherited mounted schema for that mount point.
+            Thus, local "mount/feature" entries add to features enabled by
+            inherited mounted packages and inherited "mount/feature" entries,
+            as well as features enabled by locally listed mounted packages. If
             the same package version is present in both the inherited and local
             "mount/package" entries, then the local entry overwrites the
             inherited entry, including location information.  If the same
@@ -811,7 +814,7 @@ module: ietf-yang-package-types
         advertised by the server, retrieve a package instance data file from
         one of the advertised 'location' URIs, or use a cached package instance
         data file for the same package name and version.  The client then
-        resolves the listed packages, together with any 'additional-feature'
+        resolves the listed packages, together with any 'feature'
         entries to construct the complete datastore schema, as described
         in <xref target="yang-lib-binding"/>.</t>
 
@@ -858,11 +861,11 @@ module: ietf-yang-packages
           <t>Since packages can be made available offline in instance data files,
           and cached, it may be sufficient for a client to only fetch the
           names/versions of the top level packages, along with the list of
-          additional-feature entries to construct the full datastore schema.</t>
+          feature entries to construct the full datastore schema.</t>
 
           <t>If multiple packages are listed for a datastore schema then they
           are resolved as if the packages were all directly included in a single
-          package definition, including all additional-feature entries, and following
+          package definition, including all feature entries, and following
           the standard package resolution rules in <xref target="resolution"/>.</t>
 
           <t>This means that conflicting module versions between the listed
@@ -878,14 +881,14 @@ module: ietf-yang-packages
           <xref target="conformance-conflicting-module-versions"/>).</t>
 
           <t>If populated, the set of packages listed for a datastore schema
-          combined with the leaf-list of additional-feature entries MUST resolve
+          combined with the leaf-list of feature entries MUST resolve
           to a schema that exactly matches the schema defined by the YANG library
           'schema/module-set' leaf-list, and the resolved package schema MUST be
           referentially complete.</t>
 
           <t>Since these nodes augment into YANG library, then as per
           <xref target="RFC8525"/>, the "/yang-library/content-id" leaf is
-          updated if the packages or additional-feature entries change.</t>
+          updated if the packages or feature entries change.</t>
 
           <figure>
             <preamble>The "ietf-yl-packages" YANG module has the following
@@ -899,7 +902,7 @@ module: ietf-yl-packages
     |  +--ro name        -> /pkgs:packages/package/name
     |  +--ro version     leafref
     |  +--ro location*   inet:uri
-    +--ro additional-feature*   pkg-types:scoped-feature
+    +--ro feature*   pkg-types:scoped-feature
           ]]></artwork>
           </figure>
         </section>
@@ -2097,7 +2100,7 @@ module ietf-yang-package-types {
           "Indicates whether the packages, additional features, and
            parent-references available at the mount point for this
            package definition automatically include the packages,
-           additional-feature entries, and parent-references mounted
+           feature entries, and parent-references mounted
            at the same mount path in any 'includes/package' entries.
 
            If set to true (the default), the schema is defined
@@ -2148,15 +2151,16 @@ module ietf-yang-package-types {
         uses yang-pkg-location;
       }
 
-      leaf-list additional-feature {
+      leaf-list feature {
         type scoped-feature;
         description
-          "The name of YANG features enabled at the mount point in
-           addition to the enabled features from the resolved
-           mounted package definitions.
-           
-           This list identifies additional features rather than the
-           complete set of supported features.
+          "Features listed here are enabled at the mount point in
+           addition to those enabled by the resolved mounted packages
+           and, when 'inherit-mounted-packages' is true, by inherited
+           'mount/feature' entries.
+
+           This list does not identify the complete set of supported
+           features.
 
            The features listed here MUST be defined in modules
            included in the resolved mounted package schema.
@@ -2513,7 +2517,7 @@ module ietf-yl-packages {
 
        Features enabled by the server in addition to the mandatory
        features from the package definitions are listed in the
-       'additional-feature' list.
+       'feature' list.
        ";
 
     list package {
@@ -2537,7 +2541,7 @@ module ietf-yl-packages {
       uses pkg-types:yang-pkg-location;
     }
 
-    leaf-list additional-feature {
+    leaf-list feature {
       type pkg-types:scoped-feature;
       description
         "The name of YANG features enabled by the server in addition
