@@ -573,15 +573,15 @@ module: ietf-yang-package-types
         are the contents of the "includes", "excludes", and "mount" containers
         in this package.  The merge is performed using the following rules:
           <list style="symbols">
-            <t><spanx style="verb">included-packages</spanx>:  The set of
+            <t><spanx style="verb">included packages</spanx>:  The set of
             included package references is the union of all included package
             references in the resolved included packages, then overwritten,
             including location information, by any entries in the local
             "includes/package" list with the same package name and version.
             Location leaf-lists for duplicate inherited package references are
-            merged using the <spanx style="verb">location-lists</spanx>
+            merged using the <spanx style="verb">location lists</spanx>
             rule.</t>
-            <t><spanx style="verb">implemented-modules</spanx>:  The set of
+            <t><spanx style="verb">implemented modules</spanx>:  The set of
             implemented modules is the union of all
             implemented modules in the resolved included packages.  Conflicting
             module versions can be resolved automatically as per
@@ -590,23 +590,27 @@ module: ietf-yang-package-types
             "includes/module" list, and finally filtered by any entries in
             "excludes/module" list.  Location leaf-lists for duplicate
             inherited module references are merged using the
-            <spanx style="verb">location-lists</spanx> rule.</t>
-            <t><spanx style="verb">import-only-modules</spanx>:  The set of
+            <spanx style="verb">location lists</spanx> rule.</t>
+            <t><spanx style="verb">import-only modules</spanx>:  The set of
             import-only modules is the union of all import-only modules in the
             resolved included packages.  Location leaf-lists for duplicate
             inherited import-only module references are merged using the
-            <spanx style="verb">location-lists</spanx> rule.  The set is then
+            <spanx style="verb">location lists</spanx> rule.  The set is then
             overwritten (including submodule and location information) by any
             entries in the "includes/import-only-module" list with the same
             module name and version, and finally filtered by any entries in the
-            "excludes/import-only-module" list.</t>
-            <t><spanx style="verb">enabled-features</spanx>:  The set of
+            "excludes/import-only-module" list.  Any import-only module entry
+            with the same module name and version as a resolved implemented
+            module entry is also filtered out.</t>
+            <t><spanx style="verb">enabled features</spanx>:  The set of
             enabled features is the union of the enabled features from the
             resolved included packages, with any
             "includes/feature" entries added, and any
             "excludes/feature" entries removed.  If a module is
             excluded by "excludes/module" then all features associated with
-            that module are also implicitly removed.</t>
+            that module are also implicitly removed.  A package definition is
+            invalid if, after resolution, an enabled feature is not defined by
+            its named implemented module in the resolved package schema.</t>
             <t><spanx style="verb">mounts</spanx>:  The set of mounts is the
             union of the mounts in the resolved included packages, where for a
             given mount-path that is present in more than one included package
@@ -632,8 +636,8 @@ module: ietf-yang-package-types
             for resolution purposes, only the module version is considered and
             compared.  For duplicate inherited references to the same submodule
             version, location leaf-lists are merged using the
-            <spanx style="verb">location-lists</spanx> rule.</t>
-            <t><spanx style="verb">location-lists</spanx>:  This rule applies
+            <spanx style="verb">location lists</spanx> rule.</t>
+            <t><spanx style="verb">location lists</spanx>:  This rule applies
             when duplicate inherited package, module, import-only module, or
             submodule references identify the same version but have different
             location leaf-list values.  The referenced content and metadata are
@@ -647,6 +651,7 @@ module: ietf-yang-package-types
           </list></t>
       </list>
       </t>
+
       <section anchor="auto-module-version-resolution" title="Automatic Module Version Resolution">
         <t>A resolved package schema can only include a single version of
         a module, and hence when conflicting module versions arise from included
@@ -681,7 +686,7 @@ module: ietf-yang-package-types
                 <t>Submodule information, if present, for both module definitions
                 is assumed to be equivalent and hence either can be used.</t>
                 <t>the location leaf-lists for the module definitions are
-                merged using the <spanx style="verb">location-lists</spanx>
+                merged using the <spanx style="verb">location lists</spanx>
                 rule.</t>
               </list></t>
           </list>
@@ -2019,9 +2024,11 @@ module ietf-yang-package-types {
       leaf-list feature {
         type scoped-feature;
         description
-          "Lists features, defined in any modules included in the
-           package, that MUST be supported by any server
-           implementing the package.
+          "Lists features that MUST be supported by any server
+           implementing the package.  Each feature MUST be defined
+           by the selected implemented version of its named module
+           in the resolved package schema, including any selected
+           submodules.
 
            Enabled features specified by any directly included
            packages MUST also be supported by server
