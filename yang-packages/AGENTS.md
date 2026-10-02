@@ -1,6 +1,6 @@
 # YANG Packages draft instructions
 
-Use `yang-packages/build.mill` to regenerate draft contents. From the repository root, run:
+After every change, run Mill using `yang-packages/build.mill` to rebuild the `.txt` draft before presenting the diff or committing. From the repository root, run:
 
 ```sh
 cd yang-packages
