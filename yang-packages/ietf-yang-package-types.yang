@@ -173,6 +173,10 @@ module ietf-yang-package-types {
 
       leaf-list module {
         type module-name;
+        must "not(. = ../../includes/module/name)" {
+          error-message
+            "A module cannot be both included and excluded.";
+        }
         description
           "Lists implemented modules, of any version, that may
            have been brought in by included packages, but are
@@ -191,6 +195,21 @@ module ietf-yang-package-types {
 
       list import-only-module {
         key "name";
+        must
+          "not(../../includes/import-only-module"
+        + "[name = current()/name]"
+        + "[version = current()/version])" {
+          error-message
+            "An import-only module cannot be included and excluded"
+          + " with the same name and version values.";
+        }
+        must
+          "version or not(../../includes/import-only-module"
+        + "[name = current()/name])" {
+          error-message
+            "An exclusion of all versions conflicts with an included"
+          + " import-only module with the same name.";
+        }
         description
           "Lists import-only modules that may have been brought
            in by included packages, but are explicitly excluded from
@@ -226,6 +245,10 @@ module ietf-yang-package-types {
 
       leaf-list feature {
         type scoped-feature;
+        must "not(. = ../../includes/feature)" {
+          error-message
+            "A feature cannot be both included and excluded.";
+        }
         description
           "Lists features from the 'includes/feature' leaf-list
           exported by an included package that are reclassified as
@@ -233,7 +256,7 @@ module ietf-yang-package-types {
           package, overriding the behavior specified by the included
           package.
 
-          Features MUST NOT be specified both in this leaf-list and
+          It is an error to list a feature in both this leaf-list and
           the 'includes/feature' leaf-list.";
       }
     }
