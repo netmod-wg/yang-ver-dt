@@ -966,14 +966,16 @@ object DraftXml extends mill.Module:
           |        +--ro version               pkg-version
           |        ... remainder of yang-pkg-instance grouping ...""".stripMargin
       case "ietf-yang-inst-data-pkg" =>
-        """module: ietf-yang-inst-data-pkg
-          |
-          |  augment-structure /yid:instance-data-set/...
-          |    +--:(pkg-schema)
-          |       +-- pkg-schema
-          |          +-- name        pkg-name
-          |          +-- version     pkg-version
-          |          +-- location*   inet:uri""".stripMargin
+        tree.trim.linesIterator.map: line =>
+          val prefix = "  augment-structure "
+          if line.startsWith(prefix) && line.length > 69 then
+            // Split augment paths at path boundaries, per RFC 8340 Section 3.1.
+            val split = line.lastIndexOf('/', 68)
+            if split < prefix.length then
+              sys.error("cannot wrap augment-structure path at a path boundary")
+            line.take(split) + "\n" + (" " * (prefix.length + 2)) + line.drop(split)
+          else line
+        .mkString("\n")
       case _ => tree.trim
 
   private def treeOptions(module: YangModule) =
