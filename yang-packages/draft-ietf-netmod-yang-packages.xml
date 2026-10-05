@@ -247,6 +247,10 @@
 
           <t>package schema: An alternative term for 'resolved package schema'.</t>
 
+          <t>referentially complete: A property of a resolved package schema
+          in which all module import dependencies can be resolved within that
+          schema, as defined in <xref target="completeness"/>.</t>
+
           <t>enabled feature: A YANG module feature that a resolved package
           schema identifies as mandatory to enable for all implementations
           that conform to the package definition.</t>
@@ -367,6 +371,10 @@ module: ietf-yang-package-types
             dependencies missing, as described in <xref target="completeness"/>.
             </t>
 
+            <t>If the resolved package schema is not referentially complete,
+            as defined in <xref target="completeness"/>, the package definition's
+            'complete' flag MUST be set to 'false'.</t>
+
             <t>Package definitions are hierarchical because a package can
             include other packages.  There MUST NOT be any circular package
             include dependencies, i.e., packages cannot, directly or
@@ -450,12 +458,11 @@ module: ietf-yang-package-types
         complete', or 'referentially incomplete', indicated in the package
         definition by the 'complete' flag.</t>
 
-        <t>If all import statements in all YANG modules included in the
-        package (either directly, or through included packages) can be
-        resolved to a module version defined with the YANG package
-        definition, then the package is classified as being referentially complete.
+        <t>If all import statements in all YANG modules in the resolved
+        package schema can be resolved to a module version in that schema,
+        then the package is classified as being referentially complete.
         Conversely, if one or more import statements cannot be resolved to a
-        module specified as part of the package definition, then the package
+        module version in the resolved package schema, then the package
         is classified as being referentially incomplete.</t>
 
         <t>If the packages needed to resolve a referentially incomplete package
@@ -542,6 +549,15 @@ module: ietf-yang-package-types
         mechanism for this is described in <xref target="resolution"/>, and
         the conformance implications are described in
         <xref target="conformance"/>.</t>
+
+        <t>Excluding a module can leave module import dependencies unresolved
+        and make the resolved package schema referentially incomplete, as
+        defined in <xref target="completeness"/>.  The 'complete' flag MUST be
+        set appropriately, as required by <xref target="definition"/>.
+        Referentially incomplete packages are permitted, but the resolved
+        schema used for a datastore must be referentially complete, as required
+        by <xref target="yang-lib-binding"/> and
+        <xref target="rel_with_datastores"/>.</t>
       </section>
     </section>
 
@@ -654,6 +670,12 @@ module: ietf-yang-package-types
           </list></t>
       </list>
       </t>
+
+      <t>Package resolution MUST check that each package definition conforms
+      to the rules in <xref target="definition"/>.  Rules that depend on the
+      resolved package schema MUST be checked after Step 2 for that package,
+      e.g., checking that the 'complete' flag is 'false' if the resolved
+      schema is referentially incomplete.</t>
 
       <section anchor="auto-module-version-resolution" title="Automatic Module Version Resolution">
         <t>A resolved package schema can only include a single version of
@@ -1972,10 +1994,12 @@ module ietf-yang-package-types {
       type boolean;
       default true;
       description
-        "Indicates whether the schema defined by this package is
+        "Indicates whether this package's resolved schema is
          referentially complete.  I.e. all module imports can be
-         resolved to a module explicitly defined in this package or
-         one of the included packages.";
+         resolved to a module version in the resolved package
+         schema.";
+      reference
+        "RFC XXXX: YANG Packages, Section 3.3";
     }
 
     container includes {

@@ -76,11 +76,11 @@ Table of Contents
    2.  Terminology and Conventions . . . . . . . . . . . . . . . . .   6
    3.  The YANG Package Definition . . . . . . . . . . . . . . . . .   8
      3.1.  Package definition rules  . . . . . . . . . . . . . . . .  10
-     3.2.  Package dependencies  . . . . . . . . . . . . . . . . . .  11
+     3.2.  Package dependencies  . . . . . . . . . . . . . . . . . .  12
      3.3.  Schema referential completeness . . . . . . . . . . . . .  12
      3.4.  Submodule package considerations  . . . . . . . . . . . .  12
-     3.5.  Package Mount Points  . . . . . . . . . . . . . . . . . .  12
-     3.6.  Exclusions  . . . . . . . . . . . . . . . . . . . . . . .  13
+     3.5.  Package Mount Points  . . . . . . . . . . . . . . . . . .  13
+     3.6.  Exclusions  . . . . . . . . . . . . . . . . . . . . . . .  14
    4.  Package Resolution  . . . . . . . . . . . . . . . . . . . . .  14
      4.1.  Automatic Module Version Resolution . . . . . . . . . . .  17
    5.  YANG Package Usage  . . . . . . . . . . . . . . . . . . . . .  18
@@ -394,6 +394,10 @@ Wilton, et al.            Expires 8 April 2027                  [Page 7]
 Internet-Draft                YANG Packages                 October 2026
 
 
+   *  referentially complete: A property of a resolved package schema in
+      which all module import dependencies can be resolved within that
+      schema, as defined in Section 3.3.
+
    *  enabled feature: A YANG module feature that a resolved package
       schema identifies as mandatory to enable for all implementations
       that conform to the package definition.
@@ -433,6 +437,19 @@ Internet-Draft                YANG Packages                 October 2026
    The "yang-pkg-instance" grouping in the "ietf-yang-package-types"
    YANG module has the following structure:
 
+
+
+
+
+
+
+
+
+Wilton, et al.            Expires 8 April 2027                  [Page 8]
+
+Internet-Draft                YANG Packages                 October 2026
+
+
    module: ietf-yang-package-types
 
      grouping yang-pkg-instance:
@@ -442,14 +459,6 @@ Internet-Draft                YANG Packages                 October 2026
        +-- timestamp?             yang:date-and-time
        +-- organization?          string
        +-- contact?               string
-
-
-
-Wilton, et al.            Expires 8 April 2027                  [Page 8]
-
-Internet-Draft                YANG Packages                 October 2026
-
-
        +-- description?           string
        +-- reference?             string
        +-- complete?              boolean
@@ -489,15 +498,6 @@ Internet-Draft                YANG Packages                 October 2026
        +-- mount* [mount-path]
           +-- mount-path                  pkg-ypath
           +-- inherit-mounted-packages?   boolean
-          +-- package* [name version]
-          |  +-- name        pkg-name
-          |  +-- version     pkg-version
-          |  +-- location*   inet:uri
-          +-- feature*                    scoped-feature
-          +-- parent-reference*           pkg-ypath
-
-
-
 
 
 
@@ -505,6 +505,13 @@ Wilton, et al.            Expires 8 April 2027                  [Page 9]
 
 Internet-Draft                YANG Packages                 October 2026
 
+
+          +-- package* [name version]
+          |  +-- name        pkg-name
+          |  +-- version     pkg-version
+          |  +-- location*   inet:uri
+          +-- feature*                    scoped-feature
+          +-- parent-reference*           pkg-ypath
 
 3.1.  Package definition rules
 
@@ -526,33 +533,26 @@ Internet-Draft                YANG Packages                 October 2026
         modules or MAY represent a set of modules with some module
         import dependencies missing, as described in Section 3.3.
 
-   5.   Package definitions are hierarchical because a package can
+   5.   If the resolved package schema is not referentially complete, as
+        defined in Section 3.3, the package definition's 'complete' flag
+        MUST be set to 'false'.
+
+   6.   Package definitions are hierarchical because a package can
         include other packages.  There MUST NOT be any circular package
         include dependencies, i.e., packages cannot, directly or
         indirectly, include themselves.
 
-   6.   A package definition MAY directly include multiple versions of
+   7.   A package definition MAY directly include multiple versions of
         the same package in the "includes/package" list, but normally
         only a single package version is expected.  Multiple package
         versions can be listed, for example, to update location
         information for package versions included through other
         packages.
 
-   7.   If the same package version, module version, import-only module
-        version, or submodule version is referenced via multiple
-        included packages, then the referenced content and metadata are
-        expected to be equivalent.  Location information MAY differ and
-        is merged as defined by the package resolution rules in
-        Section 4.
 
-   8.   A package definition MUST NOT list the same package version
-        under both the 'includes/package' and 'depends-on/package'
-        lists.
 
-   9.   If a location leaf-list for a package, implemented module,
-        import-only module, or submodule includes a canonical location
-        used to retrieve that YANG artifact, it MUST be the first entry
-        in the leaf-list.
+
+
 
 
 
@@ -562,32 +562,48 @@ Wilton, et al.            Expires 8 April 2027                 [Page 10]
 Internet-Draft                YANG Packages                 October 2026
 
 
-   10.  For each module implemented by a package, only a single version/
+   8.   If the same package version, module version, import-only module
+        version, or submodule version is referenced via multiple
+        included packages, then the referenced content and metadata are
+        expected to be equivalent.  Location information MAY differ and
+        is merged as defined by the package resolution rules in
+        Section 4.
+
+   9.   A package definition MUST NOT list the same package version
+        under both the 'includes/package' and 'depends-on/package'
+        lists.
+
+   10.  If a location leaf-list for a package, implemented module,
+        import-only module, or submodule includes a canonical location
+        used to retrieve that YANG artifact, it MUST be the first entry
+        in the leaf-list.
+
+   11.  For each module implemented by a package, only a single version/
         revision of that module MUST be implemented.  Conflicting module
         versions (e.g. from package includes) MAY be resolved explicitly
         (via "includes/module") or using automatic module version
         resolution, as described in Section 4.1.
 
-   11.  Multiple versions/revisions of an import-only module MAY be
+   12.  Multiple versions/revisions of an import-only module MAY be
         listed, but any extraneous import-only module versions SHOULD be
         removed.
 
-   12.  A package definition MUST NOT include the same module name in
+   13.  A package definition MUST NOT include the same module name in
         the 'includes/module' list and the 'excludes/module' leaf-list.
 
-   13.  A package definition MUST NOT include and exclude the same
+   14.  A package definition MUST NOT include and exclude the same
         import-only module version.  If an 'excludes/import-only-module'
         entry does not list any versions, then it excludes all versions
         of that import-only module and MUST NOT be used with any
         'includes/import-only-module' entry for the same module name.
 
-   14.  A package definition MUST NOT include the same feature name in
+   15.  A package definition MUST NOT include the same feature name in
         both the 'includes/feature' and 'excludes/feature' leaf-lists.
 
-   15.  A package definition MUST NOT exclude a module and list features
+   16.  A package definition MUST NOT exclude a module and list features
         defined by that module in the 'includes/feature' leaf-list.
 
-   16.  A package definition MAY include redundant information, e.g.,
+   17.  A package definition MAY include redundant information, e.g.,
         including a module or package version that is already present by
         an included package, or excluding a module that is not included
         by any included package.  However, such redundant information
@@ -595,7 +611,14 @@ Internet-Draft                YANG Packages                 October 2026
         schema is unambiguous, it is best to minimize redundant
         information where possible.
 
-   17.  Finally, standard rules for YANG instance data apply.  E.g.,
+
+
+Wilton, et al.            Expires 8 April 2027                 [Page 11]
+
+Internet-Draft                YANG Packages                 October 2026
+
+
+   18.  Finally, standard rules for YANG instance data apply.  E.g.,
         entries in the various lists MUST be unique by any list key.
 
 3.2.  Package dependencies
@@ -611,25 +634,17 @@ Internet-Draft                YANG Packages                 October 2026
    also be used by a referentially complete package to provide
    additional machine-readable dependency metadata.
 
-
-
-Wilton, et al.            Expires 8 April 2027                 [Page 11]
-
-Internet-Draft                YANG Packages                 October 2026
-
-
 3.3.  Schema referential completeness
 
    A YANG package may represent a schema that is 'referentially
    complete', or 'referentially incomplete', indicated in the package
    definition by the 'complete' flag.
 
-   If all import statements in all YANG modules included in the package
-   (either directly, or through included packages) can be resolved to a
-   module version defined with the YANG package definition, then the
+   If all import statements in all YANG modules in the resolved package
+   schema can be resolved to a module version in that schema, then the
    package is classified as being referentially complete.  Conversely,
    if one or more import statements cannot be resolved to a module
-   specified as part of the package definition, then the package is
+   version in the resolved package schema, then the package is
    classified as being referentially incomplete.
 
    If the packages needed to resolve a referentially incomplete package
@@ -649,6 +664,16 @@ Internet-Draft                YANG Packages                 October 2026
    conformance and versioning is specified in terms of particular
    versions of YANG modules rather than for individual submodules.
 
+
+
+
+
+
+Wilton, et al.            Expires 8 April 2027                 [Page 12]
+
+Internet-Draft                YANG Packages                 October 2026
+
+
    However, YANG package definitions also include the list of submodules
    included by a module, primarily to provide user-ordered locations
    where each submodule definition can be obtained from.  If a canonical
@@ -666,14 +691,6 @@ Internet-Draft                YANG Packages                 October 2026
    [RFC8528] declares that it provides support for mounted schema at
    "Implementation time" and "Run time", but does not cover mounting
    schema at "Design time".  YANG package definitions do not give YANG
-
-
-
-Wilton, et al.            Expires 8 April 2027                 [Page 12]
-
-Internet-Draft                YANG Packages                 October 2026
-
-
    language level "Design time" guarantees, but they are able to give a
    stronger "Implementation time" guarantee through the use of offline
    YANG package definitions.  They can also be used to report "Run time"
@@ -705,6 +722,14 @@ Internet-Draft                YANG Packages                 October 2026
    If a server implements the YANG library package bindings defined in
    Section 5.4.3 for a mounted schema, then the YANG library data
    provided at the mount point MUST include the 'package' list, and any
+
+
+
+Wilton, et al.            Expires 8 April 2027                 [Page 13]
+
+Internet-Draft                YANG Packages                 October 2026
+
+
    applicable 'feature' leaf-list entries, defined by the "ietf-yl-
    packages" module, Section 5.4.3.  The mounted schema MUST also
    include the "ietf-yang-packages" module, and its '/packages/package'
@@ -718,17 +743,13 @@ Internet-Draft                YANG Packages                 October 2026
    mechanism for this is described in Section 4, and the conformance
    implications are described in Section 7.
 
-
-
-
-
-
-
-
-Wilton, et al.            Expires 8 April 2027                 [Page 13]
-
-Internet-Draft                YANG Packages                 October 2026
-
+   Excluding a module can leave module import dependencies unresolved
+   and make the resolved package schema referentially incomplete, as
+   defined in Section 3.3.  The 'complete' flag MUST be set
+   appropriately, as required by Section 3.1.  Referentially incomplete
+   packages are permitted, but the resolved schema used for a datastore
+   must be referentially complete, as required by Section 5.4.3 and
+   Section 7.7.
 
 4.  Package Resolution
 
@@ -758,6 +779,13 @@ Internet-Draft                YANG Packages                 October 2026
    1.  Step 1: recursively resolve each package in the "includes/
        package" list using this same two-step process.
 
+
+
+Wilton, et al.            Expires 8 April 2027                 [Page 14]
+
+Internet-Draft                YANG Packages                 October 2026
+
+
    2.  Step 2: merge the resolved package schemas from those included
        packages with the local entries defined directly by this package.
        The local entries are the contents of the "includes" and
@@ -778,14 +806,6 @@ Internet-Draft                YANG Packages                 October 2026
           automatically as per Section 4.1, then overwritten (including
           submodule and location information) by any entries in the
           "includes/module" list, and finally filtered by any entries in
-
-
-
-Wilton, et al.            Expires 8 April 2027                 [Page 14]
-
-Internet-Draft                YANG Packages                 October 2026
-
-
           the "excludes/module" leaf-list.  Location leaf-lists for
           duplicate inherited module references are merged using the
           location lists rule.
@@ -812,26 +832,6 @@ Internet-Draft                YANG Packages                 October 2026
           defined by its named implemented module in the resolved
           package schema.  Consequently, a feature defined only by an
           import-only module cannot be enabled by a package.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -883,11 +883,11 @@ Internet-Draft                YANG Packages                 October 2026
           retained and the relative order of non-duplicate locations is
           preserved.
 
-
-
-
-
-
+   Package resolution MUST check that each package definition conforms
+   to the rules in Section 3.1.  Rules that depend on the resolved
+   package schema MUST be checked after Step 2 for that package, e.g.,
+   checking that the 'complete' flag is 'false' if the resolved schema
+   is referentially incomplete.
 
 
 
@@ -2417,10 +2417,12 @@ Internet-Draft                YANG Packages                 October 2026
          type boolean;
          default true;
          description
-           "Indicates whether the schema defined by this package is
+           "Indicates whether this package's resolved schema is
             referentially complete.  I.e. all module imports can be
-            resolved to a module explicitly defined in this package or
-            one of the included packages.";
+            resolved to a module version in the resolved package
+            schema.";
+         reference
+           "RFC XXXX: YANG Packages, Section 3.3";
        }
 
        container includes {
@@ -2456,8 +2458,6 @@ Internet-Draft                YANG Packages                 October 2026
 
              An entry in this list overrides any module version
              'implemented' by an included package.";
-           reference
-             "RFC 7950: The YANG 1.1 Data Modeling Language.";
 
 
 
@@ -2465,6 +2465,9 @@ Wilton, et al.            Expires 8 April 2027                 [Page 44]
 
 Internet-Draft                YANG Packages                 October 2026
 
+
+           reference
+             "RFC 7950: The YANG 1.1 Data Modeling Language.";
 
            uses module-and-submodule-identification-leafs;
          }
@@ -2511,9 +2514,6 @@ Internet-Draft                YANG Packages                 October 2026
 
        uses yang-pkg-exclusions;
 
-       container depends-on {
-         description
-           "Lists packages that this package depends on, but that do
 
 
 
@@ -2522,6 +2522,9 @@ Wilton, et al.            Expires 8 April 2027                 [Page 45]
 Internet-Draft                YANG Packages                 October 2026
 
 
+       container depends-on {
+         description
+           "Lists packages that this package depends on, but that do
             not form part of the resolved package definition.
 
             For an incomplete package definition, this list can help a
@@ -2567,9 +2570,6 @@ Internet-Draft                YANG Packages                 October 2026
               defined in the package schema.
 
               For example, if an example module 'ex-module' defines a
-              mount point under list entry '/modules/module/' then a
-              mount path of
-
 
 
 
@@ -2577,6 +2577,9 @@ Wilton, et al.            Expires 8 April 2027                 [Page 46]
 
 Internet-Draft                YANG Packages                 October 2026
 
+
+              mount point under list entry '/modules/module/' then a
+              mount path of
 
               - '/modules/module[name=foo]' would indicate the mounted
                 package schema for only the 'foo' entry in the module
@@ -2624,9 +2627,6 @@ Internet-Draft                YANG Packages                 October 2026
              "The packages that will be mounted at the specified mount
              path.
 
-             A mount point MAY directly list multiple versions of the
-             same package, but normally only a single package version
-
 
 
 Wilton, et al.            Expires 8 April 2027                 [Page 47]
@@ -2634,6 +2634,8 @@ Wilton, et al.            Expires 8 April 2027                 [Page 47]
 Internet-Draft                YANG Packages                 October 2026
 
 
+             A mount point MAY directly list multiple versions of the
+             same package, but normally only a single package version
              is expected.  Multiple package versions can be listed,
              for example, to update location information for package
              versions inherited from included packages.
@@ -2681,8 +2683,6 @@ Internet-Draft                YANG Packages                 October 2026
               from the mounted schema for the evaluation of XPath
               expressions.
 
-              See Mount Point path and parent-reference in Schema Mount
-
 
 
 Wilton, et al.            Expires 8 April 2027                 [Page 48]
@@ -2690,6 +2690,7 @@ Wilton, et al.            Expires 8 April 2027                 [Page 48]
 Internet-Draft                YANG Packages                 October 2026
 
 
+              See Mount Point path and parent-reference in Schema Mount
               (RFC 8528) for a more detailed description.
 
               Unlike the YANG module defined in RFC 8528, this leaf is
@@ -2737,7 +2738,6 @@ Internet-Draft                YANG Packages                 October 2026
      organization
        "IETF NETMOD (Network Modeling) Working Group";
 
-     contact
 
 
 
@@ -2746,6 +2746,7 @@ Wilton, et al.            Expires 8 April 2027                 [Page 49]
 Internet-Draft                YANG Packages                 October 2026
 
 
+     contact
        "WG Web:   <https://datatracker.ietf.org/wg/netmod/>
         WG List:  <mailto:netmod@ietf.org>
 
@@ -2793,7 +2794,6 @@ Internet-Draft                YANG Packages                 October 2026
      /*
       * Top-level structure
       */
-
 
 
 
