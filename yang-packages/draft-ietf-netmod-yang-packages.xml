@@ -72,7 +72,7 @@
           <t>exported from a server,</t>
           <t>resolved into a YANG schema,</t>
           <t>augmented into YANG library <xref target="RFC8525"/>,</t>
-          <t>accessed as instance data files <xref target="RFC9195"/>, with a dedicated .ypkg file suffix,</t>
+          <t>accessed as YANG package files with a dedicated .ypkg file suffix,</t>
           <t>used to define the schema of data in instance data files,</t>
           <t>and used by tooling to compare and manage YANG schema.</t>
         </list>
@@ -284,8 +284,8 @@
 
       <t>The ietf-yang-package-types.yang module defines a grouping to
       specify the core elements of the YANG package structure that is used
-      within YANG package instance data files
-      (ietf-yang-package-instance.yang) and also on the server
+      within YANG package files
+      (ietf-ypkg.yang) and also on the server
       (ietf-yang-packages.yang).</t>
 
       <figure>
@@ -436,7 +436,7 @@ module: ietf-yang-package-types
             is unambiguous, it is best to minimize redundant information where
             possible.</t>
 
-            <t>Finally, standard rules for YANG instance data apply.  E.g.,
+            <t>Finally, standard YANG validation rules apply.  E.g.,
             entries in the various lists MUST be unique by any list key.</t>
           </list></t>
       </section>
@@ -763,7 +763,7 @@ module: ietf-yang-package-types
       be described on a more abstract level than individual modules.</t>
 
       <t>Where possible, package definitions SHOULD be made available offline in
-      Package Instance Data files, see <xref target="package_files"/>, but also
+      YANG package files, see <xref target="package_files"/>, but also
       on the device as a list of known packages and relationships between 
       YANG library datastore schema and equivalent YANG package definitions,
       e.g., see <xref target="on-device-pkg-definitions"/>.</t>
@@ -849,7 +849,7 @@ module: ietf-yang-package-types
         package name/version pairs that define that datastore schema.  Those
         package references identify entries in the server's top-level
         '/packages/package' list.  A client can use the package definition
-        advertised by the server, retrieve a package instance data file from
+        advertised by the server, retrieve a package file from
         one of the advertised 'location' URIs, or use a cached package instance
         data file for the same package name and version.  The client then
         resolves the listed packages, together with any 'feature'
@@ -896,7 +896,7 @@ module: ietf-yang-packages
           datastore schema compared to constructing the schema using a union
           of more verbose module definitions defined in module-sets.</t>
 
-          <t>Since packages can be made available offline in instance data files,
+          <t>Since packages can be made available offline in YANG package files,
           and cached, it may be sufficient for a client to only fetch the
           names/versions of the top level packages, along with the list of
           feature entries to construct the full datastore schema.</t>
@@ -946,89 +946,74 @@ module: ietf-yl-packages
         </section>
       </section>
 
-      <section anchor="package_files" title="Package Instance Data Files">
-        <t>YANG packages SHOULD be made available offline from the server,
-        defined as YANG instance data files <xref target="RFC9195"/> using the 
-        schema below to define the package data.</t>
+      <section anchor="package_files" title="YANG Package Files">
+        <t>YANG packages SHOULD be made available offline from the server
+        as YANG package files defined by the "ietf-ypkg" module.</t>
 
-        <t>Package instance data files MUST use the ".ypkg" file extension and
-        the "application/ypkg" media type as defined in
-        <xref target="iana-media-type-ypkg"/>.</t>
+        <t>The following rules apply to YANG package files:
+        <list style="numbers">
+          <t>A file MUST contain exactly one "ietf-ypkg:yang-package"
+          structure with exactly one complete package definition in its
+          'pkg-defn' container. All applicable YANG constraints and package
+          definition rules MUST be satisfied. A package definition may
+          describe a referentially incomplete package schema using
+          'complete: false'.</t>
+          <t>The file MUST use the JSON encoding defined in
+          <xref target="RFC7951"/> and UTF-8 character encoding.</t>
+          <t>The file MUST use the ".ypkg" extension and the
+          "application/yang-package+json" media type defined in
+          <xref target="iana-media-type-ypkg"/>.</t>
+          <t>The filename MUST be "&lt;package-name&gt;@&lt;version&gt;.ypkg",
+          with the name and version matching the 'pkg-defn/name' and
+          'pkg-defn/version' leafs.</t>
+          <t>The optional top-level 'schema' leaf identifies the package
+          defining the schema of the entire file, including its envelope
+          and any extensions. Its value MUST have the form
+          "&lt;package-name&gt;@&lt;version&gt;". The default reference schema is
+          "ietf-ypkg-schema@0.1.0", defined in
+          <xref target="pkg-instance-data-schema"/>, and MUST be used if
+          'schema' is absent. A different schema MUST be explicitly
+          identified. The referenced schema MUST be referentially complete.
+          The schema package version identifies the file format version;
+          no separate format version field is defined.</t>
+          <t>The optional top-level 'schema-location' leaf-list provides
+          URLs for retrieving the explicitly identified or default schema
+          package. The retrieved package's name and version MUST match
+          the schema reference. A canonical location, if provided, MUST
+          be the first entry in this user-ordered leaf-list. If no location
+          is specified, the schema package MUST be available to download at
+          "https://www.iana.org/assignments/yang-parameters/&lt;pkg-name&gt;@&lt;pkg-version&gt;.ypkg",
+          using the name and version of the explicitly identified or default
+          schema package. Otherwise, at least one download URL MUST be
+          provided in 'schema-location'.</t>
+          <t>Values equal to their applicable YANG defaults MAY be
+          explicitly encoded. Producers SHOULD omit such values to
+          encourage a consistent style.</t>
+          <t>The package file for each package version SHOULD be available
+          at one or more URLs.</t>
+        </list></t>
 
-        <t>The following rules apply to the format of the YANG package instance
-        files:<list style="numbers">
-            <t>The file MUST be encoded in JSON.</t>
-
-            <t>The name of the file MUST follow the format
-            "&lt;package-name&gt;@&lt;version&gt;.ypkg", and the package-name
-            and version MUST match the values specified in the package
-            container's 'name' and 'version' leafs.</t>
-
-            <t>The 'format' version leaf in the instance-data-set for .ypkg
-            files MUST NOT be set if it uses the default value of "2022-01-20"
-            but MUST be set if a newer revision is used.</t>
-
-            <t>The 'include-defaults' leaf in the instance-data-set for .ypkg
-            files MUST NOT be set, but defaults to the 'trim' mode.  I.e.,
-            default values of the YANG package definition MUST NOT be included
-            in the instance-data-set content-data.</t>
-
-            <t>The instance-data file can specify a schema:
-            <list style="symbols">
-                <t>The default schema for .ypkg files is
-                "ietf-inst-data-pkg-schema.ypkg", defined in
-                <xref target="pkg-instance-data-schema"/>.  When used, it SHOULD
-                NOT be specified in the instance-data file.</t>
-
-                <t>If a different, e.g., newer or augmented, schema is used then
-                it is RECOMMENDED to specify the YANG instance data file schema
-                using a package definition.  E.g., see
-                <xref target="pkg-instance-data-schema"/> and
-                <xref target="yang_packages_as_schema"/>.</t>
-            </list>
-            </t>
-
-            <t>The 'name', 'description', 'timestamp', 'organization', and
-            'contact' fields are defined both in the instance-data-set
-            meta-data and the YANG package meta-data.  To avoid redundant
-            information, package definitions MUST only define these fields as
-            part of the package definition.  They MUST be left unset as part of
-            the instance-data-set meta-data.</t>
-
-            <t>If the package definition applies only to a specific datastore
-            then the 'datastore' leaf in the instance-data-set meta-data MUST
-            be set.  If the package definition applies to multiple datastores,
-            then the 'datastore' leaf MUST NOT be set.</t>
-
-            <t>The 'revision' list in the instance data file MUST NOT be used,
-            since versioning is handled by the package definition.</t>
-
-            <t>The instance data file for each version of a YANG package SHOULD
-            be made available at one or more locations accessible via URLs. If
-            one of the listed locations defines the canonical location for the
-            package definition then it MUST be listed as the first entry in
-            the user-ordered list, so that it remains first when locations are
-            merged during package resolution.</t>
-          </list></t>
-
-        <t>Note, the stricter rules for YANG packages in instance data files are
-        intended to encourage consistency and provide a canonical base file
-        representation of the package definition.</t>
+        <t>RFC Editor note: Before publication, update the default reference
+        schema identifier to "ietf-ypkg-schema@1.0.0" throughout this
+        document. Confirm the implicit schema download URL with IANA and
+        update the URL prefix here and in the "ietf-ypkg" module if needed.
+        Remove this note before publication.</t>
 
         <figure>
-          <preamble>The "ietf-yang-package-instance" YANG module has the following
-          structure:</preamble>
-
+          <preamble>The "ietf-ypkg" module has the following structure:</preamble>
           <artwork><![CDATA[
-module: ietf-yang-package-instance
+module: ietf-ypkg
 
-  structure package:
-    // Uses the yang-pkg-instance grouping defined in
-    // ietf-yang-package-types.yang
-    +-- name                  pkg-name
-    +-- version               pkg-version
-    ... remainder of yang-pkg-instance grouping ...
-        ]]></artwork>
+  structure yang-package:
+    +-- schema?           pkg-types:pkg-reference
+    +-- schema-location*  inet:uri
+    +-- pkg-defn
+       // Uses the yang-pkg-instance grouping defined in
+       // ietf-yang-package-types.yang
+       +-- name        pkg-name
+       +-- version     pkg-version
+       ... remainder of yang-pkg-instance grouping ...
+          ]]></artwork>
         </figure>
       </section>
 
@@ -1036,9 +1021,11 @@ module: ietf-yang-package-instance
         <t>YANG package definitions can be used to define the content schema for
         YANG instance data files, extending the content schema definition in
         <xref target="RFC9195" section="3.2" sectionFormat="of"/>.  When using a
-        package-based content schema, the package name and version MUST be
-        specified, and one or more location URLs for retrieving the package
-        definition MAY also be provided.  The resolved package schema
+        package-based content schema, the 'schema' leaf MUST identify the
+        schema package as "&lt;package-name&gt;@&lt;version&gt;", using the
+        'pkg-reference' typedef. One or more location URLs for retrieving
+        the package definition in the .ypkg format defined in
+        <xref target="package_files"/> MAY also be provided.  The resolved package schema
         provides the exact specification for the content schema, taking into
         consideration all implemented modules, import-only modules,
         augmentations, enabled features and any deviations.</t>
@@ -1054,8 +1041,7 @@ module: ietf-yang-inst-data-pkg
                       /yid:content-schema-spec:
     +--:(pkg-schema)
        +-- pkg-schema
-          +-- name        pkg-name
-          +-- version     pkg-version
+          +-- schema      pkg-types:pkg-reference
           +-- location*   inet:uri
         ]]></artwork>
         </figure>
@@ -1075,15 +1061,15 @@ module: ietf-yang-inst-data-pkg
   "ietf-yang-instance-data:instance-data-set": {
     "name": "example-router-netconf-diagnostics",
     "content-schema": {
-      "pkg-schema": {
-        "name": "example-diagnostics-schema",
-        "version": "1.0.0",
-        "location":
+      "ietf-yang-inst-data-pkg:pkg-schema": {
+        "schema": "example-diagnostics-schema@1.0.0",
+        "location": [
           "https://example.org/\
 example-diagnostics-schema@1.0.0.ypkg"
+        ]
       }
     },
-    "timestamp": "2018-01-25T17:00:38Z",
+    "timestamp": "2026-10-07T10:23:14Z",
     "description":  ["NETCONF statistics, \
         The data may change at any time."],
     "content-data": {
@@ -1113,45 +1099,43 @@ example-diagnostics-schema@1.0.0.ypkg"
 =============== NOTE: '\' line wrapping per RFC 8792 ================
 
 {
-  "ietf-yang-instance-data:instance-data-set": {
-    "content-data": {
-      "ietf-yang-package-instance:package": {
-        "name": "example-diagnostics-schema",
-        "version": "1.0.0",
-        "timestamp": "2018-01-25T17:00:38Z",
-        "description": "Example schema package for NETCONF \
-monitoring instance data.",
-        "reference": "RFC 6022",
-        "includes": {
-          "module": [
-            {
-              "name": "ietf-netconf-monitoring",
-              "version": "2010-10-04",
-              "location": [
-                "https://www.iana.org/assignments/yang-parameters/\
+  "ietf-ypkg:yang-package": {
+    "pkg-defn": {
+      "name": "example-diagnostics-schema",
+      "version": "1.0.0",
+      "timestamp": "2026-10-07T10:23:14Z",
+      "description": "Example schema package for NETCONF monitoring \
+instance data.",
+      "reference": "RFC 6022",
+      "includes": {
+        "module": [
+          {
+            "name": "ietf-netconf-monitoring",
+            "version": "2010-10-04",
+            "location": [
+              "https://www.iana.org/assignments/yang-parameters/\
 ietf-netconf-monitoring@2010-10-04.yang"
-              ]
-            }
-          ],
-          "import-only-module": [
-            {
-              "name": "ietf-yang-types",
-              "version": "2025-12-22",
-              "location": [
-                "https://www.iana.org/assignments/yang-parameters/\
+            ]
+          }
+        ],
+        "import-only-module": [
+          {
+            "name": "ietf-yang-types",
+            "version": "2025-12-22",
+            "location": [
+              "https://www.iana.org/assignments/yang-parameters/\
 ietf-yang-types@2025-12-22.yang"
-              ]
-            },
-            {
-              "name": "ietf-inet-types",
-              "version": "2025-12-22",
-              "location": [
-                "https://www.iana.org/assignments/yang-parameters/\
+            ]
+          },
+          {
+            "name": "ietf-inet-types",
+            "version": "2025-12-22",
+            "location": [
+              "https://www.iana.org/assignments/yang-parameters/\
 ietf-inet-types@2025-12-22.yang"
-              ]
-            }
-          ]
-        }
+            ]
+          }
+        ]
       }
     }
   }
@@ -1700,6 +1684,22 @@ module ietf-yang-package-types {
       "Packages are versioned using YANG Semver version labels.";
   }
 
+  typedef pkg-reference {
+    type string {
+      pattern '[a-zA-Z_][a-zA-Z0-9\-_.]*@'
+            + '[0-9]+[.][0-9]+[.][0-9]+(_(non_)?compatible)?'
+            + '(-[A-Za-z0-9.-]+)?([+][A-Za-z0-9.-]+)?';
+      pattern '[^@]+@.{5,128}';
+    }
+    description
+      "Identifies an exact package version as
+       '<package-name>@<version>'.
+       The name MUST conform to pkg-name and the version MUST conform
+       to pkg-version. Exactly one '@' separates the two components.
+       The reference does not include a filename extension
+       or location.";
+  }
+
   typedef module-name {
     type yang:yang-identifier;
     description
@@ -1883,8 +1883,8 @@ module ietf-yang-package-types {
       type inet:uri;
       ordered-by user;
       description
-        "Contains a URL that represents where an instance data file
-         (RFC 9195) for this YANG package can be found.
+        "Contains a URL that represents where a YANG package file
+         (.ypkg) for this YANG package can be found.
 
          This leaf will only be present if there is a URL available
          for retrieval of the schema for this entry.
@@ -1979,8 +1979,7 @@ module ietf-yang-package-types {
   grouping yang-pkg-instance {
     description
       "Specifies the data node for a full YANG package instance
-       represented either on a server or as a YANG instance data
-       document.";
+       represented either on a server or in a YANG package file.";
     uses yang-pkg-identification-leafs;
 
     leaf version-description {
@@ -2285,19 +2284,28 @@ module ietf-yang-package-types {
           ]]></artwork>
         </figure>
       </section>
-      <section title="ietf-yang-package-instance">
-        <t>The "ietf-yang-package-instance" module imports "ietf-yang-semver"
+      <section title="ietf-ypkg">
+        <t>The "ietf-ypkg" module imports "ietf-yang-semver"
         <xref target="I-D.ietf-netmod-yang-semver"/>,
-        "ietf-yang-package-types" defined in this document, and
-        "ietf-yang-structure-ext" <xref target="RFC8791"/>.</t>
+        "ietf-yang-package-types" defined in this document,
+        "ietf-yang-structure-ext" <xref target="RFC8791"/>, and
+        "ietf-inet-types" <xref target="RFC9911"/>.</t>
+
+        <t>RFC Editor note: Before publication, confirm with IANA the
+        implicit schema download location described in the "ietf-ypkg"
+        module below and <xref target="package_files"/>. Update the URL
+        prefix to the agreed IANA location if needed, and update the
+        default reference schema identifier to "ietf-ypkg-schema@1.0.0".
+        Remove this note and the corresponding module comment before
+        publication.</t>
 
         <figure>
           <artwork><![CDATA[
-<CODE BEGINS> file "ietf-yang-package-instance@0.10.0.yang"
-module ietf-yang-package-instance {
+<CODE BEGINS> file "ietf-ypkg@0.10.0.yang"
+module ietf-ypkg {
   yang-version 1.1;
-  namespace "urn:ietf:params:xml:ns:yang:ietf-yang-package-instance";
-  prefix pkg-inst;
+  namespace "urn:ietf:params:xml:ns:yang:ietf-ypkg";
+  prefix ypkg;
 
   import ietf-yang-semver  {
     prefix ys;
@@ -2315,6 +2323,11 @@ module ietf-yang-package-instance {
     reference "RFC 8791: YANG Data Structure Extensions.";
   }
 
+  import ietf-inet-types {
+    prefix inet;
+    reference "RFC 9911: Common YANG Data Types";
+  }
+
   organization
     "IETF NETMOD (Network Modeling) Working Group";
 
@@ -2326,9 +2339,8 @@ module ietf-yang-package-instance {
                <mailto:rwilton@cisco.com>";
 
   description
-    "This module provides a definition of a YANG package, which is
-     used as the content schema for a YANG instance data
-     document specifying a YANG package.
+    "This module defines the structure of a YANG package file
+     encoded using the JSON encoding specified in RFC 7951.
 
      Copyright (c) 2026 IETF Trust and the persons identified as
      authors of the code.  All rights reserved.
@@ -2368,15 +2380,67 @@ module ietf-yang-package-instance {
 
 
   /*
-   * Top-level structure
+   * Package file grouping and structure
    */
 
-  sx:structure package {
+  grouping yang-package-file {
     description
-      "Defines the YANG package structure for use in a YANG instance
-       data document.";
+      "Defines a schema reference and a complete
+       package definition.";
 
-    uses pkg-types:yang-pkg-instance;
+    leaf schema {
+      type pkg-types:pkg-reference;
+      description
+        "Identifies the package defining the schema for the entire
+         package file as '<package-name>@<version>', including the
+         envelope and any extensions. The referenced schema MUST be
+         referentially complete. If absent, the reference schema
+         defined in RFC XXXX applies. The schema package version
+         identifies the file format; no separate format version
+         is required.";
+    }
+
+    leaf-list schema-location {
+      type inet:uri;
+      // RFC Ed.: confirm the implicit download URL prefix below
+      // with IANA, update it if needed, and remove this comment.
+      ordered-by user;
+      description
+        "URLs from which the schema package identified by 'schema',
+         or the default reference schema when 'schema' is absent,
+         can be retrieved. A retrieved package's name and version
+         MUST match the schema package reference. If a canonical
+         location is provided, it MUST be the first entry.
+
+         If no location is specified, the schema package MUST be
+         available to download at the URL formed by appending
+         '<pkg-name>@<pkg-version>.ypkg' to
+         'https://www.iana.org/assignments/yang-parameters/', using
+         the name and version of the explicitly identified or
+         default schema package. Otherwise, at least one download
+         URL MUST be provided in this leaf-list.";
+    }
+
+    container pkg-defn {
+      description
+        "The complete package definition carried by this file.";
+
+      uses pkg-types:yang-pkg-instance;
+    }
+  }
+
+  sx:structure yang-package {
+    must "pkg-defn" {
+      error-message
+        "A package file must contain a package definition.";
+    }
+    description
+      "Defines a YANG package file. All applicable YANG constraints
+       and package definition rules MUST be satisfied.
+       Values equal to their applicable YANG defaults MAY be
+       explicitly encoded, but SHOULD be omitted.";
+
+    uses yang-package-file;
   }
 }
 <CODE ENDS>
@@ -2771,7 +2835,13 @@ module ietf-yang-inst-data-pkg {
           "Identifies the YANG package that defines the content
            schema for this instance data set.";
 
-        uses pkg-types:yang-pkg-identification-leafs;
+        leaf schema {
+          type pkg-types:pkg-reference;
+          mandatory true;
+          description
+            "Identifies the exact schema package as
+             '<package-name>@<version>'.";
+        }
 
         uses pkg-types:yang-pkg-location;
       }
@@ -2784,12 +2854,14 @@ module ietf-yang-inst-data-pkg {
       </section>
     </section>
 
-  <section anchor="pkg-instance-data-schema" title="YANG Package Instance Data Schema">
-    <t>This section defines the YANG package schema to use as a schema for YANG
-    instance data files defining YANG packages.  Although this definition may
-    appear to be somewhat self-recursive, this can be mitigated by the fact that
-    tools SHOULD recognize files of type ".ypkg" as being YANG package instance
-    data files, without needing to check the package schema.</t>
+  <section anchor="pkg-instance-data-schema" title="YANG Package File Reference Schema">
+    <t>This section defines the default reference schema for YANG package
+    files. It defines the entire "ietf-ypkg:yang-package" structure and
+    MUST be referentially complete. Tools SHOULD recognize the root and
+    schema reference defined by "ietf-ypkg" to select the schema before
+    validating the package definition. This reference package omits its
+    own schema reference and is interpreted using this default schema;
+    recursive retrieval of a schema package is not required.</t>
 
     <t>RFC Editor note: Before publication, check that the revision dates
     for "ietf-yang-semver" and "ietf-yang-revisions" in this package
@@ -2802,82 +2874,79 @@ module ietf-yang-inst-data-pkg {
     of example packages and modules. Remove this note before publication.</t>
         <figure>
           <artwork><![CDATA[
-<CODE BEGINS> file "yang-inst-data-schema@0.2.0.ypkg"
+<CODE BEGINS> file "ietf-ypkg-schema@0.1.0.ypkg"
 =============== NOTE: '\' line wrapping per RFC 8792 ================
 
 {
-  "ietf-yang-instance-data:instance-data-set": {
-    "content-data": {
-      "ietf-yang-package-instance:package": {
-        "name": "yang-inst-data-schema",
-        "version": "0.2.0",
-        "timestamp": "2026-03-20T17:52:47.188253Z",
-        "organization": "IETF",
-        "contact": "IESG",
-        "description": "Package schema to use for defining the \
-yang-inst-data-schema schema for YANG packages.",
-        "includes": {
-          "module": [
-            {
-              "name": "ietf-yang-package-instance",
-              "version": "0.10.0",
-              "location": [
-                "https://www.iana.org/assignments/yang-parameters/\
-ietf-yang-package-instance@0.10.0.yang"
-              ]
-            }
-          ],
-          "import-only-module": [
-            {
-              "name": "ietf-yang-package-types",
-              "version": "0.10.0",
-              "location": [
-                "https://www.iana.org/assignments/yang-parameters/\
+  "ietf-ypkg:yang-package": {
+    "pkg-defn": {
+      "name": "ietf-ypkg-schema",
+      "version": "0.1.0",
+      "timestamp": "2026-03-20T17:52:47.188253Z",
+      "organization": "IETF",
+      "contact": "IESG",
+      "description": "Reference schema for YANG package files.",
+      "includes": {
+        "module": [
+          {
+            "name": "ietf-ypkg",
+            "version": "0.10.0",
+            "location": [
+              "https://www.iana.org/assignments/yang-parameters/\
+ietf-ypkg@0.10.0.yang"
+            ]
+          }
+        ],
+        "import-only-module": [
+          {
+            "name": "ietf-yang-package-types",
+            "version": "0.10.0",
+            "location": [
+              "https://www.iana.org/assignments/yang-parameters/\
 ietf-yang-package-types@0.10.0.yang"
-              ]
-            },
-            {
-              "name": "ietf-yang-revisions",
-              "version": "2025-09-16",
-              "location": [
-                "https://www.iana.org/assignments/yang-parameters/\
+            ]
+          },
+          {
+            "name": "ietf-yang-revisions",
+            "version": "2025-09-16",
+            "location": [
+              "https://www.iana.org/assignments/yang-parameters/\
 ietf-yang-revisions@2025-09-16.yang"
-              ]
-            },
-            {
-              "name": "ietf-yang-semver",
-              "version": "2025-09-29",
-              "location": [
-                "https://www.iana.org/assignments/yang-parameters/\
+            ]
+          },
+          {
+            "name": "ietf-yang-semver",
+            "version": "2025-09-29",
+            "location": [
+              "https://www.iana.org/assignments/yang-parameters/\
 ietf-yang-semver@2025-09-29.yang"
-              ]
-            },
-            {
-              "name": "ietf-yang-types",
-              "version": "2025-12-22",
-              "location": [
-                "https://www.iana.org/assignments/yang-parameters/\
+            ]
+          },
+          {
+            "name": "ietf-yang-types",
+            "version": "2025-12-22",
+            "location": [
+              "https://www.iana.org/assignments/yang-parameters/\
 ietf-yang-types@2025-12-22.yang"
-              ]
-            },
-            {
-              "name": "ietf-inet-types",
-              "version": "2025-12-22",
-              "location": [
-                "https://www.iana.org/assignments/yang-parameters/\
+            ]
+          },
+          {
+            "name": "ietf-inet-types",
+            "version": "2025-12-22",
+            "location": [
+              "https://www.iana.org/assignments/yang-parameters/\
 ietf-inet-types@2025-12-22.yang"
-              ]
-            },
-            {
-              "name": "ietf-yang-structure-ext",
-              "version": "2020-06-17",
-              "location": [
-                "https://www.iana.org/assignments/yang-parameters/\
+            ]
+          },
+          {
+            "name": "ietf-yang-structure-ext",
+            "version": "2020-06-17",
+            "location": [
+              "https://www.iana.org/assignments/yang-parameters/\
 ietf-yang-structure-ext@2020-06-17.yang"
-              ]
-            }
-          ]
-        }
+            ]
+          }
+        ]
       }
     }
   }
@@ -2909,14 +2978,13 @@ ietf-yang-structure-ext@2020-06-17.yang"
     information will help an attacker identify server implementations with
     such a defect, in order to launch a denial-of-service attack on the
     device.</t>
-    <t>The 'ietf-yang-package-instance.yang' YANG file allows YANG packages to
-    be defined in YANG instance data files.  In addition,
-    "ietf-yang-inst-data-pkg" allows YANG packages to be used to define the schema
-    for YANG instance data files.  In both cases, the security considerations
-    from <xref target="RFC9195"/> apply. Since YANG package instance data files
-    are outside the security controls of the network management protocols, it is
-    important to consider controlling access to these files to restrict access
-    to potentially sensitive information.</t>
+    <t>The "ietf-ypkg" module defines YANG package files, which are
+    outside the security controls of network management protocols.
+    Access to these files should be controlled where they expose sensitive
+    information, and consumers should verify their source and integrity.
+    The "ietf-yang-inst-data-pkg" module allows packages to define schemas
+    for RFC 9195 instance data files, for which the security considerations
+    of <xref target="RFC9195"/> apply.</t>
 
     <section anchor="yang-security" title="YANG Module Security Considerations">
       <t>This section is modeled after the template described in Section 3.7
@@ -2975,7 +3043,7 @@ ietf-yang-structure-ext@2020-06-17.yang"
       <t>Package resolution is generally expected to be performed off-device
       using tooling rather than by the managed device itself.  To support this,
       package definitions should be made available off-device as ".ypkg"
-      instance data files using stable URIs.  Stable locations allow operators,
+      package files using stable URIs.  Stable locations allow operators,
       clients, and tooling to retrieve package definitions, resolve package
       dependencies, compare package versions, and validate schemas without
       relying on repeated retrieval of schema information from the device.</t>
@@ -2996,7 +3064,7 @@ ietf-yang-structure-ext@2020-06-17.yang"
             <t>XML: N/A, the requested URI is an XML namespace.</t>
           </list> <list style="empty">
             <t>URI:
-            urn:ietf:params:xml:ns:yang:ietf-yang-package-instance</t>
+            urn:ietf:params:xml:ns:yang:ietf-ypkg</t>
 
             <t>Registrant Contact: The IESG.</t>
 
@@ -3035,14 +3103,14 @@ ietf-yang-structure-ext@2020-06-17.yang"
 
             <t>Reference: RFC XXXX</t>
           </list> <list style="empty">
-            <t>Name: ietf-yang-package-instance</t>
+            <t>Name: ietf-ypkg</t>
 
             <t>Maintained by IANA? N</t>
 
             <t>Namespace:
-            urn:ietf:params:xml:ns:yang:ietf-yang-package-instance</t>
+            urn:ietf:params:xml:ns:yang:ietf-ypkg</t>
 
-            <t>Prefix: pkg-inst</t>
+            <t>Prefix: ypkg</t>
 
             <t>Reference: RFC XXXX</t>
           </list> <list style="empty">
@@ -3089,19 +3157,31 @@ ietf-yang-structure-ext@2020-06-17.yang"
         <t>The name of the registry is "YANG Package Names" in the "YANG
         Parameters" registry group.</t>
 
+        <t>IANA is requested to establish a known, stable HTTPS download
+        location for the registered YANG package files. Each registered
+        package version should be available at a stable URL, with its
+        filename following the rules in <xref target="package_files"/>.
+        The requested URL format is
+        "https://www.iana.org/assignments/yang-parameters/&lt;pkg-name&gt;@&lt;pkg-version&gt;.ypkg".
+        The registry should link to these URLs. IANA is requested to
+        confirm this download location, including that of the initial
+        "ietf-ypkg-schema" package, before RFC publication so that the
+        implicit schema download URL in <xref target="package_files"/>
+        and the "ietf-ypkg" module can be updated if necessary.</t>
+
         <t>The registry shall record for each entry:</t>
         <list style="symbols">
           <t>the name of the YANG package</t>
           <t>a brief description of the package purpose</t>
           <t>The latest published package version</t>
           <t>A list of all published package versions, each hyperlinked to the
-          location where a package instance data file,
+          location where a package file,
           <xref target="package_files"/>, for that package definition may be
           retrieved from.</t>
           <t>a reference to the package documentation (e.g., the RFC number)</t>
         </list>
 
-        <t>On creation of the registry, the ietf-inst-data-pkg-schema.ypkg,
+        <t>On creation of the registry, the ietf-ypkg-schema@0.1.0.ypkg,
         defined in <xref target="pkg-instance-data-schema"/>, should be added.</t>
 
         <t>For allocation, the registration policy is Specification Required,
@@ -3118,7 +3198,7 @@ ietf-yang-structure-ext@2020-06-17.yang"
         <t>All package names in the registry must be unique.</t>
       </section>
       <section anchor="iana-media-type-ypkg"
-               title="Media Type Registration for application/ypkg">
+               title="Media Type Registration for application/yang-package+json">
         <t>This document requests IANA to register the following media type,
         following the procedures of <xref target="RFC6838"/>:</t>
 
@@ -3126,13 +3206,13 @@ ietf-yang-structure-ext@2020-06-17.yang"
         <list style="empty">
           <t>Type name: application</t>
 
-          <t>Subtype name: ypkg</t>
+          <t>Subtype name: yang-package+json</t>
 
           <t>Required parameters: N/A</t>
 
           <t>Optional parameters: N/A</t>
 
-          <t>Encoding considerations: 8bit; YANG package instance data files
+          <t>Encoding considerations: 8bit; YANG package files
           are encoded in UTF-8.</t>
 
           <t>Security considerations: See the Security Considerations section
@@ -3143,7 +3223,7 @@ ietf-yang-structure-ext@2020-06-17.yang"
           <t>Published specification: RFC XXXX</t>
 
           <t>Applications that use this media type: YANG tooling and servers
-          that generate or consume YANG package instance data files.</t>
+          that generate or consume YANG package files.</t>
 
           <t>Additional information:
             <list style="empty">
@@ -3192,6 +3272,7 @@ ietf-yang-structure-ext@2020-06-17.yang"
       <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.6242.xml"/>
       <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.6838.xml"/>
       <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.7950.xml"/>
+      <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.7951.xml"/>
       <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.8126.xml"/>
       <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.8174.xml"/>
       <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.8342.xml"/>
@@ -3242,7 +3323,7 @@ ietf-yang-structure-ext@2020-06-17.yang"
     <section anchor="basic_examples" title="Basic Package Examples">
       <t>This section provides some very simple examples of YANG package
       definitions that may be published by an SDO,
-      illustrated using the instance data file format defined in 
+      illustrated using the YANG package file format defined in
       <xref target="package_files"/>.  The version numbers chosen are somewhat
       arbitrary, and illustrative.</t>
 
@@ -3282,46 +3363,44 @@ ietf-yang-structure-ext@2020-06-17.yang"
 =============== NOTE: '\' line wrapping per RFC 8792 ================
 
 {
-  "ietf-yang-instance-data:instance-data-set": {
-    "content-data": {
-      "ietf-yang-package-instance:package": {
-        "name": "example-base-types",
-        "version": "1.0.0",
-        "timestamp": "2026-03-20T17:52:47.188322Z",
-        "organization": "IETF NETMOD Working Group",
-        "contact": "WG Web:   <http://tools.ietf.org/wg/netmod/>, \
-WG List:  <mailto:netmod@ietf.org>",
-        "description": "Example package containing base IETF and \
-IANA type modules",
-        "reference": "XXX, draft-ietf-netmod-yang-packages",
-        "includes": {
-          "import-only-module": [
-            {
-              "name": "ietf-yang-types",
-              "version": "2010-09-24",
-              "location": [
-                "https://www.iana.org/assignments/yang-parameters/\
+  "ietf-ypkg:yang-package": {
+    "pkg-defn": {
+      "name": "example-base-types",
+      "version": "1.0.0",
+      "timestamp": "2026-03-20T17:52:47.188322Z",
+      "organization": "IETF NETMOD Working Group",
+      "contact": "WG Web:   <http://tools.ietf.org/wg/netmod/>, WG \
+List:  <mailto:netmod@ietf.org>",
+      "description": "Example package containing base IETF and IANA \
+type modules",
+      "reference": "XXX, draft-ietf-netmod-yang-packages",
+      "includes": {
+        "import-only-module": [
+          {
+            "name": "ietf-yang-types",
+            "version": "2010-09-24",
+            "location": [
+              "https://www.iana.org/assignments/yang-parameters/\
 ietf-yang-types@2010-09-24.yang"
-              ]
-            },
-            {
-              "name": "ietf-inet-types",
-              "version": "2010-09-24",
-              "location": [
-                "https://www.iana.org/assignments/yang-parameters/\
+            ]
+          },
+          {
+            "name": "ietf-inet-types",
+            "version": "2010-09-24",
+            "location": [
+              "https://www.iana.org/assignments/yang-parameters/\
 ietf-inet-types@2010-09-24.yang"
-              ]
-            },
-            {
-              "name": "ietf-netconf-acm",
-              "version": "2012-02-22",
-              "location": [
-                "https://www.iana.org/assignments/yang-parameters/\
+            ]
+          },
+          {
+            "name": "ietf-netconf-acm",
+            "version": "2012-02-22",
+            "location": [
+              "https://www.iana.org/assignments/yang-parameters/\
 ietf-netconf-acm@2012-02-22.yang"
-              ]
-            }
-          ]
-        }
+            ]
+          }
+        ]
       }
     }
   }
@@ -3341,44 +3420,42 @@ ietf-netconf-acm@2012-02-22.yang"
 =============== NOTE: '\' line wrapping per RFC 8792 ================
 
 {
-  "ietf-yang-instance-data:instance-data-set": {
-    "content-data": {
-      "ietf-yang-package-instance:package": {
-        "name": "example-base-types",
-        "version": "1.1.0",
-        "version-description": "Updated to 2025 RFC module versions",
-        "timestamp": "2026-03-20T17:52:47.188373Z",
-        "description": "Example package containing base IETF and \
-IANA type modules",
-        "reference": "XXX, draft-ietf-netmod-yang-packages",
-        "includes": {
-          "import-only-module": [
-            {
-              "name": "ietf-yang-types",
-              "version": "2025-12-22",
-              "location": [
-                "https://www.iana.org/assignments/yang-parameters/\
+  "ietf-ypkg:yang-package": {
+    "pkg-defn": {
+      "name": "example-base-types",
+      "version": "1.1.0",
+      "version-description": "Updated to 2025 RFC module versions",
+      "timestamp": "2026-03-20T17:52:47.188373Z",
+      "description": "Example package containing base IETF and IANA \
+type modules",
+      "reference": "XXX, draft-ietf-netmod-yang-packages",
+      "includes": {
+        "import-only-module": [
+          {
+            "name": "ietf-yang-types",
+            "version": "2025-12-22",
+            "location": [
+              "https://www.iana.org/assignments/yang-parameters/\
 ietf-yang-types@2025-12-22.yang"
-              ]
-            },
-            {
-              "name": "ietf-inet-types",
-              "version": "2025-12-22",
-              "location": [
-                "https://www.iana.org/assignments/yang-parameters/\
+            ]
+          },
+          {
+            "name": "ietf-inet-types",
+            "version": "2025-12-22",
+            "location": [
+              "https://www.iana.org/assignments/yang-parameters/\
 ietf-inet-types@2025-12-22.yang"
-              ]
-            },
-            {
-              "name": "ietf-netconf-acm",
-              "version": "2018-02-14",
-              "location": [
-                "https://www.iana.org/assignments/yang-parameters/\
+            ]
+          },
+          {
+            "name": "ietf-netconf-acm",
+            "version": "2018-02-14",
+            "location": [
+              "https://www.iana.org/assignments/yang-parameters/\
 ietf-netconf-acm@2018-02-14.yang"
-              ]
-            }
-          ]
-        }
+            ]
+          }
+        ]
       }
     }
   }
@@ -3390,7 +3467,7 @@ ietf-netconf-acm@2018-02-14.yang"
 
       <section anchor="network_device_pkg"
                title="Example Network Device YANG package">
-        <t>This section provides an instance data file example of a
+        <t>This section provides a YANG package file example of a
         Network Device YANG package.</t>
 
         <t>This example package is intended to represent the standard set of
@@ -3414,97 +3491,95 @@ ietf-netconf-acm@2018-02-14.yang"
 =============== NOTE: '\' line wrapping per RFC 8792 ================
 
 {
-  "ietf-yang-instance-data:instance-data-set": {
-    "content-data": {
-      "ietf-yang-package-instance:package": {
-        "name": "example-network-device",
-        "version": "1.1.2",
-        "timestamp": "2018-12-13T17:00:00Z",
-        "organization": "IETF NETMOD Working Group",
-        "contact": "WG Web:   <http://tools.ietf.org/wg/netmod/>, \
-WG List:  <mailto:netmod@ietf.org>",
-        "description": "Example IETF network device YANG package. \
+  "ietf-ypkg:yang-package": {
+    "pkg-defn": {
+      "name": "example-network-device",
+      "version": "1.1.2",
+      "timestamp": "2018-12-13T17:00:00Z",
+      "organization": "IETF NETMOD Working Group",
+      "contact": "WG Web:   <http://tools.ietf.org/wg/netmod/>, WG \
+List:  <mailto:netmod@ietf.org>",
+      "description": "Example IETF network device YANG package. \
 This package defines a small sample set of YANG modules that could \
 represent the basic set of modules that a standard network device \
 might be expected to support.",
-        "reference": "XXX, draft-ietf-netmod-yang-packages",
-        "includes": {
-          "package": [
-            {
-              "name": "example-base-types",
-              "version": "1.0.0",
-              "location": [
-                "https://example.org/yang/packages/\
+      "reference": "XXX, draft-ietf-netmod-yang-packages",
+      "includes": {
+        "package": [
+          {
+            "name": "example-base-types",
+            "version": "1.0.0",
+            "location": [
+              "https://example.org/yang/packages/\
 example-base-types@1.0.0.ypkg"
-              ]
-            }
-          ],
-          "module": [
-            {
-              "name": "iana-crypt-hash",
-              "version": "2014-08-06",
-              "location": [
-                "https://www.iana.org/assignments/yang-parameters/\
+            ]
+          }
+        ],
+        "module": [
+          {
+            "name": "iana-crypt-hash",
+            "version": "2014-08-06",
+            "location": [
+              "https://www.iana.org/assignments/yang-parameters/\
 iana-crypt-hash@2014-08-06.yang"
-              ]
-            },
-            {
-              "name": "ietf-system",
-              "version": "2014-08-06",
-              "location": [
-                "https://www.iana.org/assignments/yang-parameters/\
+            ]
+          },
+          {
+            "name": "ietf-system",
+            "version": "2014-08-06",
+            "location": [
+              "https://www.iana.org/assignments/yang-parameters/\
 ietf-system@2014-08-06.yang"
-              ]
-            },
-            {
-              "name": "iana-if-type",
-              "version": "2026-03-17",
-              "location": [
-                "https://www.iana.org/assignments/yang-parameters/\
+            ]
+          },
+          {
+            "name": "iana-if-type",
+            "version": "2026-03-17",
+            "location": [
+              "https://www.iana.org/assignments/yang-parameters/\
 iana-if-type@2026-03-17.yang"
-              ]
-            },
-            {
-              "name": "ietf-interfaces",
-              "version": "2018-02-20",
-              "location": [
-                "https://www.iana.org/assignments/yang-parameters/\
+            ]
+          },
+          {
+            "name": "ietf-interfaces",
+            "version": "2018-02-20",
+            "location": [
+              "https://www.iana.org/assignments/yang-parameters/\
 ietf-interfaces@2018-02-20.yang"
-              ]
-            },
-            {
-              "name": "ietf-netconf-acm",
-              "version": "2018-02-14",
-              "location": [
-                "https://www.iana.org/assignments/yang-parameters/\
+            ]
+          },
+          {
+            "name": "ietf-netconf-acm",
+            "version": "2018-02-14",
+            "location": [
+              "https://www.iana.org/assignments/yang-parameters/\
 ietf-netconf-acm@2018-02-14.yang"
-              ]
-            },
-            {
-              "name": "ietf-key-chain",
-              "version": "2017-06-15",
-              "location": [
-                "https://www.iana.org/assignments/yang-parameters/\
+            ]
+          },
+          {
+            "name": "ietf-key-chain",
+            "version": "2017-06-15",
+            "location": [
+              "https://www.iana.org/assignments/yang-parameters/\
 ietf-key-chain@2017-06-15.yang"
-              ]
-            },
-            {
-              "name": "ietf-ip",
-              "version": "2018-02-22",
-              "location": [
-                "https://www.iana.org/assignments/yang-parameters/\
+            ]
+          },
+          {
+            "name": "ietf-ip",
+            "version": "2018-02-22",
+            "location": [
+              "https://www.iana.org/assignments/yang-parameters/\
 ietf-ip@2018-02-22.yang"
-              ]
-            }
-          ],
-          "feature": [
-            "ietf-system:authentication",
-            "ietf-system:local-users",
-            "ietf-system:radius",
-            "ietf-system:radius-authentication",
-            "ietf-ip:ipv6-privacy-autoconf"
-          ]
-        }
+            ]
+          }
+        ],
+        "feature": [
+          "ietf-system:authentication",
+          "ietf-system:local-users",
+          "ietf-system:radius",
+          "ietf-system:radius-authentication",
+          "ietf-ip:ipv6-privacy-autoconf"
+        ]
       }
     }
   }
@@ -3532,54 +3607,52 @@ ietf-ip@2018-02-22.yang"
 =============== NOTE: '\' line wrapping per RFC 8792 ================
 
 {
-  "ietf-yang-instance-data:instance-data-set": {
-    "content-data": {
-      "ietf-yang-package-instance:package": {
-        "name": "example-routing-types",
-        "version": "1.0.0",
-        "timestamp": "2026-03-20T17:52:47.202513Z",
-        "description": "Example package containing routing types \
+  "ietf-ypkg:yang-package": {
+    "pkg-defn": {
+      "name": "example-routing-types",
+      "version": "1.0.0",
+      "timestamp": "2026-03-20T17:52:47.202513Z",
+      "description": "Example package containing routing types \
 modules",
-        "includes": {
-          "package": [
-            {
-              "name": "example-base-types",
-              "version": "1.1.0",
-              "location": [
-                "https://example.org/yang/packages/\
+      "includes": {
+        "package": [
+          {
+            "name": "example-base-types",
+            "version": "1.1.0",
+            "location": [
+              "https://example.org/yang/packages/\
 example-base-types@1.1.0.ypkg"
-              ]
-            }
-          ],
-          "module": [
-            {
-              "name": "ietf-routing-types",
-              "version": "2017-12-04",
-              "location": [
-                "https://www.iana.org/assignments/yang-parameters/\
+            ]
+          }
+        ],
+        "module": [
+          {
+            "name": "ietf-routing-types",
+            "version": "2017-12-04",
+            "location": [
+              "https://www.iana.org/assignments/yang-parameters/\
 ietf-routing-types@2017-12-04.yang"
-              ]
-            },
-            {
-              "name": "ietf-bgp-types",
-              "version": "2018-05-09",
-              "location": [
-                "https://www.iana.org/assignments/yang-parameters/\
+            ]
+          },
+          {
+            "name": "ietf-bgp-types",
+            "version": "2018-05-09",
+            "location": [
+              "https://www.iana.org/assignments/yang-parameters/\
 ietf-bgp-types@2018-05-09.yang"
-              ]
-            }
-          ],
-          "import-only-module": [
-            {
-              "name": "iana-routing-types",
-              "version": "2017-12-04",
-              "location": [
-                "https://www.iana.org/assignments/yang-parameters/\
+            ]
+          }
+        ],
+        "import-only-module": [
+          {
+            "name": "iana-routing-types",
+            "version": "2017-12-04",
+            "location": [
+              "https://www.iana.org/assignments/yang-parameters/\
 iana-routing-types@2017-12-04.yang"
-              ]
-            }
-          ]
-        }
+            ]
+          }
+        ]
       }
     }
   }
@@ -3591,7 +3664,7 @@ iana-routing-types@2017-12-04.yang"
 
       <section anchor="routing_pkg"
                title="Example Basic Routing YANG package">
-        <t>This section provides an instance data file example of a basic
+        <t>This section provides a YANG package file example of a basic
         Routing YANG package formatted in JSON.</t>
 
         <t>This example package is intended to represent the standard set of
@@ -3613,133 +3686,131 @@ iana-routing-types@2017-12-04.yang"
 =============== NOTE: '\' line wrapping per RFC 8792 ================
 
 {
-  "ietf-yang-instance-data:instance-data-set": {
-    "content-data": {
-      "ietf-yang-package-instance:package": {
-        "name": "example-routing",
-        "version": "1.3.1",
-        "timestamp": "2018-12-13T17:00:00Z",
-        "description": "This package defines a small sample set of \
+  "ietf-ypkg:yang-package": {
+    "pkg-defn": {
+      "name": "example-routing",
+      "version": "1.3.1",
+      "timestamp": "2018-12-13T17:00:00Z",
+      "description": "This package defines a small sample set of \
 IETF routing YANG modules that could represent the set of IETF \
 routing functionality that a basic IP network device might be \
 expected to support.",
-        "reference": "XXX, draft-ietf-netmod-yang-packages",
-        "includes": {
-          "package": [
-            {
-              "name": "example-network-device",
-              "version": "1.1.2",
-              "location": [
-                "https://example.org/yang/packages/\
+      "reference": "XXX, draft-ietf-netmod-yang-packages",
+      "includes": {
+        "package": [
+          {
+            "name": "example-network-device",
+            "version": "1.1.2",
+            "location": [
+              "https://example.org/yang/packages/\
 example-network-device@1.1.2.ypkg"
-              ]
-            },
-            {
-              "name": "example-routing-types",
-              "version": "1.0.0",
-              "location": [
-                "https://example.org/yang/packages/\
+            ]
+          },
+          {
+            "name": "example-routing-types",
+            "version": "1.0.0",
+            "location": [
+              "https://example.org/yang/packages/\
 example-routing-types@1.0.0.ypkg"
-              ]
-            }
-          ],
-          "module": [
-            {
-              "name": "ietf-routing",
-              "version": "2018-03-13",
-              "location": [
-                "https://www.iana.org/assignments/yang-parameters/\
+            ]
+          }
+        ],
+        "module": [
+          {
+            "name": "ietf-routing",
+            "version": "2018-03-13",
+            "location": [
+              "https://www.iana.org/assignments/yang-parameters/\
 ietf-routing@2018-03-13.yang"
-              ]
-            },
-            {
-              "name": "ietf-ipv4-unicast-routing",
-              "version": "2018-03-13",
-              "location": [
-                "https://www.iana.org/assignments/yang-parameters/\
+            ]
+          },
+          {
+            "name": "ietf-ipv4-unicast-routing",
+            "version": "2018-03-13",
+            "location": [
+              "https://www.iana.org/assignments/yang-parameters/\
 ietf-ipv4-unicast-routing@2018-03-13.yang"
-              ]
-            },
-            {
-              "name": "ietf-ipv6-unicast-routing",
-              "version": "2018-03-13",
-              "location": [
-                "https://www.iana.org/assignments/yang-parameters/\
+            ]
+          },
+          {
+            "name": "ietf-ipv6-unicast-routing",
+            "version": "2018-03-13",
+            "location": [
+              "https://www.iana.org/assignments/yang-parameters/\
 ietf-ipv6-unicast-routing@2018-03-13.yang"
-              ]
-            },
-            {
-              "name": "ietf-isis",
-              "version": "2018-12-11",
-              "location": [
-                "https://www.iana.org/assignments/yang-parameters/\
+            ]
+          },
+          {
+            "name": "ietf-isis",
+            "version": "2018-12-11",
+            "location": [
+              "https://www.iana.org/assignments/yang-parameters/\
 ietf-isis@2018-12-11.yang"
-              ]
-            },
-            {
-              "name": "ietf-interfaces-common",
-              "version": "2018-07-02",
-              "location": [
-                "https://www.iana.org/assignments/yang-parameters/\
+            ]
+          },
+          {
+            "name": "ietf-interfaces-common",
+            "version": "2018-07-02",
+            "location": [
+              "https://www.iana.org/assignments/yang-parameters/\
 ietf-interfaces-common@2018-07-02.yang"
-              ]
-            },
-            {
-              "name": "ietf-if-l3-vlan",
-              "version": "2017-10-30",
-              "location": [
-                "https://www.iana.org/assignments/yang-parameters/\
+            ]
+          },
+          {
+            "name": "ietf-if-l3-vlan",
+            "version": "2017-10-30",
+            "location": [
+              "https://www.iana.org/assignments/yang-parameters/\
 ietf-if-l3-vlan@2017-10-30.yang"
-              ]
-            },
-            {
-              "name": "ietf-routing-policy",
-              "version": "2018-10-19",
-              "location": [
-                "https://www.iana.org/assignments/yang-parameters/\
+            ]
+          },
+          {
+            "name": "ietf-routing-policy",
+            "version": "2018-10-19",
+            "location": [
+              "https://www.iana.org/assignments/yang-parameters/\
 ietf-routing-policy@2018-10-19.yang"
-              ]
-            },
-            {
-              "name": "ietf-bgp",
-              "version": "2018-05-09",
-              "location": [
-                "https://www.iana.org/assignments/yang-parameters/\
+            ]
+          },
+          {
+            "name": "ietf-bgp",
+            "version": "2018-05-09",
+            "location": [
+              "https://www.iana.org/assignments/yang-parameters/\
 ietf-bgp@2018-05-09.yang"
-              ]
-            },
-            {
-              "name": "ietf-access-control-list",
-              "version": "2018-11-06",
-              "location": [
-                "https://www.iana.org/assignments/yang-parameters/\
+            ]
+          },
+          {
+            "name": "ietf-access-control-list",
+            "version": "2018-11-06",
+            "location": [
+              "https://www.iana.org/assignments/yang-parameters/\
 ietf-access-control-list@2018-11-06.yang"
-              ]
-            }
-          ],
-          "import-only-module": [
-            {
-              "name": "ietf-packet-fields",
-              "version": "2018-11-06",
-              "location": [
-                "https://www.iana.org/assignments/yang-parameters/\
+            ]
+          }
+        ],
+        "import-only-module": [
+          {
+            "name": "ietf-packet-fields",
+            "version": "2018-11-06",
+            "location": [
+              "https://www.iana.org/assignments/yang-parameters/\
 ietf-packet-fields@2018-11-06.yang"
-              ]
-            },
-            {
-              "name": "ietf-ethertypes",
-              "version": "2018-11-06",
-              "location": [
-                "https://www.iana.org/assignments/yang-parameters/\
+            ]
+          },
+          {
+            "name": "ietf-ethertypes",
+            "version": "2018-11-06",
+            "location": [
+              "https://www.iana.org/assignments/yang-parameters/\
 ietf-ethertypes@2018-11-06.yang"
-              ]
-            }
-          ],
-          "feature": [
-            "ietf-access-control-list:match-on-ipv6",
-            "ietf-access-control-list:ipv6"
-          ]
-        }
+            ]
+          }
+        ],
+        "feature": [
+          "ietf-access-control-list:match-on-ipv6",
+          "ietf-access-control-list:ipv6"
+        ]
       }
     }
   }
@@ -3768,41 +3839,39 @@ ietf-ethertypes@2018-11-06.yang"
           <artwork><![CDATA[
 <CODE BEGINS> file "device-routing@1.0.0.ypkg"
 {
-  "ietf-yang-instance-data:instance-data-set": {
-    "content-data": {
-      "ietf-yang-package-instance:package": {
-        "name": "device-routing",
-        "version": "1.0.0",
-        "timestamp": "2026-06-22T00:00:00Z",
-        "description": "Example vendor device routing package",
-        "reference": "XXX, draft-ietf-netmod-yang-packages",
-        "includes": {
-          "package": [
-            {
-              "name": "example-routing",
-              "version": "1.3.1"
-            }
-          ],
-          "module": [
-            {
-              "name": "vendor-ietf-bgp-deviations",
-              "version": "2026-06-22"
-            },
-            {
-              "name": "device-isis-extensions",
-              "version": "1.2.3"
-            }
-          ]
-        },
-        "excludes": {
-          "module": [
-            "ietf-if-l3-vlan"
-          ],
-          "feature": [
-            "ietf-system:radius",
-            "ietf-system:radius-authentication"
-          ]
-        }
+  "ietf-ypkg:yang-package": {
+    "pkg-defn": {
+      "name": "device-routing",
+      "version": "1.0.0",
+      "timestamp": "2026-06-22T00:00:00Z",
+      "description": "Example vendor device routing package",
+      "reference": "XXX, draft-ietf-netmod-yang-packages",
+      "includes": {
+        "package": [
+          {
+            "name": "example-routing",
+            "version": "1.3.1"
+          }
+        ],
+        "module": [
+          {
+            "name": "vendor-ietf-bgp-deviations",
+            "version": "2026-06-22"
+          },
+          {
+            "name": "device-isis-extensions",
+            "version": "1.2.3"
+          }
+        ]
+      },
+      "excludes": {
+        "module": [
+          "ietf-if-l3-vlan"
+        ],
+        "feature": [
+          "ietf-system:radius",
+          "ietf-system:radius-authentication"
+        ]
       }
     }
   }
@@ -3929,31 +3998,29 @@ ietf-ethertypes@2018-11-06.yang"
           <artwork><![CDATA[
 <CODE BEGINS> file "vendor-isis-hotfix@1.0.0.ypkg"
 {
-  "ietf-yang-instance-data:instance-data-set": {
-    "content-data": {
-      "ietf-yang-package-instance:package": {
-        "name": "vendor-isis-hotfix",
-        "version": "1.0.0",
-        "timestamp": "2026-06-22T00:00:00Z",
-        "description": "Example vendor ISIS hotfix package",
-        "reference": "XXX, draft-ietf-netmod-yang-packages;",
-        "complete": false,
-        "includes": {
-          "module": [
-            {
-              "name": "device-isis-extensions",
-              "version": "1.2.4_compatible"
-            }
-          ]
-        },
-        "depends-on": {
-          "package": [
-            {
-              "name": "device-routing",
-              "version": "1.0.0"
-            }
-          ]
-        }
+  "ietf-ypkg:yang-package": {
+    "pkg-defn": {
+      "name": "vendor-isis-hotfix",
+      "version": "1.0.0",
+      "timestamp": "2026-06-22T00:00:00Z",
+      "description": "Example vendor ISIS hotfix package",
+      "reference": "XXX, draft-ietf-netmod-yang-packages;",
+      "complete": false,
+      "includes": {
+        "module": [
+          {
+            "name": "device-isis-extensions",
+            "version": "1.2.4_compatible"
+          }
+        ]
+      },
+      "depends-on": {
+        "package": [
+          {
+            "name": "device-routing",
+            "version": "1.0.0"
+          }
+        ]
       }
     }
   }
@@ -4048,7 +4115,7 @@ ietf-ethertypes@2018-11-06.yang"
     <section anchor="versioning_examples" title="Package Versioning Examples">
       <t>This section provides examples of versioning packages.  The
       examples are non-normative, and for brevity only the relevant package
-      definition fields are shown in the package instance-data files.</t>
+      definition fields are shown in the package files.</t>
 
       <t>The examples illustrate the history of a single package,
       "example-versioned-routing".  Each example highlights whether the
@@ -4084,35 +4151,33 @@ ietf-ethertypes@2018-11-06.yang"
           <artwork><![CDATA[
 <CODE BEGINS> file "example-versioned-routing@1.0.0.ypkg"
 {
-  "ietf-yang-instance-data:instance-data-set": {
-    "content-data": {
-      "ietf-yang-package-instance:package": {
-        "name": "example-versioned-routing",
-        "version": "1.0.0",
-        "timestamp": "2026-06-22T00:00:00Z",
-        "description": "Example versioned routing package",
-        "reference": "XXX, draft-ietf-netmod-yang-packages",
-        "includes": {
-          "package": [
-            {
-              "name": "example-network-device",
-              "version": "1.1.2"
-            }
-          ],
-          "module": [
-            {
-              "name": "example-routing-core",
-              "version": "2.0.0"
-            },
-            {
-              "name": "example-routing-acl",
-              "version": "1.0.0"
-            }
-          ],
-          "feature": [
-            "example-routing-core:ipv4"
-          ]
-        }
+  "ietf-ypkg:yang-package": {
+    "pkg-defn": {
+      "name": "example-versioned-routing",
+      "version": "1.0.0",
+      "timestamp": "2026-06-22T00:00:00Z",
+      "description": "Example versioned routing package",
+      "reference": "XXX, draft-ietf-netmod-yang-packages",
+      "includes": {
+        "package": [
+          {
+            "name": "example-network-device",
+            "version": "1.1.2"
+          }
+        ],
+        "module": [
+          {
+            "name": "example-routing-core",
+            "version": "2.0.0"
+          },
+          {
+            "name": "example-routing-acl",
+            "version": "1.0.0"
+          }
+        ],
+        "feature": [
+          "example-routing-core:ipv4"
+        ]
       }
     }
   }
@@ -4134,47 +4199,45 @@ ietf-ethertypes@2018-11-06.yang"
 =============== NOTE: '\' line wrapping per RFC 8792 ================
 
 {
-  "ietf-yang-instance-data:instance-data-set": {
-    "content-data": {
-      "ietf-yang-package-instance:package": {
-        "name": "example-versioned-routing",
-        "version": "1.1.0",
-        "version-description": "Adds telemetry, policy, and new \
+  "ietf-ypkg:yang-package": {
+    "pkg-defn": {
+      "name": "example-versioned-routing",
+      "version": "1.1.0",
+      "version-description": "Adds telemetry, policy, and new \
 features.",
-        "timestamp": "2026-06-22T00:00:00Z",
-        "description": "Example versioned routing package",
-        "reference": "XXX, draft-ietf-netmod-yang-packages",
-        "includes": {
-          "package": [
-            {
-              "name": "example-network-device",
-              "version": "1.1.2"
-            },
-            {
-              "name": "example-routing-telemetry",
-              "version": "1.0.0"
-            }
-          ],
-          "module": [
-            {
-              "name": "example-routing-core",
-              "version": "2.0.0"
-            },
-            {
-              "name": "example-routing-acl",
-              "version": "1.0.0"
-            },
-            {
-              "name": "example-routing-policy",
-              "version": "1.0.0"
-            }
-          ],
-          "feature": [
-            "example-routing-core:ipv4",
-            "example-routing-core:ipv6",
-            "example-routing-policy:statistics"
-          ]
-        }
+      "timestamp": "2026-06-22T00:00:00Z",
+      "description": "Example versioned routing package",
+      "reference": "XXX, draft-ietf-netmod-yang-packages",
+      "includes": {
+        "package": [
+          {
+            "name": "example-network-device",
+            "version": "1.1.2"
+          },
+          {
+            "name": "example-routing-telemetry",
+            "version": "1.0.0"
+          }
+        ],
+        "module": [
+          {
+            "name": "example-routing-core",
+            "version": "2.0.0"
+          },
+          {
+            "name": "example-routing-acl",
+            "version": "1.0.0"
+          },
+          {
+            "name": "example-routing-policy",
+            "version": "1.0.0"
+          }
+        ],
+        "feature": [
+          "example-routing-core:ipv4",
+          "example-routing-core:ipv6",
+          "example-routing-policy:statistics"
+        ]
       }
     }
   }
@@ -4197,43 +4260,41 @@ features.",
 =============== NOTE: '\' line wrapping per RFC 8792 ================
 
 {
-  "ietf-yang-instance-data:instance-data-set": {
-    "content-data": {
-      "ietf-yang-package-instance:package": {
-        "name": "example-versioned-routing",
-        "version": "2.0.0",
-        "version-description": "Downrefs a package and removes the \
+  "ietf-ypkg:yang-package": {
+    "pkg-defn": {
+      "name": "example-versioned-routing",
+      "version": "2.0.0",
+      "version-description": "Downrefs a package and removes the \
 ACL module.",
-        "timestamp": "2026-06-22T00:00:00Z",
-        "description": "Example versioned routing package",
-        "reference": "XXX, draft-ietf-netmod-yang-packages",
-        "includes": {
-          "package": [
-            {
-              "name": "example-network-device",
-              "version": "1.0.0"
-            },
-            {
-              "name": "example-routing-telemetry",
-              "version": "1.0.0"
-            }
-          ],
-          "module": [
-            {
-              "name": "example-routing-core",
-              "version": "2.0.0"
-            },
-            {
-              "name": "example-routing-policy",
-              "version": "1.0.0"
-            }
-          ],
-          "feature": [
-            "example-routing-core:ipv4",
-            "example-routing-core:ipv6",
-            "example-routing-policy:statistics"
-          ]
-        }
+      "timestamp": "2026-06-22T00:00:00Z",
+      "description": "Example versioned routing package",
+      "reference": "XXX, draft-ietf-netmod-yang-packages",
+      "includes": {
+        "package": [
+          {
+            "name": "example-network-device",
+            "version": "1.0.0"
+          },
+          {
+            "name": "example-routing-telemetry",
+            "version": "1.0.0"
+          }
+        ],
+        "module": [
+          {
+            "name": "example-routing-core",
+            "version": "2.0.0"
+          },
+          {
+            "name": "example-routing-policy",
+            "version": "1.0.0"
+          }
+        ],
+        "feature": [
+          "example-routing-core:ipv4",
+          "example-routing-core:ipv6",
+          "example-routing-policy:statistics"
+        ]
       }
     }
   }
@@ -4254,46 +4315,44 @@ ACL module.",
           <artwork><![CDATA[
 <CODE BEGINS> file "example-versioned-routing@3.0.0.ypkg"
 {
-  "ietf-yang-instance-data:instance-data-set": {
-    "content-data": {
-      "ietf-yang-package-instance:package": {
-        "name": "example-versioned-routing",
-        "version": "3.0.0",
-        "version-description": "Adds NBC vendor deviations.",
-        "timestamp": "2026-06-22T00:00:00Z",
-        "description": "Example versioned routing package",
-        "reference": "XXX, draft-ietf-netmod-yang-packages",
-        "includes": {
-          "package": [
-            {
-              "name": "example-network-device",
-              "version": "1.0.0"
-            },
-            {
-              "name": "example-routing-telemetry",
-              "version": "1.0.0"
-            }
-          ],
-          "module": [
-            {
-              "name": "example-routing-core",
-              "version": "2.0.0"
-            },
-            {
-              "name": "example-routing-policy",
-              "version": "1.0.0"
-            },
-            {
-              "name": "vendor-routing-deviations",
-              "version": "2026-06-22"
-            }
-          ],
-          "feature": [
-            "example-routing-core:ipv4",
-            "example-routing-core:ipv6",
-            "example-routing-policy:statistics"
-          ]
-        }
+  "ietf-ypkg:yang-package": {
+    "pkg-defn": {
+      "name": "example-versioned-routing",
+      "version": "3.0.0",
+      "version-description": "Adds NBC vendor deviations.",
+      "timestamp": "2026-06-22T00:00:00Z",
+      "description": "Example versioned routing package",
+      "reference": "XXX, draft-ietf-netmod-yang-packages",
+      "includes": {
+        "package": [
+          {
+            "name": "example-network-device",
+            "version": "1.0.0"
+          },
+          {
+            "name": "example-routing-telemetry",
+            "version": "1.0.0"
+          }
+        ],
+        "module": [
+          {
+            "name": "example-routing-core",
+            "version": "2.0.0"
+          },
+          {
+            "name": "example-routing-policy",
+            "version": "1.0.0"
+          },
+          {
+            "name": "vendor-routing-deviations",
+            "version": "2026-06-22"
+          }
+        ],
+        "feature": [
+          "example-routing-core:ipv4",
+          "example-routing-core:ipv6",
+          "example-routing-policy:statistics"
+        ]
       }
     }
   }
@@ -4318,50 +4377,48 @@ ACL module.",
 =============== NOTE: '\' line wrapping per RFC 8792 ================
 
 {
-  "ietf-yang-instance-data:instance-data-set": {
-    "content-data": {
-      "ietf-yang-package-instance:package": {
-        "name": "example-versioned-routing",
-        "version": "4.0.0",
-        "version-description": "Removes IPv4, downrefs core, adds \
+  "ietf-ypkg:yang-package": {
+    "pkg-defn": {
+      "name": "example-versioned-routing",
+      "version": "4.0.0",
+      "version-description": "Removes IPv4, downrefs core, adds \
 ISIS.",
-        "timestamp": "2026-06-22T00:00:00Z",
-        "description": "Example versioned routing package",
-        "reference": "XXX, draft-ietf-netmod-yang-packages",
-        "includes": {
-          "package": [
-            {
-              "name": "example-network-device",
-              "version": "1.0.0"
-            },
-            {
-              "name": "example-routing-telemetry",
-              "version": "1.0.0"
-            }
-          ],
-          "module": [
-            {
-              "name": "example-routing-core",
-              "version": "1.5.0"
-            },
-            {
-              "name": "example-routing-policy",
-              "version": "1.0.0"
-            },
-            {
-              "name": "vendor-routing-deviations",
-              "version": "2026-06-22"
-            },
-            {
-              "name": "example-isis",
-              "version": "1.0.0"
-            }
-          ],
-          "feature": [
-            "example-routing-core:ipv6",
-            "example-routing-policy:statistics"
-          ]
-        }
+      "timestamp": "2026-06-22T00:00:00Z",
+      "description": "Example versioned routing package",
+      "reference": "XXX, draft-ietf-netmod-yang-packages",
+      "includes": {
+        "package": [
+          {
+            "name": "example-network-device",
+            "version": "1.0.0"
+          },
+          {
+            "name": "example-routing-telemetry",
+            "version": "1.0.0"
+          }
+        ],
+        "module": [
+          {
+            "name": "example-routing-core",
+            "version": "1.5.0"
+          },
+          {
+            "name": "example-routing-policy",
+            "version": "1.0.0"
+          },
+          {
+            "name": "vendor-routing-deviations",
+            "version": "2026-06-22"
+          },
+          {
+            "name": "example-isis",
+            "version": "1.0.0"
+          }
+        ],
+        "feature": [
+          "example-routing-core:ipv6",
+          "example-routing-policy:statistics"
+        ]
       }
     }
   }
@@ -4387,54 +4444,51 @@ ISIS.",
 =============== NOTE: '\' line wrapping per RFC 8792 ================
 
 {
-  "ietf-yang-instance-data:instance-data-set": {
-    "content-data": {
-      "ietf-yang-package-instance:package": {
-        "name": "example-versioned-routing",
-        "version": "4.0.1",
-        "version-description": "Updates module location \
-information.",
-        "timestamp": "2026-06-22T00:00:00Z",
-        "description": "Example versioned routing package",
-        "reference": "XXX, draft-ietf-netmod-yang-packages",
-        "includes": {
-          "package": [
-            {
-              "name": "example-network-device",
-              "version": "1.0.0"
-            },
-            {
-              "name": "example-routing-telemetry",
-              "version": "1.0.0"
-            }
-          ],
-          "module": [
-            {
-              "name": "example-routing-core",
-              "version": "1.5.0",
-              "location": [
-                "https://example.org/yang/\
+  "ietf-ypkg:yang-package": {
+    "pkg-defn": {
+      "name": "example-versioned-routing",
+      "version": "4.0.1",
+      "version-description": "Updates module location information.",
+      "timestamp": "2026-06-22T00:00:00Z",
+      "description": "Example versioned routing package",
+      "reference": "XXX, draft-ietf-netmod-yang-packages",
+      "includes": {
+        "package": [
+          {
+            "name": "example-network-device",
+            "version": "1.0.0"
+          },
+          {
+            "name": "example-routing-telemetry",
+            "version": "1.0.0"
+          }
+        ],
+        "module": [
+          {
+            "name": "example-routing-core",
+            "version": "1.5.0",
+            "location": [
+              "https://example.org/yang/\
 example-routing-core@1.5.0.yang"
-              ]
-            },
-            {
-              "name": "example-routing-policy",
-              "version": "1.0.0"
-            },
-            {
-              "name": "vendor-routing-deviations",
-              "version": "2026-06-22"
-            },
-            {
-              "name": "example-isis",
-              "version": "1.0.0"
-            }
-          ],
-          "feature": [
-            "example-routing-core:ipv6",
-            "example-routing-policy:statistics"
-          ]
-        }
+            ]
+          },
+          {
+            "name": "example-routing-policy",
+            "version": "1.0.0"
+          },
+          {
+            "name": "vendor-routing-deviations",
+            "version": "2026-06-22"
+          },
+          {
+            "name": "example-isis",
+            "version": "1.0.0"
+          }
+        ],
+        "feature": [
+          "example-routing-core:ipv6",
+          "example-routing-policy:statistics"
+        ]
       }
     }
   }
@@ -4447,7 +4501,7 @@ example-routing-core@1.5.0.yang"
 
     <section anchor="resolution_examples" title="Package Resolution Examples">
       <t>This section provides examples of package resolution.  The examples
-      are non-normative, and for brevity the package instance data files omit
+      are non-normative, and for brevity the package files omit
       location information except where used to illustrate a specific point.</t>
 
       <t>As described in <xref target="resolution"/>, resolving a set of
@@ -4472,32 +4526,30 @@ example-routing-core@1.5.0.yang"
 =============== NOTE: '\' line wrapping per RFC 8792 ================
 
 {
-  "ietf-yang-instance-data:instance-data-set": {
-    "content-data": {
-      "ietf-yang-package-instance:package": {
-        "name": "example-resolution-common",
-        "version": "1.0.0",
-        "timestamp": "2026-06-22T00:00:00Z",
-        "description": "Example common package for resolution \
+  "ietf-ypkg:yang-package": {
+    "pkg-defn": {
+      "name": "example-resolution-common",
+      "version": "1.0.0",
+      "timestamp": "2026-06-22T00:00:00Z",
+      "description": "Example common package for resolution \
 examples",
-        "reference": "XXX, draft-ietf-netmod-yang-packages",
-        "includes": {
-          "module": [
-            {
-              "name": "example-resolution-base",
-              "version": "1.0.0"
-            }
-          ],
-          "import-only-module": [
-            {
-              "name": "example-resolution-types",
-              "version": "1.0.0"
-            }
-          ],
-          "feature": [
-            "example-resolution-base:basic"
-          ]
-        }
+      "reference": "XXX, draft-ietf-netmod-yang-packages",
+      "includes": {
+        "module": [
+          {
+            "name": "example-resolution-base",
+            "version": "1.0.0"
+          }
+        ],
+        "import-only-module": [
+          {
+            "name": "example-resolution-types",
+            "version": "1.0.0"
+          }
+        ],
+        "feature": [
+          "example-resolution-base:basic"
+        ]
       }
     }
   }
@@ -4522,37 +4574,35 @@ examples",
 =============== NOTE: '\' line wrapping per RFC 8792 ================
 
 {
-  "ietf-yang-instance-data:instance-data-set": {
-    "content-data": {
-      "ietf-yang-package-instance:package": {
-        "name": "example-resolution-common",
-        "version": "1.4.0",
-        "timestamp": "2026-06-22T00:00:00Z",
-        "description": "Updated common package for resolution \
+  "ietf-ypkg:yang-package": {
+    "pkg-defn": {
+      "name": "example-resolution-common",
+      "version": "1.4.0",
+      "timestamp": "2026-06-22T00:00:00Z",
+      "description": "Updated common package for resolution \
 examples",
-        "reference": "XXX, draft-ietf-netmod-yang-packages",
-        "includes": {
-          "module": [
-            {
-              "name": "example-resolution-base",
-              "version": "1.4.0"
-            },
-            {
-              "name": "example-resolution-telemetry",
-              "version": "1.2.0"
-            }
-          ],
-          "import-only-module": [
-            {
-              "name": "example-resolution-types",
-              "version": "1.4.0"
-            }
-          ],
-          "feature": [
-            "example-resolution-base:basic",
-            "example-resolution-telemetry:events"
-          ]
-        }
+      "reference": "XXX, draft-ietf-netmod-yang-packages",
+      "includes": {
+        "module": [
+          {
+            "name": "example-resolution-base",
+            "version": "1.4.0"
+          },
+          {
+            "name": "example-resolution-telemetry",
+            "version": "1.2.0"
+          }
+        ],
+        "import-only-module": [
+          {
+            "name": "example-resolution-types",
+            "version": "1.4.0"
+          }
+        ],
+        "feature": [
+          "example-resolution-base:basic",
+          "example-resolution-telemetry:events"
+        ]
       }
     }
   }
@@ -4578,43 +4628,41 @@ examples",
 =============== NOTE: '\' line wrapping per RFC 8792 ================
 
 {
-  "ietf-yang-instance-data:instance-data-set": {
-    "content-data": {
-      "ietf-yang-package-instance:package": {
-        "name": "example-resolution-access",
-        "version": "2.0.0",
-        "timestamp": "2026-06-22T00:00:00Z",
-        "description": "Example access package for resolution \
+  "ietf-ypkg:yang-package": {
+    "pkg-defn": {
+      "name": "example-resolution-access",
+      "version": "2.0.0",
+      "timestamp": "2026-06-22T00:00:00Z",
+      "description": "Example access package for resolution \
 examples",
-        "reference": "XXX, draft-ietf-netmod-yang-packages",
-        "includes": {
-          "package": [
-            {
-              "name": "example-resolution-common",
-              "version": "1.0.0"
-            }
-          ],
-          "module": [
-            {
-              "name": "example-resolution-acl",
-              "version": "1.1.0",
-              "location": [
-                "example:location-qux"
-              ]
-            },
-            {
-              "name": "example-resolution-transport",
-              "version": "1.2.0",
-              "location": [
-                "example:location-foo",
-                "example:location-bar"
-              ]
-            }
-          ],
-          "feature": [
-            "example-resolution-acl:ipv4"
-          ]
-        }
+      "reference": "XXX, draft-ietf-netmod-yang-packages",
+      "includes": {
+        "package": [
+          {
+            "name": "example-resolution-common",
+            "version": "1.0.0"
+          }
+        ],
+        "module": [
+          {
+            "name": "example-resolution-acl",
+            "version": "1.1.0",
+            "location": [
+              "example:location-qux"
+            ]
+          },
+          {
+            "name": "example-resolution-transport",
+            "version": "1.2.0",
+            "location": [
+              "example:location-foo",
+              "example:location-bar"
+            ]
+          }
+        ],
+        "feature": [
+          "example-resolution-acl:ipv4"
+        ]
       }
     }
   }
@@ -4645,44 +4693,42 @@ examples",
 =============== NOTE: '\' line wrapping per RFC 8792 ================
 
 {
-  "ietf-yang-instance-data:instance-data-set": {
-    "content-data": {
-      "ietf-yang-package-instance:package": {
-        "name": "example-resolution-routing",
-        "version": "3.0.0",
-        "timestamp": "2026-06-22T00:00:00Z",
-        "description": "Example routing package for resolution \
+  "ietf-ypkg:yang-package": {
+    "pkg-defn": {
+      "name": "example-resolution-routing",
+      "version": "3.0.0",
+      "timestamp": "2026-06-22T00:00:00Z",
+      "description": "Example routing package for resolution \
 examples",
-        "reference": "XXX, draft-ietf-netmod-yang-packages",
-        "includes": {
-          "package": [
-            {
-              "name": "example-resolution-common",
-              "version": "1.4.0"
-            }
-          ],
-          "module": [
-            {
-              "name": "example-resolution-acl",
-              "version": "1.3.0"
-            },
-            {
-              "name": "example-resolution-routing",
-              "version": "1.3.0"
-            },
-            {
-              "name": "example-resolution-transport",
-              "version": "1.2.0",
-              "location": [
-                "example:location-foo",
-                "example:location-baz"
-              ]
-            }
-          ],
-          "feature": [
-            "example-resolution-routing:statistics"
-          ]
-        }
+      "reference": "XXX, draft-ietf-netmod-yang-packages",
+      "includes": {
+        "package": [
+          {
+            "name": "example-resolution-common",
+            "version": "1.4.0"
+          }
+        ],
+        "module": [
+          {
+            "name": "example-resolution-acl",
+            "version": "1.3.0"
+          },
+          {
+            "name": "example-resolution-routing",
+            "version": "1.3.0"
+          },
+          {
+            "name": "example-resolution-transport",
+            "version": "1.2.0",
+            "location": [
+              "example:location-foo",
+              "example:location-baz"
+            ]
+          }
+        ],
+        "feature": [
+          "example-resolution-routing:statistics"
+        ]
       }
     }
   }
@@ -4726,43 +4772,41 @@ examples",
           <artwork><![CDATA[
 <CODE BEGINS> file "example-resolution-device@4.0.0.ypkg"
 {
-  "ietf-yang-instance-data:instance-data-set": {
-    "content-data": {
-      "ietf-yang-package-instance:package": {
-        "name": "example-resolution-device",
-        "version": "4.0.0",
-        "timestamp": "2026-06-22T00:00:00Z",
-        "description": "Top-level package for resolution examples",
-        "reference": "XXX, draft-ietf-netmod-yang-packages",
-        "includes": {
-          "package": [
-            {
-              "name": "example-resolution-access",
-              "version": "2.0.0"
-            },
-            {
-              "name": "example-resolution-routing",
-              "version": "3.0.0"
-            }
-          ],
-          "module": [
-            {
-              "name": "example-resolution-acl",
-              "version": "1.1.0",
-              "location": [
-                "example:location-quux"
-              ]
-            }
-          ]
-        },
-        "excludes": {
-          "module": [
-            "example-resolution-telemetry"
-          ],
-          "feature": [
-            "example-resolution-routing:statistics"
-          ]
-        }
+  "ietf-ypkg:yang-package": {
+    "pkg-defn": {
+      "name": "example-resolution-device",
+      "version": "4.0.0",
+      "timestamp": "2026-06-22T00:00:00Z",
+      "description": "Top-level package for resolution examples",
+      "reference": "XXX, draft-ietf-netmod-yang-packages",
+      "includes": {
+        "package": [
+          {
+            "name": "example-resolution-access",
+            "version": "2.0.0"
+          },
+          {
+            "name": "example-resolution-routing",
+            "version": "3.0.0"
+          }
+        ],
+        "module": [
+          {
+            "name": "example-resolution-acl",
+            "version": "1.1.0",
+            "location": [
+              "example:location-quux"
+            ]
+          }
+        ]
+      },
+      "excludes": {
+        "module": [
+          "example-resolution-telemetry"
+        ],
+        "feature": [
+          "example-resolution-routing:statistics"
+        ]
       }
     }
   }
@@ -4837,40 +4881,38 @@ examples",
 =============== NOTE: '\' line wrapping per RFC 8792 ================
 
 {
-  "ietf-yang-instance-data:instance-data-set": {
-    "content-data": {
-      "ietf-yang-package-instance:package": {
-        "name": "example-ab",
-        "version": "0.1.0",
-        "timestamp": "2026-03-20T17:52:47.188303Z",
-        "description": "Example package defining modules A, B and \
+  "ietf-ypkg:yang-package": {
+    "pkg-defn": {
+      "name": "example-ab",
+      "version": "0.1.0",
+      "timestamp": "2026-03-20T17:52:47.188303Z",
+      "description": "Example package defining modules A, B and \
 associated types",
-        "includes": {
-          "module": [
-            {
-              "name": "example-module-a",
-              "version": "1.0.0"
-            },
-            {
-              "name": "example-module-b",
-              "version": "1.1.0"
-            }
-          ],
-          "import-only-module": [
-            {
-              "name": "example-module-a-types",
-              "version": "1.0.0"
-            },
-            {
-              "name": "example-module-b-types",
-              "version": "1.1.0"
-            }
-          ],
-          "feature": [
-            "example-module-a:foo",
-            "example-module-b:bar"
-          ]
-        }
+      "includes": {
+        "module": [
+          {
+            "name": "example-module-a",
+            "version": "1.0.0"
+          },
+          {
+            "name": "example-module-b",
+            "version": "1.1.0"
+          }
+        ],
+        "import-only-module": [
+          {
+            "name": "example-module-a-types",
+            "version": "1.0.0"
+          },
+          {
+            "name": "example-module-b-types",
+            "version": "1.1.0"
+          }
+        ],
+        "feature": [
+          "example-module-a:foo",
+          "example-module-b:bar"
+        ]
       }
     }
   }
@@ -4886,45 +4928,43 @@ associated types",
 =============== NOTE: '\' line wrapping per RFC 8792 ================
 
 {
-  "ietf-yang-instance-data:instance-data-set": {
-    "content-data": {
-      "ietf-yang-package-instance:package": {
-        "name": "example-c",
-        "version": "0.1.0",
-        "timestamp": "2026-03-20T17:52:47.202747Z",
-        "description": "Example package importing A, removing B and \
+  "ietf-ypkg:yang-package": {
+    "pkg-defn": {
+      "name": "example-c",
+      "version": "0.1.0",
+      "timestamp": "2026-03-20T17:52:47.202747Z",
+      "description": "Example package importing A, removing B and \
 adding C",
-        "includes": {
-          "package": [
-            {
-              "name": "example-ab",
-              "version": "0.1.0",
-              "location": [
-                "https://example.org/yang/packages/\
+      "includes": {
+        "package": [
+          {
+            "name": "example-ab",
+            "version": "0.1.0",
+            "location": [
+              "https://example.org/yang/packages/\
 example-ab@0.1.0.ypkg"
-              ]
-            }
-          ],
-          "module": [
-            {
-              "name": "example-module-c",
-              "version": "2.0.0"
-            }
-          ]
-        },
-        "excludes": {
-          "module": [
-            "example-module-b"
-          ],
-          "import-only-module": [
-            {
-              "name": "example-module-b-types"
-            }
-          ],
-          "feature": [
-            "example-module-b:bar"
-          ]
-        }
+            ]
+          }
+        ],
+        "module": [
+          {
+            "name": "example-module-c",
+            "version": "2.0.0"
+          }
+        ]
+      },
+      "excludes": {
+        "module": [
+          "example-module-b"
+        ],
+        "import-only-module": [
+          {
+            "name": "example-module-b-types"
+          }
+        ],
+        "feature": [
+          "example-module-b:bar"
+        ]
       }
     }
   }
@@ -4937,7 +4977,7 @@ example-ab@0.1.0.ypkg"
         package have been resolved.</t>
         <figure>
           <artwork><![CDATA[
-<CODE BEGINS> file "example-c-library@0.1.0.ypkg"
+<CODE BEGINS> file "example-c-library@0.1.0.json"
 {
   "ietf-yang-instance-data:instance-data-set": {
     "name": "Package example-c@0.1.0 schema",

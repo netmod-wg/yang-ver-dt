@@ -54,17 +54,16 @@ trait ExamplePkgDefn extends PkgDefn:
 //         "ietf-netconf-acm@2018-02-14")
 // }
 
-object YangInstDataSchemaPkg_0_2_0 extends IetfPkgDefn:
-  def name = "yang-inst-data-schema"
-  def version = "0.2.0"
+object IetfYpkgSchemaPkg_0_1_0 extends IetfPkgDefn:
+  def name = "ietf-ypkg-schema"
+  def version = "0.1.0"
   override def timestamp = "2026-03-20T17:52:47.188253Z"
   def description =
-    descriptionText("""|Package schema to use for defining the yang-inst-data-schema
-       |schema for YANG packages.""")
+    "Reference schema for YANG package files."
 
   def reference = ""
 
-  def modules = Seq("ietf-yang-package-instance@0.10.0")
+  def modules = Seq("ietf-ypkg@0.10.0")
   def importOnlyModules =
     Seq("ietf-yang-package-types@0.10.0",
         "ietf-yang-revisions@2025-09-16",
@@ -141,7 +140,7 @@ object ExampleBaseTypesPkg_1_1_0 extends ExamplePkgDefn {
 object ExampleDiagnosticsSchemaPkg extends ExamplePkgDefn {
   def name = "example-diagnostics-schema"
   def version = "1.0.0"
-  override def timestamp = "2018-01-25T17:00:38Z"
+  override def timestamp = "2026-10-07T10:23:14Z"
   def description =
     "Example schema package for NETCONF monitoring instance data."
   def reference = "RFC 6022"
@@ -824,14 +823,14 @@ object DraftXml extends mill.Module:
 
   private val modules = Seq(
     YangModule("ietf-yang-package-types", "ietf-yang-package-types.yang"),
-    YangModule("ietf-yang-package-instance", "ietf-yang-package-instance.yang"),
+    YangModule("ietf-ypkg", "ietf-ypkg.yang"),
     YangModule("ietf-yang-packages", "ietf-yang-packages.yang"),
     YangModule("ietf-yl-packages", "ietf-yl-packages.yang"),
     YangModule("ietf-yang-inst-data-pkg", "ietf-yang-inst-data-pkg.yang"),
   )
 
   private val examplePackages: Seq[PkgDefn] = Seq(
-    YangInstDataSchemaPkg_0_2_0,
+    IetfYpkgSchemaPkg_0_1_0,
     ExampleBaseTypesPkg_1_0_0,
     ExampleBaseTypesPkg_1_1_0,
     ExampleDiagnosticsSchemaPkg,
@@ -947,15 +946,18 @@ object DraftXml extends mill.Module:
 
   private def xmlTreeFigure(module: YangModule, tree: String) =
     module.name match
-      case "ietf-yang-package-instance" =>
-        """module: ietf-yang-package-instance
+      case "ietf-ypkg" =>
+        """module: ietf-ypkg
           |
-          |  structure package:
-          |    // Uses the yang-pkg-instance grouping defined in
-          |    // ietf-yang-package-types.yang
-          |    +-- name                  pkg-name
-          |    +-- version               pkg-version
-          |    ... remainder of yang-pkg-instance grouping ...""".stripMargin
+          |  structure yang-package:
+          |    +-- schema?           pkg-types:pkg-reference
+          |    +-- schema-location*  inet:uri
+          |    +-- pkg-defn
+          |       // Uses the yang-pkg-instance grouping defined in
+          |       // ietf-yang-package-types.yang
+          |       +-- name        pkg-name
+          |       +-- version     pkg-version
+          |       ... remainder of yang-pkg-instance grouping ...""".stripMargin
       case "ietf-yang-packages" =>
         """module: ietf-yang-packages
           |  +--ro packages
@@ -981,7 +983,7 @@ object DraftXml extends mill.Module:
   private def treeOptions(module: YangModule) =
     module.name match
       case "ietf-yang-package-types" => Seq("--tree-print-groupings")
-      case "ietf-yang-package-instance" | "ietf-yang-inst-data-pkg" =>
+      case "ietf-ypkg" | "ietf-yang-inst-data-pkg" =>
         Seq("--tree-print-structures")
       case _ => Seq.empty
 
@@ -1113,12 +1115,19 @@ object DraftXml extends mill.Module:
           s"file://${ref.path}",
         ).foldLeft(updated)((acc, local) => acc.replace(local, packageExampleLocation(pkg)))
 
+  private def packageFileJson(text: String) =
+    val legacy = ujson.read(text)
+    val pkg = legacy("ietf-yang-instance-data:instance-data-set")(
+      "content-data"
+    )("ietf-yang-package-instance:package")
+    ujson.write(ujson.Obj(
+      "ietf-ypkg:yang-package" -> ujson.Obj("pkg-defn" -> pkg)
+    ), indent = 2) + "\n"
+
   private def addHotfixDependsOn(text: String) =
     val json = ujson.read(text)
     val pkg =
-      json("ietf-yang-instance-data:instance-data-set")("content-data")(
-        "ietf-yang-package-instance:package"
-      ).obj
+      json("ietf-ypkg:yang-package")("pkg-defn").obj
     if pkg("name").str == VendorIsisHotfixPkg.name then
       pkg("depends-on") = ujson.Obj(
         "package" -> ujson.Arr(
@@ -1137,7 +1146,7 @@ object DraftXml extends mill.Module:
     examplePackages.zip(packageRefs).map: (pkg, ref) =>
       val path = outDir / packageFileName(pkg)
       val sanitized = sanitizePackageLocations(os.read(ref.path), packageRefs)
-      os.write.over(path, addHotfixDependsOn(sanitized))
+      os.write.over(path, addHotfixDependsOn(packageFileJson(sanitized)))
       println(s"Package written to $path")
       PackageArtifact(pkg, path)
 
@@ -1153,10 +1162,7 @@ object DraftXml extends mill.Module:
   private def packageBlockLabels(pkg: PkgDefn) =
     val generated = packageFileName(pkg)
     val unversioned = s"${pkg.name}.ypkg"
-    val previousLabels =
-      if pkg.name == "yang-inst-data-schema" then Seq("yang-inst-data-schema@0.1.0.ypkg")
-      else Seq()
-    (Seq(generated, unversioned) ++ previousLabels).distinct
+    Seq(generated, unversioned).distinct
 
   private def replacePackageCodeBlock(xml: String, artifact: PackageArtifact) =
     val labels = packageBlockLabels(artifact.pkg).map(Pattern.quote).mkString("|")
@@ -1208,7 +1214,7 @@ object DraftXml extends mill.Module:
             source + s"\n<CODE ENDS>\n${mtch.group(2)}]]></artwork>"
         )
     val packageBlocks = Seq(
-      "yang-inst-data-schema",
+      "ietf-ypkg-schema",
       "example-base-types",
       "example-diagnostics-schema",
       "example-routing-types",
