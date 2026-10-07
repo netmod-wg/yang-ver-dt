@@ -2,7 +2,7 @@
 //| mill-jvm-version: temurin:21.0.1
 //| mvnDeps:
 //| - uk.org.wilton::yang-pkg-lib:0.0.13
-//| - uk.org.wilton::yang-pkg-mill-plugin::0.0.13
+//| - uk.org.wilton::yang-pkg-mill-plugin::0.1.0
 package build
 
 import mill._
@@ -1115,15 +1115,6 @@ object DraftXml extends mill.Module:
           s"file://${ref.path}",
         ).foldLeft(updated)((acc, local) => acc.replace(local, packageExampleLocation(pkg)))
 
-  private def packageFileJson(text: String) =
-    val legacy = ujson.read(text)
-    val pkg = legacy("ietf-yang-instance-data:instance-data-set")(
-      "content-data"
-    )("ietf-yang-package-instance:package")
-    ujson.write(ujson.Obj(
-      "ietf-ypkg:yang-package" -> ujson.Obj("pkg-defn" -> pkg)
-    ), indent = 2) + "\n"
-
   private def addHotfixDependsOn(text: String) =
     val json = ujson.read(text)
     val pkg =
@@ -1146,7 +1137,8 @@ object DraftXml extends mill.Module:
     examplePackages.zip(packageRefs).map: (pkg, ref) =>
       val path = outDir / packageFileName(pkg)
       val sanitized = sanitizePackageLocations(os.read(ref.path), packageRefs)
-      os.write.over(path, addHotfixDependsOn(packageFileJson(sanitized)))
+      val packageJson = addHotfixDependsOn(sanitized)
+      os.write.over(path, if packageJson.endsWith("\n") then packageJson else packageJson + "\n")
       println(s"Package written to $path")
       PackageArtifact(pkg, path)
 
