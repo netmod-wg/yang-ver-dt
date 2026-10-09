@@ -1155,132 +1155,80 @@ ietf-inet-types@2025-12-22.yang"
 
         <section anchor="change_scope"
                  title="Updating a package with a new version">
-          <t>Package compatibility is fundamentally defined by how the
-          package schema between two package versions has changed.</t>
+          <t>Package compatibility is determined by comparing the resolved
+          package schemas of the prior and updated package versions.  The
+          comparison MUST use the YANG schema tree comparison algorithm
+          defined in <xref target="I-D.ietf-netmod-yang-schema-comparison"/>,
+          applied to the compiled schema tree (i.e., the fully resolved schema
+          representation, with deviations applied, and all YANG features
+          available).
+          The comparison also covers all schemas mounted by the package, at
+          their respective mount points.  The comparison ignores feature
+          enablement specified in the package, since a feature that is not
+          required (i.e., included) by a package may still be enabled by an
+          implementation,
+          so its absence from this set does not remove the associated schema
+          nodes.</t>
+
+          <t>Changes to the resolved set of mandatory enabled features,
+          including those at mount points, MUST be assessed separately.
+          Adding a feature to this set is a BC
+          change; removing a feature from this set is an NBC change.</t>
+
+          <t>Changes to the resolved set of parent-references at each mount
+          point MUST also be assessed separately.  Adding a parent-reference
+          is a BC change; changing or removing a parent-reference is an NBC
+          change.</t>
 
           <t>When a package definition is updated, the version associated with
-          the package MUST be updated appropriately, taking into consideration
-          the scope of the changes as defined by the rules below.  See section
-          4.5 of <xref target="I-D.ietf-netmod-yang-semver"/> for guidance on
-          choosing the next version number based on the type of change being
-          made.</t>
+          the package MUST be updated according to the YANG semantic version
+          update rules in Section 4.5 of
+          <xref target="I-D.ietf-netmod-yang-semver"/>, using the scope of
+          changes determined by the schema comparison and the separate
+          assessment of mandatory enabled features and parent-references,
+          as described below.</t>
 
-          <t>It is important to note that a non-backwards-compatible (NBC)
-          change to a package definition (generally requiring a major version
-          number increment) may not always result in an NBC change to the
-          resolved package schema. For example, if a package replaces a module version
-          1.0.0 with version 3.0.0, but the content of version 3.0.0 has been
-          reverted to be functionally identical to version 1.0.0 (effectively
-          backing out previous changes between the two), the schema difference
-          between the package versions may be functionally compatible.
-          Nevertheless, such changes must still follow the versioning rules
-          defined above based on the package definition changes, not the
-          effective change to the resolved package schema.</t>
+          <t>Note, an NBC change to a YANG module does not necessarily result in an
+          NBC change to a package that uses that module.  For example, renaming
+          a grouping and updating all uses of that grouping in the package
+          schema can leave the compiled schema tree unchanged.  Such a change
+          does not require an NBC package version update, even though the
+          module change is NBC for other modules that reference the old
+          grouping name.</t>
+
+          <t>A package publisher MAY choose a more significant version update
+          than these assessments require, as permitted by
+          <xref target="I-D.ietf-netmod-yang-semver"/>.  For example, a publisher
+          may choose a major version update to highlight changes to groupings
+          intended for reuse by modules outside the package, even if the
+          compiled schema tree is unchanged.  The publisher SHOULD explain the
+          reason for such an update in the 'version-description' leaf.</t>
 
           <section anchor="nbc_package_change"
                    title="Non-Backwards-compatible changes">
-            <t>Non-backwards-compatible changes to a package are those that may
-            cause the resolved package schema to change in a way that can
-            negatively impact clients.  E.g., the removal or change of a data
-            node that was present in the previous package version, which may be
-            used by client applications.</t>
-            <t>The following changes classify as non-backwards-compatible
-            changes to a package definition: <list style="symbols">
-                <t>Changing an 'includes/package' list entry to select a
-                package version that is non-backwards-compatible to the prior
-                package version, or removing a previously included
-                package.</t>
-
-                <t>Changing an 'includes/module' or
-                'includes/import-only-module' list entry to select a module
-                version that is non-backwards-compatible to the prior module
-                version, or removing a previously implemented module.</t>
-
-                <t>Adding an entry to the 'excludes/module' leaf-list or the
-                'excludes/import-only-module' list, which in either case causes
-                a module to be removed from an included package and could affect
-                the conformance reporting of whether the included package is
-                deemed as being implemented.</t>
-
-                <t>Removing a feature from the 'includes/feature' leaf-list unless
-                the feature was not enabled by any included packages.</t>
-
-                <t>Adding a feature to the 'excludes/feature' leaf-list unless the
-                feature was not enabled by any included package.</t>
-
-                <t>Adding, changing, or removing a module containing one 
-                or more deviations, that when applied to the target module 
-                would create a change that is considered a 
-                non-backwards-compatible change to the affected data node 
-                in the schema associated with the prior package version.</t>
-
-                <t>Removing a package from a mount point, or changing a mounted
-                package to a version that is non-backwards-compatible to the
-                prior package version.</t>
-              </list></t>
+            <t>A package update is non-backwards-compatible if the comparison
+            reports any NBC change to the resolved package schema, including
+            any mounted schema, or if any mandatory enabled feature is
+            removed from the resolved set, or if any parent-reference is
+            changed or removed.</t>
           </section>
 
           <section anchor="bc_package_change"
                    title="Backwards-compatible changes">
-            <t>Backwards-compatible changes to a package are those that may
-            cause the resolved package schema to change in a way that should not
-            impact clients.  E.g., the addition of a new data node that was not
-            present in the previous package version.</t>
-            <t>The following changes classify as backwards-compatible changes
-            to a package definition: <list style="symbols">
-                <t>Changing an 'includes/package' list entry to select a
-                package version that is backwards-compatible to the prior
-                package version, or including a new package that does not
-                conflict with any existing included package or module.</t>
-
-                <t>Changing an 'includes/module' or
-                'includes/import-only-module' list entry to select a module
-                version that is backwards-compatible to the prior module
-                version, or including a new module to the package
-                definition.</t>
-
-                <t>Removing an entry from the 'excludes/module' leaf-list or the
-                'excludes/import-only-module' list.</t>
-
-                <t>Adding a feature to the 'includes/feature' leaf-list.</t>
-
-                <t>Removing a feature from the 'excludes/feature' leaf-list.</t>
-
-                <t>Adding, changing, or removing a module containing one 
-                or more deviations, that when applied to the target module 
-                would create a change that is considered a 
-                backwards-compatible change to the affected data node 
-                in the schema associated with the prior package version.</t>
-              </list></t>
+            <t>A package update is backwards-compatible if the comparison
+            reports at least one BC change or a mandatory enabled feature or
+            parent-reference is added to the resolved set.  This includes
+            changes to mounted schemas.</t>
           </section>
 
           <section anchor="editorial_package_change" title="Editorial changes">
-            <t>Editorial changes to a package are those that do not change the
-            resolved package schema.</t>
-            <t>The following changes classify as editorial changes to a package
-            definition: <list style="symbols">
-                <t>Changing an 'includes/package' list entry to select a
-                package version that is classified as an editorial change
-                relative to the prior package version.</t>
-
-                <t>Changing an 'includes/module' or
-                'includes/import-only-module' list entry to select a module
-                version that is classified as an editorial change relative to
-                the prior module version.</t>
-
-                <t>Adding an 'includes/package', 'includes/module',
-                'includes/import-only-module', or 'mount/package' list entry if
-                the referenced package or module version is already present
-                from an included package.</t>
-
-                <t>Updating location information in an 'includes/package',
-                'includes/module', 'includes/import-only-module', or
-                'mount/package' list entry without changing the referenced
-                package or module version.</t>
-
-                <t>Any change to any meta-data associated with a package
-                definition.</t>
-              </list></t>
+            <t>A package update is editorial if the comparison reports only
+            editorial changes or no changes to the resolved package schema,
+            including any mounted schema, and the resolved set of mandatory
+            enabled features and parent-references is unchanged.  Changes to
+            package metadata or
+            location information that do not affect that schema are also
+            editorial.</t>
           </section>
         </section>
 
@@ -1544,7 +1492,8 @@ ietf-inet-types@2025-12-22.yang"
           </list></t>
       </section>
 
-      <section title="Using package comparison tools">
+      <section anchor="package-comparison-tools"
+               title="Using package comparison tools">
         <t>Clients fetch the package information from the server (if required),
         and then can use tools to generate the resolved package schema.  The
         resolved package schema may list multiple versions of the same package
@@ -1557,12 +1506,14 @@ ietf-inet-types@2025-12-22.yang"
         <t>YANG package schema comparison tools (and also documentation) can be
         used to determine how closely a device implements particular
         YANG package definitions advertised by the device.  The tooling, by
-        resolving the package definition, then comparing the set of module
-        versions, features, deviations and mounts, can determine if the package
-        schema is implemented exactly, or if the package schema is
-        backwards-compatible, or non-backwards-compatible.  Tooling can
-        determine if modules have been removed, mounts have been changed, or
-        deviations have been applied.</t>
+        resolving the package definition and comparing the resulting compiled
+        schema trees using
+        <xref target="I-D.ietf-netmod-yang-schema-comparison"/>, can determine
+        the compatibility of the implemented schema with the package schema.
+        Comparisons between package versions are described in
+        <xref target="versioning"/>.
+        Tools can also report differences in the module versions, features,
+        deviations and mounts to help explain the comparison results.</t>
     </section>
     </section>
 
@@ -3260,10 +3211,10 @@ ietf-yang-structure-ext@2020-06-17.yang"
       Lengyel, Ladislav Lhotka, and Jan Lindblad.</t>
       <t>Bo Wu acted as a temporary editor for earlier versions of this
       work.</t>
-      <t>LLMs, mainly Codex, have been used to review and hopefully improve this
-      document and have been directed help generate some content, in particular
-      the examples.  The final content remains the responsibility of the
-      authors.</t>
+      <t>This document has been reviewed by large language models (LLMs),
+      including Anthropic Claude and ChatGPT Codex.  Markup and prose have
+      been produced using ChatGPT Codex and reviewed by the authors.  The
+      final content remains the responsibility of the authors.</t>
     </section>
   </middle>
 
@@ -3290,6 +3241,7 @@ ietf-yang-structure-ext@2020-06-17.yang"
       <xi:include href="https://bib.ietf.org/public/rfc/bibxml3/reference.I-D.ietf-netmod-yang-module-versioning.xml"/>
       <xi:include href="https://bib.ietf.org/public/rfc/bibxml3/reference.I-D.ietf-netmod-yang-ver-selection.xml"/>
       <xi:include href="https://bib.ietf.org/public/rfc/bibxml3/reference.I-D.ietf-netmod-yang-semver.xml"/>
+      <xi:include href="https://bib.ietf.org/public/rfc/bibxml3/reference.I-D.ietf-netmod-yang-schema-comparison.xml"/>
       <xi:include href="https://bib.ietf.org/public/rfc/bibxml3/reference.I-D.ietf-netmod-yang-module-filename.xml"/>
       <xi:include href="https://bib.ietf.org/public/rfc/bibxml3/reference.I-D.jgc-netmod-yang-path.xml"/>
       <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.9907.xml"/>
@@ -4125,8 +4077,10 @@ ietf-ethertypes@2018-11-06.yang"
 
       <t>The examples illustrate the history of a single package,
       "example-versioned-routing".  Each example highlights whether the
-      package definition changes are backwards-compatible (BC),
-      non-backwards-compatible (NBC), or editorial.</t>
+      resolved package schema changes are backwards-compatible (BC),
+      non-backwards-compatible (NBC), or editorial, based on the compiled
+      schema tree comparison and separate assessment of mandatory enabled
+      features in <xref target="change_scope"/>.</t>
 
       <t>The following diagram summarizes the version lineage illustrated
       by the examples.  The lineage is linear because these examples focus on
@@ -4196,8 +4150,11 @@ ietf-ethertypes@2018-11-06.yang"
       <section anchor="versioning-example-bc"
                title="Backwards-compatible Update">
         <t>In version 1.1.0, a new included package, a new module, and new
-        mandatory features are added.  These are all backwards-compatible
-        changes, so the minor version is incremented.</t>
+        mandatory features are added.  In this example, the compiled schema
+        tree comparison reports only BC additions to the resolved package
+        schema.  The additions to the resolved set of mandatory enabled
+        features are assessed separately and are also BC changes, so the
+        minor version is incremented.</t>
 
         <figure>
           <artwork><![CDATA[
@@ -4257,8 +4214,11 @@ features.",
                title="Package Downref and Module Removal">
         <t>In version 2.0.0, the "example-network-device" package reference is
         changed to an older package version, and the previously included
-        "example-routing-acl" module is removed.  Both changes are NBC, so the
-        major version is incremented.</t>
+        "example-routing-acl" module is removed.  In this example, the
+        compiled schema tree comparison reports the removal of data nodes,
+        making the package update NBC, so the major version is incremented.
+        Selecting an older included package version does not by itself
+        determine the compatibility of the package update.</t>
 
         <figure>
           <artwork><![CDATA[
@@ -4372,10 +4332,13 @@ ACL module.",
                title="Mixed Backwards-compatible and NBC Changes">
         <t>In version 4.0.0, the mandatory "example-routing-core:ipv4"
         feature is removed and the "example-routing-core" module is changed
-        to an older version.  Both of these are NBC changes.  A new
-        "example-isis" module is also added,
-        which would otherwise be a BC change, but the overall package update is
-        still NBC, so the major version is incremented.</t>
+        to an older version.  A new "example-isis" module is also added.
+        Removing the mandatory feature is assessed separately as an NBC
+        change; it does not remove the feature's conditional nodes from the
+        schema comparison.  In this example, the compiled schema tree
+        comparison also reports NBC removals of data nodes from the module
+        version change, as well as BC additions.  The overall package update
+        is therefore NBC, so the major version is incremented.</t>
 
         <figure>
           <artwork><![CDATA[
