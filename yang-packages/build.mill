@@ -1,7 +1,7 @@
 //| mill-version: 1.1.2
 //| mill-jvm-version: temurin:21.0.1
 //| mvnDeps:
-//| - uk.org.wilton::yang-pkg-lib:0.0.13
+//| - uk.org.wilton::yang-pkg-lib:0.1.0
 //| - uk.org.wilton::yang-pkg-mill-plugin::0.1.0
 package build
 
@@ -36,6 +36,8 @@ private def descriptionText(text: String) =
 trait ExamplePkgDefn extends PkgDefn:
   def contact = ""
   def organization = ""
+  override def moduleFileLocationResolver: os.Path => String =
+    path => s"https://example.org/yang/modules/${path.last}"
 
 /**
   * Any core common types that are commonly used across all IETF packages.
@@ -177,13 +179,18 @@ object ExampleAbPackage extends ExamplePkgDefn {
     "Example package defining modules A, B and associated types"
   def reference = ""
 
+  def implementedSources = Task.Sources(
+    mill.api.BuildCtx.workspaceRoot / "example-modules/example-module-a.yang",
+    mill.api.BuildCtx.workspaceRoot / "example-modules/example-module-b.yang"
+  )
+  def importedSources = Task.Sources(
+    mill.api.BuildCtx.workspaceRoot / "example-modules/example-module-a-types.yang",
+    mill.api.BuildCtx.workspaceRoot / "example-modules/example-module-b-types.yang"
+  )
+  override def moduleFiles = Task { implementedSources().map(_.path) }
+  override def importOnlyModuleFiles = Task { importedSources().map(_.path) }
+
   def includedPackages = Seq()
-  def modules = 
-    Seq("example-module-a@1.0.0",
-        "example-module-b@1.1.0")
-  def importOnlyModules =
-    Seq("example-module-a-types@1.0.0",
-        "example-module-b-types@1.1.0")
   def mandatoryFeatures =
     Seq("example-module-a:foo",
         "example-module-b:bar")
@@ -198,9 +205,10 @@ object ExampleCPackage extends ExamplePkgDefn {
     "Example package importing A, removing B and adding C"
   def reference = ""
 
+  def implementedSources = Task.Sources(mill.api.BuildCtx.workspaceRoot / "example-modules/example-module-c.yang")
+  override def moduleFiles = Task { implementedSources().map(_.path) }
+
   def includedPackages = Seq(ExampleAbPackage)
-  def modules = 
-    Seq("example-module-c@2.0.0")
   def excludedModules = 
     Seq("example-module-b")
   def excludedImportOnlyModules = 
@@ -1183,6 +1191,115 @@ object DraftXml extends mill.Module:
       m => s"${m.group(1)}\n\n$body${m.group(3)}"
     )
 
+  private val fullLibraryExamples = Seq(
+    ("device-routing-library.json", Seq("device-routing"), "device-module-set", "device-routing datastore schema"),
+    ("device-routing-hotfix-library.json", Seq("device-routing", "vendor-isis-hotfix"), "device-module-set", "device-routing datastore schema"),
+    ("example-c-library@0.1.0.json", Seq("example-c"), "Package example-c@0.1.0", "Package example-c@0.1.0")
+  )
+
+  def deviceExampleSources = Task.Sources(
+    mill.api.BuildCtx.workspaceRoot / "example-modules/device/device-isis-extensions@2026-06-21.yang",
+    mill.api.BuildCtx.workspaceRoot / "example-modules/device/device-isis-extensions@2026-06-22.yang",
+    mill.api.BuildCtx.workspaceRoot / "example-modules/device/vendor-ietf-bgp-deviations.yang"
+  )
+
+  def fullExampleMetadata = Task:
+    val sources = ExampleAbPackage.implementedSources() ++ ExampleAbPackage.importedSources() ++
+      ExampleCPackage.implementedSources() ++ deviceExampleSources()
+    Helper.extractYangLibraryMetadata(sources.map(_.path))
+
+  private def writeFullLibraryExamples(
+      artifacts: Seq[PackageArtifact], sourceMetadata: Map[String, library.ModuleMetadata]
+  ) =
+    val definitions = artifacts.map(a => Helper.readPkgFile(a.path))
+      .map(p => (p.name, p.version) -> p).toMap
+    val repository = new PackageRepository:
+      def load(ref: YangPackageRef) = definitions.get((ref.name, ref.version))
+        .toRight(PackageLoadError(ref, s"Missing example package ${ref.name}@${ref.version}"))
+    val metadata = definitions.values.flatMap(p => p.includes.modules.map(m => (m.name, m.version)) ++
+      p.includes.importOnlyModules.map(m => (m.name, m.version))).flatMap: (name, version) =>
+        val fromSource = sourceMetadata.get(s"$name@$version").orElse(sourceMetadata.get(name))
+        // The IETF/IANA modules in these examples use their registered YANG namespace
+        // and revision-date versions. Fictional semver modules use the source fixtures.
+        val meta = fromSource.orElse:
+          if version.isRevisionDate && (name.startsWith("ietf-") || name.startsWith("iana-")) then
+            Some(library.ModuleMetadata(s"urn:ietf:params:xml:ns:yang:$name", Some(version.toString)))
+          else None
+        meta.map(m => s"$name@$version" -> m)
+    .toMap
+    val outDir = dir / "generated" / "yang-library"
+    os.makeDir.all(outDir)
+    fullLibraryExamples.map: (filename, names, setName, schemaName) =>
+      val refs = names.map(n => YangPackageRef(PkgName(n),
+        PkgVersion(if n == "example-c" then "0.1.0" else "1.0.0")))
+      // Resolve multiple advertised roots using the shared resolver's normal include rules.
+      // The synthetic root is not advertised or added to the package catalogue.
+      val definition = if refs.size == 1 then definitions((refs.head.name, refs.head.version))
+        else YangPackage(PkgName("combined-device-example"), PkgVersion("1.0.0"), includes = Includes(packages = refs))
+      val resolved = definition.resolve(repository) match
+        case ResolutionResult.Success(value, _) => value
+        case ResolutionResult.Failure(errors, _) => sys.error(errors.mkString("; "))
+      val plain = resolved.toYangLibrary(metadata)
+      val bound = plain.copy(
+        moduleSets = Seq(plain.moduleSets.head.copy(name = setName)),
+        schemas = Seq(plain.schemas.head.copy(name = schemaName, moduleSets = Seq(setName), packages = refs)),
+        datastores = Seq(library.Datastore("ietf-datastores:running", schemaName)), contentId = "")
+      val hash = Helper.yangLibraryContentIdentifier(
+        library.YangLibraryJson.renderLibrary(bound, indent = -1))
+      val lib = bound.copy(contentId = hash)
+      val visited = scala.collection.mutable.Set.empty[(PkgName, PkgVersion)]
+      def visit(ref: YangPackageRef): Unit =
+        if visited.add((ref.name, ref.version)) then definitions((ref.name, ref.version)).includes.packages.foreach(visit)
+      refs.foreach(visit)
+      val catalog = visited.toSeq.sortBy((n, v) => (n.toString, v.toString)).map: (n, v) =>
+        ujson.read(Helper.renderPkgFile(definitions((n, v))))("ietf-ypkg:yang-package")("pkg-defn")
+      val content = ujson.Obj(
+        "ietf-yang-library:yang-library" -> ujson.read(library.YangLibraryJson.renderLibrary(lib)),
+        "ietf-yang-packages:packages" -> ujson.Obj("package" -> ujson.Arr.from(catalog)))
+      val path = outDir / filename
+      os.write.over(path, ujson.write(content, indent = 2) + "\n")
+      // These files are filtered operational read responses, containing the RFC 8525
+      // library and package trees. They intentionally omit deprecated /modules-state.
+      run(Seq("yanglint", "-t", "get") ++ depDirs.flatMap(p => Seq("-p", p.toString)) ++ Seq(
+        (dir / os.up / "common-dependencies" / "ietf-datastores.yang").toString,
+        (dir / os.up / "common-dependencies" / "ietf-yang-library.yang").toString,
+        (dir / "ietf-yang-packages.yang").toString, (dir / "ietf-yl-packages.yang").toString,
+        (dir / os.up / "yang-semver" / "ietf-yang-library-semver.yang").toString, path.toString))
+      println(s"Generated and schema-validated full example $path")
+      path
+
+  private def updateFullExampleLinks(xml: String) =
+    val ref = sys.env.getOrElse("YANG_EXAMPLE_GITHUB_REF", run(Seq("git", "branch", "--show-current")).trim)
+    require(ref.nonEmpty, "Set YANG_EXAMPLE_GITHUB_REF when building from a detached HEAD")
+    val encodedRef = java.net.URLEncoder.encode(ref, StandardCharsets.UTF_8).replace("+", "%20")
+    val base = s"https://github.com/netmod-wg/yang-ver-dt/blob/$encodedRef/yang-packages/generated/yang-library/"
+    fullLibraryExamples.foldLeft(xml):
+      case (text, (filename, _, _, _)) =>
+        val local = dir / "generated" / "yang-library" / filename
+        require(os.isFile(local), s"Missing complete example for GitHub link: $local")
+        val full = ujson.read(os.read(local))
+        val withContentId = oneReplace(text,
+          "<CODE BEGINS> file \"" + Pattern.quote(filename) + "\"\\n(.*?)\\n<CODE ENDS>",
+          m =>
+            val snippet = ujson.read(unfoldLongLines(m.group(1)))
+            snippet("ietf-yang-library:yang-library")("content-id") =
+              full("ietf-yang-library:yang-library")("content-id")
+            s"<CODE BEGINS> file \"$filename\"\n" +
+              foldLongLines(ujson.write(snippet, indent = 2), maxCol = 69).trim + "\n<CODE ENDS>"
+        )
+        val url = URI.create(base + filename).toASCIIString
+        require(url.startsWith("https://github.com/netmod-wg/yang-ver-dt/blob/"), s"Invalid example URL: $url")
+        val updated = oneReplace(withContentId,
+          "<eref target=\"[^\"]*\">Complete " + Pattern.quote(filename) + " example</eref>",
+          _ => s"<eref target=\"$url\">Complete $filename example</eref>")
+        val client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build()
+        val request = HttpRequest.newBuilder(URI.create(url)).timeout(Duration.ofSeconds(15))
+          .method("HEAD", HttpRequest.BodyPublishers.noBody()).build()
+        val status = client.send(request, HttpResponse.BodyHandlers.discarding()).statusCode()
+        if status == 404 then println(s"Example URL awaiting publication: $url (local target validated)")
+        else require(status == 200, s"Example URL returned HTTP $status: $url")
+        updated
+
   private def updateXmlFile(trees: Seq[PathRef], packages: Seq[PackageArtifact]) =
     val treeByModule = modules.zip(trees.map(t => os.read(t.path)))
     val xmlPath = dir / "draft-ietf-netmod-yang-packages.xml"
@@ -1225,7 +1342,7 @@ object DraftXml extends mill.Module:
     val updatedPackages = packages
       .filter(p => packageBlocks.contains(p.pkg.name))
       .foldLeft(updatedSources)(replacePackageCodeBlock)
-    os.write.over(xmlPath, updatedPackages)
+    os.write.over(xmlPath, updateFullExampleLinks(updatedPackages))
     xmlPath
 
   private def multipartFileBody(
@@ -1310,6 +1427,13 @@ object DraftXml extends mill.Module:
 
   def checkYang = Task:
     run(pyangBase ++ yangSourceFiles().map(_.path.toString))
+    val exampleSources = ExampleAbPackage.implementedSources() ++
+      ExampleAbPackage.importedSources() ++ ExampleCPackage.implementedSources()
+    run(pyangBase.filterNot(_ == "--ietf") ++
+      Seq("-p", (dir / "example-modules").toString) ++
+      exampleSources.map(_.path.toString))
+    deviceExampleSources().foreach: source =>
+      run(pyangBase.filterNot(_ == "--ietf") ++ Seq(source.path.toString))
 
   def generatedTreeFiles = Task:
     checkYang()
@@ -1331,12 +1455,14 @@ object DraftXml extends mill.Module:
 
   def buildExamples() = Task.Command:
     val packageRefs = Task.traverse(examplePackages)(_.makePackage)()
-    writeExamplePackages(packageRefs)
+    val packages = writeExamplePackages(packageRefs)
+    writeFullLibraryExamples(packages, fullExampleMetadata())
     ()
 
   def updateXml() = Task.Command:
     val packageRefs = Task.traverse(examplePackages)(_.makePackage)()
     val packages = writeExamplePackages(packageRefs)
+    writeFullLibraryExamples(packages, fullExampleMetadata())
     val trees = generatedTreeFiles()
     updateXmlFile(trees, packages)
 
@@ -1347,6 +1473,7 @@ object DraftXml extends mill.Module:
     checkYang()
     val packageRefs = Task.traverse(examplePackages)(_.makePackage)()
     val packages = writeExamplePackages(packageRefs)
+    writeFullLibraryExamples(packages, fullExampleMetadata())
     val trees = generatedTreeFiles()
     writeTreeFiles(trees)
     val xmlPath = updateXmlFile(trees, packages)
