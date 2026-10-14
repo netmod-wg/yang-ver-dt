@@ -1019,6 +1019,242 @@ module: ietf-ypkg
         </figure>
       </section>
 
+      <section anchor="off-device-schema" title="Off-Device Datastore Schema Advertisement">
+        <t><xref target="package_files"/> defines how YANG packages can be
+        published in off-device files. A device may support multiple datastores,
+        each with a different schema defined by a set of packages. The
+        "ietf-yang-device-schema" module binds these datastores, schemas, and
+        package references into a complete device schema, equivalent to that
+        which could be advertised by YANG library <xref target="RFC8525"/> in an
+        instance data set <xref target="RFC9195"/>. Packages are resolved as
+        described in <xref target="yang-lib-binding"/>, including any additional
+        enabled features.</t>
+        <t>The following requirements apply:
+          <list style="symbols">
+            <t>The "device-schema" read-only container MUST be carried in the
+            "content-data" of an instance data set conforming to
+            <xref target="RFC9195"/>.</t>
+            <t>Contact, organization, description, and document revision metadata
+            are carried in the enclosing instance data set metadata.</t>
+          </list>
+        </t>
+        <t>A reference to a YANG library instance data document MAY be provided
+        in "yang-library". If provided, its datastore bindings and schemas MUST
+        match those obtained by package resolution, including any additional
+        enabled features.</t>
+        <t>This container is primarily intended for off-device publication.
+        Servers are expected to use YANG library and its package extensions to
+        advertise their current schemas.</t>
+        <figure>
+          <preamble>The module has the following structure:</preamble>
+          <artwork><![CDATA[
+module: ietf-yang-device-schema
+  +--ro device-schema
+     +--ro device          string
+     +--ro release         string
+     +--ro yang-library?   inet:uri
+     +--ro schema* [name]
+     |  +--ro name       string
+     |  +--ro package* [name version]
+     |  |  +--ro name        pkg-name
+     |  |  +--ro version     pkg-version
+     |  |  +--ro location*   inet:uri
+     |  +--ro feature*   pkg-types:scoped-feature
+     +--ro datastore* [name]
+        +--ro name      ds:datastore-ref
+        +--ro schema    -> ../../schema/name
+          ]]></artwork>
+        </figure>
+        <section anchor="device-schema-content-schema" title="Device Schema Content Schema">
+          <t>The "ietf-device-schema" package defines a minimal, referentially
+          complete content schema for carrying "ietf-yang-device-schema" data in
+          a YANG instance data document. It implements "ietf-yang-device-schema"
+          and "ietf-datastores" and lists the remaining imports as import-only
+          modules.</t>
+          <t>A datastore schema instance data set can reference this package as
+          described in <xref target="yang_packages_as_schema"/>, or list the modules
+          directly using the simplified-inline method of <xref target="RFC9195"/>.</t>
+        <figure>
+          <preamble>The following package defines the content schema:</preamble>
+          <artwork><![CDATA[
+<CODE BEGINS> file "ietf-device-schema@0.1.0.ypkg"
+=============== NOTE: '\' line wrapping per RFC 8792 ================
+
+{
+  "ietf-ypkg:yang-package": {
+    "pkg-defn": {
+      "name": "ietf-device-schema",
+      "version": "0.1.0",
+      "timestamp": "2026-10-13T00:00:00Z",
+      "organization": "IETF",
+      "contact": "IESG",
+      "description": "This package defines the 'content-schema' \
+[RFC 9195] for off-device definitions of a device's datastore \
+schemas.",
+      "reference": "RFC XXXX: YANG Packages",
+      "includes": {
+        "module": [
+          {
+            "name": "ietf-yang-device-schema",
+            "version": "0.1.0",
+            "location": [
+              "https://www.iana.org/assignments/yang-parameters/\
+ietf-yang-device-schema@0.1.0.yang"
+            ]
+          },
+          {
+            "name": "ietf-datastores",
+            "version": "2018-01-11",
+            "location": [
+              "https://www.iana.org/assignments/yang-parameters/\
+ietf-datastores@2018-01-11.yang"
+            ]
+          }
+        ],
+        "import-only-module": [
+          {
+            "name": "ietf-yang-package-types",
+            "version": "0.10.0",
+            "location": [
+              "https://www.iana.org/assignments/yang-parameters/\
+ietf-yang-package-types@0.10.0.yang"
+            ]
+          },
+          {
+            "name": "ietf-yang-revisions",
+            "version": "2026-06-26",
+            "location": [
+              "https://www.iana.org/assignments/yang-parameters/\
+ietf-yang-revisions@2026-06-26.yang"
+            ]
+          },
+          {
+            "name": "ietf-yang-semver",
+            "version": "0.25.0",
+            "location": [
+              "https://www.iana.org/assignments/yang-parameters/\
+ietf-yang-semver@0.25.0.yang"
+            ]
+          },
+          {
+            "name": "ietf-yang-types",
+            "version": "2025-12-22",
+            "location": [
+              "https://www.iana.org/assignments/yang-parameters/\
+ietf-yang-types@2025-12-22.yang"
+            ]
+          },
+          {
+            "name": "ietf-inet-types",
+            "version": "2025-12-22",
+            "location": [
+              "https://www.iana.org/assignments/yang-parameters/\
+ietf-inet-types@2025-12-22.yang"
+            ]
+          }
+        ]
+      }
+    }
+  }
+}
+<CODE ENDS>
+          ]]></artwork>
+        </figure>
+        </section>
+        <section anchor="device-schema-example" title="Device Schema Example">
+        <figure>
+          <preamble>The following instance data set uses the package defined in
+          <xref target="device-schema-content-schema"/> to identify its content schema. The running and operational datastores
+          share a schema defined by a separate device-routing package file.</preamble>
+          <artwork><![CDATA[
+<CODE BEGINS> file "example-device-schema.json"
+=============== NOTE: '\' line wrapping per RFC 8792 ================
+
+{
+  "ietf-yang-instance-data:instance-data-set": {
+    "name": "example-device-schema",
+    "content-schema": {
+      "ietf-yang-inst-data-pkg:pkg-schema": {
+        "schema": "ietf-device-schema@0.1.0",
+        "location": [
+          "https://www.iana.org/assignments/yang-parameters/\
+ietf-device-schema@0.1.0.ypkg"
+        ]
+      }
+    },
+    "contact": "Example Networks support <support@example.org>",
+    "organization": "Example Networks",
+    "description": [
+      "Datastore schemas for ExampleOS 1.0.0."
+    ],
+    "revision": [
+      {
+        "date": "2026-10-12",
+        "description": "Initial advertisement."
+      }
+    ],
+    "content-data": {
+      "ietf-yang-device-schema:device-schema": {
+        "device": "Example Router / ExampleOS",
+        "release": "1.0.0",
+        "yang-library": "https://example.org/yang/\
+exampleos-library.json",
+        "schema": [
+          {
+            "name": "device-routing datastore schema",
+            "package": [
+              {
+                "name": "device-routing",
+                "version": "1.0.0",
+                "location": [
+                  "https://example.org/yang/packages/\
+device-routing@1.0.0.ypkg"
+                ]
+              }
+            ]
+          }
+        ],
+        "datastore": [
+          {
+            "name": "ietf-datastores:running",
+            "schema": "device-routing datastore schema"
+          },
+          {
+            "name": "ietf-datastores:operational",
+            "schema": "device-routing datastore schema"
+          }
+        ]
+      }
+    }
+  }
+}
+<CODE ENDS>
+          ]]></artwork>
+        </figure>
+        <figure>
+          <preamble>Alternatively, the "content-schema" member in
+          example-device-schema.json can be replaced by the following module
+          list, including all direct and transitive import dependencies. The
+          rest of the instance data set is unchanged.</preamble>
+          <artwork><![CDATA[
+{
+  "content-schema": {
+    "module": [
+      "ietf-yang-device-schema@2026-10-12",
+      "ietf-datastores@2018-01-11",
+      "ietf-inet-types@2025-12-22",
+      "ietf-yang-package-types@2026-07-06",
+      "ietf-yang-revisions@2026-06-26",
+      "ietf-yang-semver@2026-03-03",
+      "ietf-yang-types@2025-12-22"
+    ]
+  }
+}
+          ]]></artwork>
+        </figure>
+        </section>
+      </section>
+
       <section anchor="yang_packages_as_schema" title="YANG packages as schema for YANG instance data document">
         <t>YANG package definitions can be used to define the content schema for
         YANG instance data files, extending the content schema definition in
@@ -1531,13 +1767,16 @@ ietf-inet-types@2025-12-22.yang"
       follow the convention defined in
       <xref target="I-D.ietf-netmod-yang-module-filename"/>.</t>
 
-      <t>RFC Editor note: Before publication, check all YANG modules in this
-      section for "RFC XXXX" placeholders and replace each with the assigned
+      <t>RFC Editor note: Before publication, update the revision dates of all
+      YANG modules in this section to the RFC publication date. Check the modules
+      for "RFC XXXX" placeholders and replace each with the assigned
       RFC number. References titled "YANG Packages" and unqualified occurrences
       refer to this document. References titled "Updated YANG Module Revision
       Handling" or "YANG Semantic Versioning" refer to the corresponding
-      documents. Verify referenced section numbers and remove the RFC Editor
-      notes from the modules.</t>
+      documents. Verify referenced section numbers. When updating the modules
+      to version 1.0.0, remove each "ys:recommended-min-version" statement whose
+      imported module has only one published version. Remove this note before
+      publication.</t>
 
       <section title="ietf-yang-package-types">
         <t>The "ietf-yang-package-types" module imports "ietf-yang-revisions"
@@ -1616,10 +1855,6 @@ module ietf-yang-package-types {
      described in BCP 14 (RFC 2119) (RFC 8174) when, and only when,
      they appear in all capitals, as shown here.";
 
-  // RFC Ed.: update the date below with the date of RFC publication
-  // and remove this note.
-  // RFC Ed.: replace each RFC XXXX with the appropriate RFC
-  // number, verify referenced section numbers, and remove this note.
   revision 2026-07-06 {
     ys:version 0.10.0;
     description
@@ -2230,8 +2465,7 @@ module ietf-yang-package-types {
         module below and <xref target="package_files"/>. Update the URL
         prefix to the agreed IANA location if needed, and update the
         default reference schema identifier to "ietf-ypkg-schema@1.0.0".
-        Remove this note and the corresponding module comment before
-        publication.</t>
+        Remove this note before publication.</t>
 
         <figure>
           <artwork><![CDATA[
@@ -2300,10 +2534,6 @@ module ietf-ypkg {
 
      they appear in all capitals, as shown here.";
 
-  // RFC Ed.: update the date below with the date of RFC publication
-  // and remove this note.
-  // RFC Ed.: replace each RFC XXXX with the appropriate RFC
-  // number, verify referenced section numbers, and remove this note.
   revision 2026-07-06 {
     ys:version 0.10.0;
     description
@@ -2336,8 +2566,6 @@ module ietf-ypkg {
 
     leaf-list schema-location {
       type inet:uri;
-      // RFC Ed.: confirm the implicit download URL prefix below
-      // with IANA, update it if needed, and remove this comment.
       ordered-by user;
       description
         "URLs from which the schema package identified by 'schema',
@@ -2442,10 +2670,6 @@ module ietf-yang-packages {
      they appear in all capitals, as shown here.";
 
 
-  // RFC Ed.: update the date below with the date of RFC publication
-  // and remove this note.
-  // RFC Ed.: replace each RFC XXXX with the appropriate RFC
-  // number, verify referenced section numbers, and remove this note.
   revision 2026-07-06 {
     ys:version 0.10.0;
     description
@@ -2592,10 +2816,6 @@ module ietf-yl-packages {
      they appear in all capitals, as shown here.";
 
 
-  // RFC Ed.: update the date below with the date of RFC publication
-  // and remove this note.
-  // RFC Ed.: replace each RFC XXXX with the appropriate RFC
-  // number, verify referenced section numbers, and remove this note.
   revision 2026-07-06 {
     ys:version 0.10.0;
     description
@@ -2741,10 +2961,6 @@ module ietf-yang-inst-data-pkg {
      described in BCP 14 (RFC 2119) (RFC 8174) when, and only when,
      they appear in all capitals, as shown here.";
 
-  // RFC Ed.: update the date below with the date of RFC publication
-  // and remove this note.
-  // RFC Ed.: replace each RFC XXXX with the appropriate RFC
-  // number, verify referenced section numbers, and remove this note.
   revision 2026-07-06 {
     ys:version 0.10.0;
     description
@@ -2778,6 +2994,183 @@ module ietf-yang-inst-data-pkg {
         }
 
         uses pkg-types:yang-pkg-location;
+      }
+    }
+  }
+}
+<CODE ENDS>
+          ]]></artwork>
+        </figure>
+      </section>
+      <section title="ietf-yang-device-schema">
+        <t>The "ietf-yang-device-schema" module imports
+        "ietf-yang-semver" <xref target="I-D.ietf-netmod-yang-semver"/>,
+        "ietf-yang-package-types" defined in this document,
+        "ietf-datastores" <xref target="RFC8342"/>, and
+        "ietf-inet-types" <xref target="RFC9911"/>.</t>
+        <figure>
+          <artwork><![CDATA[
+<CODE BEGINS> file "ietf-yang-device-schema@0.1.0.yang"
+module ietf-yang-device-schema {
+  yang-version 1.1;
+  namespace "urn:ietf:params:xml:ns:yang:ietf-yang-device-schema";
+  prefix yds;
+
+  import ietf-yang-semver {
+    prefix ys;
+    reference "RFC XXXX: YANG Semantic Versioning";
+  }
+  import ietf-yang-package-types {
+    prefix pkg-types;
+    ys:recommended-min-version 0.10.0;
+    reference "RFC XXXX: YANG Packages";
+  }
+  import ietf-datastores {
+    prefix ds;
+    reference "RFC 8342: Network Management Datastore Architecture";
+  }
+  import ietf-inet-types {
+    prefix inet;
+    reference "RFC 9911: Common YANG Data Types";
+  }
+
+  organization
+    "IETF NETMOD (Network Modeling) Working Group";
+  contact
+    "WG Web:   <https://datatracker.ietf.org/wg/netmod/>
+     WG List:  <mailto:netmod@ietf.org>
+
+     Editor:   Robert Wilton
+               <mailto:rwilton@cisco.com>";
+
+  description
+    "This module defines an advertisement of datastore schemas for
+     a device or operating system release, using references to
+     separate YANG package files. This module is generally expected
+     to be used within an RFC 9195 YANG instance data set.
+     Contact, organization, description, and document revision
+     metadata are carried in that instance data set.
+
+     Copyright (c) 2026 IETF Trust and the persons identified as
+     authors of the code.  All rights reserved.
+
+     Redistribution and use in source and binary forms, with or
+     without modification, is permitted pursuant to, and subject to
+     the license terms contained in, the Revised BSD License set
+     forth in Section 4.c of the IETF Trust's Legal Provisions
+     Relating to IETF Documents
+     (https://trustee.ietf.org/license-info).
+
+     All revisions of IETF and IANA published modules can be found
+     at the YANG Parameters registry group
+     (https://www.iana.org/assignments/yang-parameters).
+
+     This version of this YANG module is part of RFC XXXX; see
+     the RFC itself for full legal notices.
+
+     The key words 'MUST', 'MUST NOT', 'REQUIRED', 'SHALL', 'SHALL
+     NOT', 'SHOULD', 'SHOULD NOT', 'RECOMMENDED', 'NOT RECOMMENDED',
+     'MAY', and 'OPTIONAL' in this document are to be interpreted as
+     described in BCP 14 (RFC 2119) (RFC 8174) when, and only when,
+     they appear in all capitals, as shown here.";
+
+  revision 2026-10-12 {
+    ys:version 0.1.0;
+    description
+      "Initial revision";
+    reference
+      "RFC XXXX: YANG Packages";
+  }
+
+  container device-schema {
+    config false;
+    description
+      "A description of the datastore schemas for one device or
+       operating system release.";
+
+    leaf device {
+      type string;
+      mandatory true;
+      description
+        "The device, device family, or operating system schema
+         that is being specified.";
+    }
+    leaf release {
+      type string;
+      mandatory true;
+      description
+        "The software release or version to which this
+         advertisement applies. This is an opaque string and need
+         not be a YANG Semantic Version.";
+    }
+    leaf yang-library {
+      type inet:uri;
+      description
+        "A URI for an RFC 9195 instance data document containing
+         equivalent RFC 8525 YANG library data for this device and
+         release. Its datastore bindings and resolved schemas MUST
+         match this advertisement.";
+    }
+
+    list schema {
+      key "name";
+      min-elements 1;
+      description
+        "A referentially complete datastore schema that may be
+         shared by multiple datastores.";
+
+      leaf name {
+        type string;
+        description
+          "The name of the schema. This MUST be the same as the
+           name advertised by the device in YANG library.";
+      }
+      list package {
+        key "name version";
+        min-elements 1;
+        ordered-by user;
+        description
+          "References to separate YANG package files that
+           collectively define this schema. The resolved package
+           schema is constructed as per RFC XXXX, Section 5.4.3.
+           The resolved schema MUST be referentially complete.";
+        reference
+          "RFC XXXX: YANG Packages, Section 5.4.3";
+
+        uses pkg-types:yang-pkg-identification-leafs;
+        uses pkg-types:yang-pkg-location;
+      }
+      leaf-list feature {
+        type pkg-types:scoped-feature;
+        description
+          "Features enabled in addition to those enabled by the
+           resolved packages, identified as
+           '<module-name>:<feature-name>'. Each feature MUST be
+           defined by an implemented module in this schema.
+           Features already enabled by the packages MAY be listed.";
+      }
+    }
+
+    list datastore {
+      key "name";
+      min-elements 1;
+      description
+        "All datastores supported by this device or operating
+         system release, and their associated schemas. Datastores
+         with the same schema SHOULD reference the same entry.";
+
+      leaf name {
+        type ds:datastore-ref;
+        description
+          "The identity of the datastore.";
+      }
+      leaf schema {
+        type leafref {
+          path "../../schema/name";
+        }
+        mandatory true;
+        description
+          "The schema supported by this datastore.";
       }
     }
   }
@@ -2857,10 +3250,10 @@ ietf-yang-revisions@2026-06-26.yang"
           },
           {
             "name": "ietf-yang-semver",
-            "version": "2026-03-03",
+            "version": "0.25.0",
             "location": [
               "https://www.iana.org/assignments/yang-parameters/\
-ietf-yang-semver@2026-03-03.yang"
+ietf-yang-semver@0.25.0.yang"
             ]
           },
           {
@@ -2925,7 +3318,11 @@ ietf-yang-structure-ext@2020-06-17.yang"
     information, and consumers should verify their source and integrity.
     The "ietf-yang-inst-data-pkg" module allows packages to define schemas
     for RFC 9195 instance data files, for which the security considerations
-    of <xref target="RFC9195"/> apply.</t>
+    of <xref target="RFC9195"/> apply. The "ietf-yang-device-schema" module
+    likewise defines off-device instance data, outside network management
+    protocol security controls. Consumers should verify the source and integrity
+    of advertisements and referenced package and YANG library files before
+    relying on their contents.</t>
 
     <section anchor="yang-security" title="YANG Module Security Considerations">
       <t>This section is modeled after the template described in Section 3.7
@@ -3028,6 +3425,10 @@ ietf-yang-structure-ext@2020-06-17.yang"
             <t>Registrant Contact: The IESG.</t>
 
             <t>XML: N/A, the requested URI is an XML namespace.</t>
+          </list> <list style="empty">
+            <t>URI: urn:ietf:params:xml:ns:yang:ietf-yang-device-schema</t>
+            <t>Registrant Contact: The IESG.</t>
+            <t>XML: N/A, the requested URI is an XML namespace.</t>
           </list> <?rfc subcompact="no" ?></t>
 
       <t>This document requests that the following YANG modules are added in
@@ -3086,6 +3487,12 @@ ietf-yang-structure-ext@2020-06-17.yang"
             <t>Prefix: yid-pkg</t>
 
           <t>Reference: RFC XXXX</t>
+        </list> <list style="empty">
+          <t>Name: ietf-yang-device-schema</t>
+          <t>Maintained by IANA? N</t>
+          <t>Namespace: urn:ietf:params:xml:ns:yang:ietf-yang-device-schema</t>
+          <t>Prefix: yds</t>
+          <t>Reference: RFC XXXX</t>
         </list> <?rfc subcompact="no" ?></t>
       </section>
       <section anchor="iana-yang-package-registry"
@@ -3122,8 +3529,14 @@ ietf-yang-structure-ext@2020-06-17.yang"
           <t>a reference to the package documentation (e.g., the RFC number)</t>
         </list>
 
-        <t>On creation of the registry, the ietf-ypkg-schema@0.1.0.ypkg,
-        defined in <xref target="pkg-instance-data-schema"/>, should be added.</t>
+        <t>On creation of the registry, the following packages should be added:
+          <list style="symbols">
+            <t>ietf-ypkg-schema@0.1.0.ypkg, defined in
+            <xref target="pkg-instance-data-schema"/>.</t>
+            <t>ietf-device-schema@0.1.0.ypkg, defined in
+            <xref target="device-schema-content-schema"/>.</t>
+          </list>
+        </t>
 
         <t>For allocation, the registration policy is Specification Required,
         as defined in <xref target="RFC8126"/>. All registered YANG package
@@ -4877,7 +5290,7 @@ associated types",
             "version": "1.0.0",
             "location": [
               "https://example.org/yang/modules/\
-example-module-a.yang"
+example-module-a@1.0.0.yang"
             ]
           },
           {
@@ -4885,7 +5298,7 @@ example-module-a.yang"
             "version": "1.1.0",
             "location": [
               "https://example.org/yang/modules/\
-example-module-b.yang"
+example-module-b@1.1.0.yang"
             ]
           }
         ],
@@ -4895,7 +5308,7 @@ example-module-b.yang"
             "version": "1.0.0",
             "location": [
               "https://example.org/yang/modules/\
-example-module-a-types.yang"
+example-module-a-types@1.0.0.yang"
             ]
           },
           {
@@ -4903,7 +5316,7 @@ example-module-a-types.yang"
             "version": "1.1.0",
             "location": [
               "https://example.org/yang/modules/\
-example-module-b-types.yang"
+example-module-b-types@1.1.0.yang"
             ]
           }
         ],
@@ -4950,7 +5363,7 @@ example-ab@0.1.0.ypkg"
             "version": "2.0.0",
             "location": [
               "https://example.org/yang/modules/\
-example-module-c.yang"
+example-module-c@2.0.0.yang"
             ]
           }
         ]
@@ -4989,7 +5402,7 @@ example-module-c.yang"
 
 {
   "ietf-yang-library:yang-library": {
-    "content-id": "52081e8ce44599b6",
+    "content-id": "4d5982709387b2b8",
     "datastore": [
       {
         "name": "ietf-datastores:running",

@@ -69,10 +69,31 @@ object IetfYpkgSchemaPkg_0_1_0 extends IetfPkgDefn:
   def importOnlyModules =
     Seq("ietf-yang-package-types@0.10.0",
         "ietf-yang-revisions@2026-06-26",
-        "ietf-yang-semver@2026-03-03",
+        "ietf-yang-semver@0.25.0",
         "ietf-yang-types@2025-12-22",
         "ietf-inet-types@2025-12-22",
         "ietf-yang-structure-ext@2020-06-17")
+
+object IetfDeviceSchemaPkg_0_1_0 extends IetfPkgDefn:
+  def name = "ietf-device-schema"
+  def version = "0.1.0"
+  override def timestamp = "2026-10-13T00:00:00Z"
+  def description =
+    "This package defines the 'content-schema' [RFC 9195] for " +
+    "off-device definitions of a device's datastore schemas."
+  def reference = "RFC XXXX: YANG Packages"
+
+  def modules = Seq(
+    "ietf-yang-device-schema@0.1.0",
+    "ietf-datastores@2018-01-11"
+  )
+  def importOnlyModules = Seq(
+    "ietf-yang-package-types@0.10.0",
+    "ietf-yang-revisions@2026-06-26",
+    "ietf-yang-semver@0.25.0",
+    "ietf-yang-types@2025-12-22",
+    "ietf-inet-types@2025-12-22"
+  )
 
 object ExampleBaseTypesPkg_1_0_0 extends ExamplePkgDefn {
   def name = "example-base-types"
@@ -835,10 +856,12 @@ object DraftXml extends mill.Module:
     YangModule("ietf-yang-packages", "ietf-yang-packages.yang"),
     YangModule("ietf-yl-packages", "ietf-yl-packages.yang"),
     YangModule("ietf-yang-inst-data-pkg", "ietf-yang-inst-data-pkg.yang"),
+    YangModule("ietf-yang-device-schema", "ietf-yang-device-schema.yang"),
   )
 
   private val examplePackages: Seq[PkgDefn] = Seq(
     IetfYpkgSchemaPkg_0_1_0,
+    IetfDeviceSchemaPkg_0_1_0,
     ExampleBaseTypesPkg_1_0_0,
     ExampleBaseTypesPkg_1_1_0,
     ExampleDiagnosticsSchemaPkg,
@@ -1139,13 +1162,33 @@ object DraftXml extends mill.Module:
       ujson.write(json, indent = 2) + "\n"
     else text
 
-  private def writeExamplePackages(packageRefs: Seq[PathRef]) =
+  def semanticModuleLocations = Task.Input:
+    val repo = dir / os.up
+    val sources = modules.map(m => dir / m.source) ++
+      Seq(dir / "example-modules", repo / "yang-module-versioning", repo / "yang-semver")
+        .flatMap(os.walk(_)).filter(p => os.isFile(p) && p.ext == "yang")
+    sources.flatMap: path =>
+      val source = os.read(path)
+      val version = """(?m)^\s+[A-Za-z_][A-Za-z0-9_-]*:version\s+"?([^";\s]+)"?;""".r
+        .findFirstMatchIn(source).map(_.group(1))
+      version.toSeq.flatMap: semver =>
+        val name = """(?m)^module\s+([A-Za-z_][A-Za-z0-9_.-]*)\s*\{""".r
+          .findFirstMatchIn(source).map(_.group(1)).get
+        val revision = """(?m)^\s+revision\s+([0-9-]+)\s*\{""".r
+          .findFirstMatchIn(source).map(_.group(1)).get
+        Seq(path.last, s"$name@$revision.yang").distinct
+          .map(filename => filename -> s"$name@$semver.yang")
+
+  private def writeExamplePackages(packageRefs: Seq[PathRef], locations: Seq[(String, String)]) =
     val outDir = dir / "generated" / "packages"
     os.makeDir.all(outDir)
     examplePackages.zip(packageRefs).map: (pkg, ref) =>
       val path = outDir / packageFileName(pkg)
       val sanitized = sanitizePackageLocations(os.read(ref.path), packageRefs)
-      val packageJson = addHotfixDependsOn(sanitized)
+      val versionedLocations = locations.foldLeft(sanitized):
+        case (text, (filename, semanticFilename)) =>
+          text.replace("/" + filename, "/" + semanticFilename)
+      val packageJson = addHotfixDependsOn(versionedLocations)
       os.write.over(path, if packageJson.endsWith("\n") then packageJson else packageJson + "\n")
       println(s"Package written to $path")
       PackageArtifact(pkg, path)
@@ -1324,6 +1367,7 @@ object DraftXml extends mill.Module:
         )
     val packageBlocks = Seq(
       "ietf-ypkg-schema",
+      "ietf-device-schema",
       "example-base-types",
       "example-diagnostics-schema",
       "example-routing-types",
@@ -1342,7 +1386,19 @@ object DraftXml extends mill.Module:
     val updatedPackages = packages
       .filter(p => packageBlocks.contains(p.pkg.name))
       .foldLeft(updatedSources)(replacePackageCodeBlock)
-    os.write.over(xmlPath, updateFullExampleLinks(updatedPackages))
+    val updatedExamples = Seq("example-device-schema.json")
+      .foldLeft(updatedPackages): (xml, filename) =>
+        val example = os.read(dir / "examples" / filename).trim
+        ujson.read(example) // Check JSON syntax before embedding.
+        oneReplace(
+          xml,
+          s"(<artwork><!\\[CDATA\\[\\s*)<CODE BEGINS> file \"${Pattern.quote(filename)}\"" +
+            ".*?<CODE ENDS>\\n[\\r\\n]*(\\h*)\\]\\]></artwork>",
+          m => s"${m.group(1)}<CODE BEGINS> file \"$filename\"\n" +
+            foldLongLines(example, maxCol = 69).trim +
+            s"\n<CODE ENDS>\n${m.group(2)}]]></artwork>"
+        )
+    os.write.over(xmlPath, updateFullExampleLinks(updatedExamples))
     xmlPath
 
   private def multipartFileBody(
@@ -1455,13 +1511,13 @@ object DraftXml extends mill.Module:
 
   def buildExamples() = Task.Command:
     val packageRefs = Task.traverse(examplePackages)(_.makePackage)()
-    val packages = writeExamplePackages(packageRefs)
+    val packages = writeExamplePackages(packageRefs, semanticModuleLocations())
     writeFullLibraryExamples(packages, fullExampleMetadata())
     ()
 
   def updateXml() = Task.Command:
     val packageRefs = Task.traverse(examplePackages)(_.makePackage)()
-    val packages = writeExamplePackages(packageRefs)
+    val packages = writeExamplePackages(packageRefs, semanticModuleLocations())
     writeFullLibraryExamples(packages, fullExampleMetadata())
     val trees = generatedTreeFiles()
     updateXmlFile(trees, packages)
@@ -1472,7 +1528,7 @@ object DraftXml extends mill.Module:
   def all() = Task.Command:
     checkYang()
     val packageRefs = Task.traverse(examplePackages)(_.makePackage)()
-    val packages = writeExamplePackages(packageRefs)
+    val packages = writeExamplePackages(packageRefs, semanticModuleLocations())
     writeFullLibraryExamples(packages, fullExampleMetadata())
     val trees = generatedTreeFiles()
     writeTreeFiles(trees)
