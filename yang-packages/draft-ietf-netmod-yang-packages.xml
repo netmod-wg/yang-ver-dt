@@ -376,9 +376,9 @@ module: ietf-yang-package-types
             'complete' flag MUST be set to 'false'.</t>
 
             <t>Package definitions are hierarchical because a package can
-            include other packages.  There MUST NOT be any circular package
-            include dependencies, i.e., packages cannot, directly or
-            indirectly, include themselves.</t>
+            include other packages.  A package MUST NOT include itself at any
+            version, directly or indirectly, including through packages
+            referenced at mount points.</t>
 
             <t>A package definition MAY directly include multiple versions of
             the same package in the "includes/package" list, but normally only
@@ -5253,11 +5253,12 @@ examples",
         shared primary location, the access-specific secondary location, and
         the routing-specific secondary location.</t>
       </section>
+
     </section>
 
     <section anchor="exclusion_examples" title="Package Exclusion Examples">
-      <t>This section provides examples of how to exclude modules, and packages
-      in a package definition, and to remove enabled features.
+      <t>This section provides examples of how to exclude implemented modules,
+      import-only modules, and enabled features in a package definition.
 
       The examples are non-normative, and for brevity, some expected information
       (e.g., locations) are omitted.</t>
@@ -5266,14 +5267,16 @@ examples",
                title="Example of excluding modules and an enabled feature">
         <t>The following example defines two YANG packages.</t>
         <t>The first package, "example-ab", implements two example modules,
-        "example-module-a" and "example-module-b", two related types modules,
+        "example-module-a" and "example-module-b", imports two related types modules,
         and declares two enabled features.
         </t>
         <t>The second package, "example-c", includes the first package, but
-        excludes the implemented "example-module-a" module, the import-only
-        "example-module-b-types" module, and the enabled feature
-        "bar" from the "example-module-b" module.</t>
-        <t>TODO - Should that feature have been implicitly removed?</t>
+        excludes the implemented "example-module-b" module, the import-only
+        "example-module-b-types" module, and the enabled feature "foo" from
+        "example-module-a".  Excluding "example-module-b" also implicitly
+        removes its enabled feature "bar"; the explicit feature exclusion is
+        needed for "foo" because "example-module-a" remains implemented.
+        The package also adds the implemented "example-module-c" module.</t>
         <t>The third figure shows the resulting schema in YANG Library format,
         but with namespaces and locations elided for brevity.</t>
         <figure>
@@ -5350,8 +5353,8 @@ example-module-b-types@1.1.0.yang"
       "name": "example-c",
       "version": "0.1.0",
       "timestamp": "2026-03-20T17:52:47.202747Z",
-      "description": "Example package importing A, removing B and \
-adding C",
+      "description": "Includes AB, removes B and its types, \
+disables foo, and adds C",
       "includes": {
         "package": [
           {
@@ -5384,7 +5387,7 @@ example-module-c@2.0.0.yang"
           }
         ],
         "feature": [
-          "example-module-b:bar"
+          "example-module-a:foo"
         ]
       }
     }
@@ -5408,7 +5411,7 @@ example-module-c@2.0.0.yang"
 
 {
   "ietf-yang-library:yang-library": {
-    "content-id": "4d5982709387b2b8",
+    "content-id": "50219e6f8a3aae18",
     "datastore": [
       {
         "name": "ietf-datastores:running",
@@ -5428,9 +5431,6 @@ example-module-a-types",
         ],
         "module": [
           {
-            "feature": [
-              "foo"
-            ],
             "ietf-yang-library-semver:version": "1.0.0",
             "name": "example-module-a",
             "namespace": "https://example.org/yang/example-module-a",
@@ -5482,6 +5482,40 @@ associated types"
         ]]></artwork>
         </figure>
         <t><eref target="https://github.com/netmod-wg/yang-ver-dt/blob/packages-post-09-updates/yang-packages/generated/yang-library/example-c-library@0.1.0.json">Complete example-c-library@0.1.0.json example</eref></t>
+      </section>
+
+      <section anchor="resolution-nested-exclusions"
+               title="Exclusions in nested packages">
+        <t>An exclusion is applied while resolving the package that contains
+        it.  It does not remove the same module contributed independently by
+        another package included at a higher level.  The following abbreviated
+        example illustrates this rule; each "includes" line denotes a package or
+        module entry, and each "excludes" line denotes an
+        "excludes/module" entry.</t>
+
+        <figure>
+          <artwork><![CDATA[
+  Package PA includes module MX@2.0.0
+  Package PB includes module MX@3.0.0
+  Package PC includes package PA but excludes module MX
+  Package PD includes package PB and package PC
+
+  Resolved package PA: module MX@2.0.0, included directly
+  Resolved package PB: module MX@3.0.0, included directly
+  Resolved package PC: no module MX, excluded after resolving PA
+  Resolved package PD: module MX@3.0.0, contributed by package PB
+          ]]></artwork>
+        </figure>
+
+        <t>Packages PA and PB resolve to module MX@2.0.0 and MX@3.0.0,
+        respectively, because each includes that module version directly.
+        Package PC first inherits MX@2.0.0 from package PA, then removes it
+        using its own "excludes/module" entry.  Package PD therefore receives
+        MX@3.0.0 from package PB and no version of MX from package PC; no
+        module version conflict needs to be resolved.  Package PC's exclusion
+        does not remove the module contributed by package PB.  If package PD
+        must exclude module MX entirely, package PD needs its own
+        "excludes/module" entry.</t>
       </section>
     </section>
 
