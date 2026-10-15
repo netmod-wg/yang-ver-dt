@@ -386,14 +386,22 @@ module: ietf-yang-package-types
             can be listed, for example, to update location information for
             package versions included through other packages.</t>
 
-            <t>If the same package version, module version,
-            import-only module version, or submodule version is referenced via
+            <t>If the same package version is referenced via
             multiple included packages, then the referenced content and metadata
             are expected to be equivalent, and hence either reference can be
             used for resolution.  Tools MAY issue a warning or report an error
             if they detect conflicting content.  Location information MAY differ and
             is merged as defined by the package resolution rules in
             <xref target="resolution"/>.</t>
+
+            <t>References to the same module version from resolved included
+            packages, whether implemented or import-only, MUST be semantically
+            equivalent, as determined using the parsed module comparison
+            defined in
+            <xref target="I-D.ietf-netmod-yang-schema-comparison"/>.
+            Either equivalent module definition MAY be used for resolution.
+            Location information MAY differ and is merged as defined by the
+            package resolution rules in <xref target="resolution"/>.</t>
 
             <t>A package definition MUST NOT list the same package
             version under both the 'includes/package' and 'depends-on/package'
@@ -483,17 +491,18 @@ module: ietf-yang-package-types
         when referentially incomplete packages are helpful.</t>
       </section>
 
-      <section title="Submodule package considerations">
+      <section anchor="submodule-considerations" title="Submodule package considerations">
         <t>As defined in <xref target="RFC7950"/> and <xref
         target="I-D.ietf-netmod-yang-semver"/>, YANG conformance and
         versioning is specified in terms of particular versions of YANG
         modules rather than for individual submodules.</t>
 
-        <t>However, YANG package definitions also include the list of
-        submodules included by a module, primarily to provide user-ordered
-        locations where each submodule definition can be obtained from. If
-        a canonical location for a submodule is provided, it MUST be listed
-        first.</t>
+        <t>Each implemented or import-only module entry MUST list the exact
+        version/revision of all submodules included by that module, directly
+        or indirectly, in its 'submodule' list.  Submodule entries also
+        provide locations where each submodule definition can be obtained.
+        If a canonical location
+        for a submodule is provided, it MUST be listed first.</t>
       </section>
 
       <section title="Package Mount Points">
@@ -657,15 +666,19 @@ module: ietf-yang-package-types
             inherited mounted packages, additional features, and
             parent-references for that mount point are discarded, and the local
             "mount" entry defines the mounted schema for that mount point.</t>
-            <t><spanx style="verb">submodules</spanx>:  Submodules are ignored
-            for resolution purposes, only the module version is considered and
-            compared.  For duplicate inherited references to the same submodule
-            version, location leaf-lists are merged using the
+            <t><spanx style="verb">submodules</spanx>:  Selecting a module
+            version also selects its associated submodule entries.  I.e., submodule
+            versions are not selected independently by automatic module version
+            resolution.  Submodule location leaf-lists are merged only if the
+            submodule lists are otherwise identical between the two module
+            definitions, using the
             <spanx style="verb">location lists</spanx> rule.</t>
             <t><spanx style="verb">location lists</spanx>:  This rule applies
             when duplicate inherited package, module, import-only module, or
             submodule references identify the same version but have different
-            location leaf-list values.  The referenced content and metadata are
+            location leaf-list values.  For submodule references, this rule is
+            subject to the <spanx style="verb">submodules</spanx> rule.
+            The referenced content and metadata are
             expected to be equivalent.  The location leaf-lists are merged
             pairwise in the order that the included package entries are listed.
             For each pairwise merge, values from the second location leaf-list are
@@ -722,8 +735,9 @@ module: ietf-yang-package-types
             <t>If there is no difference in version or revision-dates to
             distinguish between two modules then:
               <list style="format %i">
-                <t>Submodule information, if present, for both module definitions
-                is assumed to be equivalent and hence either can be used.</t>
+                <t>Submodule information is handled using the
+                <spanx style="verb">submodules</spanx> rule in
+                <xref target="resolution"/>.</t>
                 <t>the location leaf-lists for the module definitions are
                 merged using the <spanx style="verb">location lists</spanx>
                 rule.</t>
@@ -2108,8 +2122,13 @@ module ietf-yang-package-types {
     list submodule {
       key "name";
       description
-        "Each entry represents one submodule within the
-          parent module.";
+        "Each entry identifies a submodule included by the parent
+         module.  This list MUST contain all the submodules
+         included directly or indirectly by that module, each with
+         its exact version/revision identified by the 'version'
+         leaf.";
+      reference
+        "RFC XXXX: YANG Packages, Section 3.4";
 
       leaf name {
         type module-name;
@@ -2125,10 +2144,11 @@ module ietf-yang-package-types {
           "The YANG submodule revision date or YANG Semantic
            version.
 
-          If the parent module include statement for this submodule
-          includes a revision date then it MUST match the revision
-          date specified here or it MUST match the revision-date
-          associated with the version specified here.";
+          If a parent module (or other submodule) include statement
+          for this submodule includes a revision date then it MUST
+          match the revision date specified here or it MUST match
+          the revision-date associated with the version specified
+          here.";
       }
 
       leaf-list location {
