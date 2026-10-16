@@ -202,7 +202,8 @@ the YANG semantic version is defined in a typedef in the same module and describ
       Pre-release metadata MAY be appended to a YANG Semver string after a trailing '-' character.  Build metadata
       MAY be appended after a trailing '+' character.  If both pre-release and build metadata are present, then build metadata MUST
       follow pre-release metadata.  While pre-release metadata can be used during module and submodule development as specified in
-      <xref target="guidelines" format="default"/>, both pre-release and build metadata MUST be ignored when comparing YANG semantic versions.
+      <xref target="guidelines" format="default"/>, both pre-release and build metadata MUST be ignored when comparing YANG semantic versions,
+      except as described in <xref target="semver_import_rules" format="default"/>.
       Both pre-release and build metadata are allowed in order
       to support all the <xref target="SemVer" format="default"/>
  rules.  Thus, a version lineage that follows strict <xref target="SemVer" format="default"/>
@@ -680,11 +681,11 @@ statement is considered a backwards compatible change.  An example use is:</t>
 <section anchor="semver_import_rules" numbered="true" toc="default">
 <name>Import by YANG Semantic Version Rules</name>
 <t>When evaluating target module to import, only the numeric triplet of MAJOR.MINOR.PATCH is considered.
-The "_compatible" and "_non_compatible" modifiers as well as any metadata are ignored.
+The "_compatible" and "_non_compatible" modifiers as well as any metadata are ignored, except as noted in condition 1 below.
  A module to be imported is considered as meeting the recommended minimum version criteria if it meets at least one of the following conditions
  (the conditions are not listed in priority order and any single matching condition is sufficient):</t>
 <ol type="1" spacing="normal">
-<li>Has the exact same MAJOR, MINOR, PATCH as in the recommended-min-version value.</li>
+<li>Has the exact same MAJOR, MINOR, PATCH as in the recommended-min-version value, and has no pre-release metadata.</li>
 <li>Has the same MAJOR and MINOR version numbers and a greater PATCH number.</li>
 <li>Has the same MAJOR version number and greater MINOR number.  In this case the PATCH number is ignored.</li>
 <li>Has a greater MAJOR version number.  In this case MINOR and PATCH numbers are ignored.</li>
@@ -699,6 +700,7 @@ The "_compatible" and "_non_compatible" modifiers as well as any metadata are ig
 <li>3.1.2_non_compatible (by condition 2 above, noting that modifiers are ignored)</li>
 <li>3.3.0-00 (by condition 3 above, noting that the pre-release metadata is ignored)</li>
 </ul>
+<t>However, 3.1.0-00 would not satisfy that recommended-min-version, because it is a pre-release of 3.1.0.</t>
 <t>If a compiler that supports the recommended-min-version extension cannot locate a module with a version that is viable according to the conditions above, 
   that YANG compiler should emit a warning, and then continue to resolve the import based on established <xref target="RFC7950" format="default"/> rules.</t>
 <t>Note that the rules above intentionally allow a version that introduces non-backwards-compatible changes (i.e., a higher MAJOR version, or a version
@@ -882,7 +884,7 @@ module: ietf-yang-library-semver
 <name>YANG Modules</name>
 <t>This YANG module contains the typedef for the YANG semantic version and the extension for expressing
 it in modules and submodules.</t>
-<sourcecode name="ietf-yang-semver@2026-03-03.yang" type="yang" markers="true"><![CDATA[
+<sourcecode name="ietf-yang-semver@2026-10-16.yang" type="yang" markers="true"><![CDATA[
 module ietf-yang-semver {
   yang-version 1.1;
   namespace "urn:ietf:params:xml:ns:yang:ietf-yang-semver";
@@ -935,8 +937,8 @@ module ietf-yang-semver {
   // note.
   // RFC Ed. update the ysv:version to "1.0.0".
 
-  revision 2026-03-03 {
-    ysv:version "0.25.0";
+  revision 2026-10-16 {
+    ysv:version "0.30.0";
     description
       "Initial revision";
     reference
@@ -994,7 +996,8 @@ module ietf-yang-semver {
        the following conditions:
 
        * Has the exact same MAJOR, MINOR, PATCH as in the
-          recommended-min-version value.
+         recommended-min-version value, and has no pre-release
+         metadata.
        * Has the same MAJOR and MINOR version numbers and a
          greater PATCH number.
        * Has the same MAJOR version number and greater MINOR number.
