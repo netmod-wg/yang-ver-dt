@@ -557,7 +557,8 @@ module ietf-yang-package-types {
            Mount paths MUST only be used for schema mount points
            defined in the package schema.";
         reference
-          "draft-jgc-netmod-yang-path: YANG path format (ypath);
+          "RFC XXXX: YANG Packages, Section 4;
+           draft-jgc-netmod-yang-path: YANG path format (ypath);
            RFC 8528: YANG Schema Mount";
       }
 
@@ -565,11 +566,9 @@ module ietf-yang-package-types {
         type boolean;
         default true;
         description
-          "Indicates whether the packages, additional features, and
-           parent-references available at the mount point for this
-           package definition automatically include the packages,
-           feature entries, and parent-references mounted
-           at the same mount path in any 'includes/package' entries.
+          "Indicates whether the mounted schema and all its
+           properties are inherited from mounts at the same
+           mount-path in 'includes/package' entries.
 
            If set to true (the default), the schema is defined
            as the union of the resolved package schema at the mount
@@ -577,17 +576,59 @@ module ietf-yang-package-types {
            combined with the resolved package schema of all packages
            listed in the 'package' list, plus any additional
            features and parent-references defined for the same
-           mount point.
+           mount point.  Read-only status and mount mode are also
+           inherited.
 
            If set to false, then the mounted schema starts from a
            blank slate and only packages, additional features, and
            parent-references listed in this 'mount' entry are
-           included.  This allows the definitions in the mounted
-           packages to be modified (e.g., remove or change module
-           versions).  To help conformance, the packages listed here
-           SHOULD include all the packages that would have been
-           automatically included.
+           included.  If no packages are listed, no schema is mounted
+           at this mount point.  This allows the definitions in the
+           mounted packages to be modified (e.g., remove or change
+           module versions).  To help conformance, the packages
+           listed here SHOULD include all the packages that would
+           have been automatically included.
           ";
+      }
+
+      leaf read-only {
+        type boolean;
+        description
+          "If true, all data nodes in the mounted schema are
+           read-only.  An explicit false value is a schema resolution
+           error if the inherited mount is read-only.  If no value is
+           inherited or specified, the mount is read-write, subject
+           to the configuration restrictions of RFC 8528.
+
+           See 'inherit-mounted-schema' for inheritance behavior.";
+        reference
+          "RFC XXXX: YANG Packages, Sections 3.5 and 4;
+           RFC 8528: YANG Schema Mount, Section 3.3";
+      }
+
+      leaf mount-mode {
+        type enumeration {
+          enum inline {
+            description
+              "Mount instances may use different schemas, as defined
+               by the 'inline' case in RFC 8528.";
+          }
+          enum shared-schema {
+            description
+              "All instances of the mount point use the same schema,
+               as defined by the 'shared-schema' case in RFC 8528.";
+          }
+        }
+        description
+          "The Schema Mount mode for this mount point.  An explicit
+           value that conflicts with an inherited mode is a schema
+           resolution error.  If no mode is inherited or specified,
+           'shared-schema' is used.
+
+           See 'inherit-mounted-schema' for inheritance behavior.";
+        reference
+          "RFC XXXX: YANG Packages, Section 4;
+           RFC 8528: YANG Schema Mount, Section 3.3";
       }
 
       list package {
@@ -646,6 +687,8 @@ module ietf-yang-package-types {
            identifies data nodes in the parent schema accessible
            from the mounted schema for the evaluation of XPath
            expressions.
+
+           Parent-references apply only to shared-schema mounts.
 
            See parent-reference in Schema Mount (RFC 8528) for a
            more detailed description of the accessible data nodes.";
