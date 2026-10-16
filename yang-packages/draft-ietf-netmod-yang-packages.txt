@@ -913,23 +913,26 @@ Internet-Draft                YANG Packages                 October 2026
           resolved included packages.  Mount paths MUST be normalized
           using the normalization rules defined in
           [I-D.jgc-netmod-yang-path] before comparison, and matching is
-          based on their normalized values.  For a given mount-path that
-          is present in more than one included package the resolved
-          mount takes the union of the mounted packages, "mount/feature"
-          entries, and mount parent-references.  The mounts are then
-          updated by processing any entries in the package's "mount"
-          list.  If "inherit-mounted-schema" is true, or absent, the
-          local "mount/package", "mount/feature", and "mount/parent-
-          reference" entries are added to the inherited mounted schema
-          for that mount point.  Thus, local "mount/feature" entries add
-          to features enabled by inherited mounted packages and
-          inherited "mount/feature" entries, as well as features enabled
-          by locally listed mounted packages.  If the same package
-          version is present in both the inherited and local "mount/
-          package" entries, then the local entry overwrites the
-          inherited entry, including location information.  If the same
-          package name is present with different package versions, then
-          all package versions are retained.  If "inherit-mounted-
+          based on their normalized values.  Only exact matches between
+          normalized mount paths are considered during package
+          resolution; overlapping selections from different normalized
+          paths are permitted and are not checked.  For a given mount-
+          path that is present in more than one included package the
+          resolved mount takes the union of the mounted packages,
+          "mount/feature" entries, and mount parent-references.  The
+          mounts are then updated by processing any entries in the
+          package's "mount" list.  If "inherit-mounted-schema" is true,
+          or absent, the local "mount/package", "mount/feature", and
+          "mount/parent-reference" entries are added to the inherited
+          mounted schema for that mount point.  Thus, local "mount/
+          feature" entries add to features enabled by inherited mounted
+          packages and inherited "mount/feature" entries, as well as
+          features enabled by locally listed mounted packages.  If the
+          same package version is present in both the inherited and
+          local "mount/package" entries, then the local entry overwrites
+          the inherited entry, including location information.  If the
+          same package name is present with different package versions,
+          then all package versions are retained.  If "inherit-mounted-
           schema" is false, the inherited mounted packages, additional
           features, parent-references, read-only status, and mount mode
           for that mount point are discarded, and the local "mount"
@@ -939,13 +942,10 @@ Internet-Draft                YANG Packages                 October 2026
           The corresponding Schema Mount 'mount-point' entry is omitted,
           as described in Section 3.3 of [RFC8528].
 
-
-
-
-
-
-
-
+       *  mount read-only status: A mount is read-only if an inherited
+          mount at the same mount-path is read-only, or if the local
+          'mount/read-only' leaf is 'true'.  An explicit local 'false'
+          value conflicts with inherited read-only status and causes
 
 
 
@@ -954,10 +954,6 @@ Wilton, et al.            Expires 19 April 2027                [Page 17]
 Internet-Draft                YANG Packages                 October 2026
 
 
-       *  mount read-only status: A mount is read-only if an inherited
-          mount at the same mount-path is read-only, or if the local
-          'mount/read-only' leaf is 'true'.  An explicit local 'false'
-          value conflicts with inherited read-only status and causes
           schema resolution to fail.  If no read-only status is
           inherited and the leaf is absent, the mount is read-write.
           All data nodes in a read-only mounted schema have an effective
@@ -998,7 +994,11 @@ Internet-Draft                YANG Packages                 October 2026
    from the implemented and import-only versions of that module in the
    resolved package schema.
 
-
+   Package resolution MUST check that each package definition conforms
+   to the rules in Section 3.1.  Rules that depend on the resolved
+   package schema MUST be checked after Step 2 for that package, e.g.,
+   checking that the 'complete' flag is 'false' if the resolved schema
+   is referentially incomplete.
 
 
 
@@ -1009,12 +1009,6 @@ Wilton, et al.            Expires 19 April 2027                [Page 18]
 
 Internet-Draft                YANG Packages                 October 2026
 
-
-   Package resolution MUST check that each package definition conforms
-   to the rules in Section 3.1.  Rules that depend on the resolved
-   package schema MUST be checked after Step 2 for that package, e.g.,
-   checking that the 'complete' flag is 'false' if the resolved schema
-   is referentially incomplete.
 
 4.1.  Automatic Module Version Resolution
 
@@ -1058,6 +1052,12 @@ Internet-Draft                YANG Packages                 October 2026
        Semver format, then the module with the most recent revision-date
        is chosen.
 
+   4.  If there is no difference in "version" leaf values to distinguish
+       between two modules then:
+
+       i   Submodule information, if present, for both module
+           definitions is assumed to be equivalent and hence either can
+           be used.
 
 
 
@@ -1065,13 +1065,6 @@ Wilton, et al.            Expires 19 April 2027                [Page 19]
 
 Internet-Draft                YANG Packages                 October 2026
 
-
-   4.  If there is no difference in "version" leaf values to distinguish
-       between two modules then:
-
-       i   Submodule information, if present, for both module
-           definitions is assumed to be equivalent and hence either can
-           be used.
 
        ii  The location leaf-lists for the module definitions are merged
            using the location lists rule.
@@ -1114,6 +1107,13 @@ Internet-Draft                YANG Packages                 October 2026
    It is RECOMMENDED that organizations publishing YANG modules also
    publish YANG package definitions that group and version those modules
    into units of related functionality.  This increases interoperability
+   by encouraging different implementations to coalesce around using the
+   same collections of YANG modules versions.  Using packages also makes
+   it easier to understand the relationship between modules, and enables
+   functionality to be described on a more abstract level than
+   individual modules.
+
+
 
 
 
@@ -1121,12 +1121,6 @@ Wilton, et al.            Expires 19 April 2027                [Page 20]
 
 Internet-Draft                YANG Packages                 October 2026
 
-
-   by encouraging different implementations to coalesce around using the
-   same collections of YANG modules versions.  Using packages also makes
-   it easier to understand the relationship between modules, and enables
-   functionality to be described on a more abstract level than
-   individual modules.
 
    Where possible, package definitions SHOULD be made available offline
    in YANG package files, see Section 5.5, but also on the device as a
@@ -1170,6 +1164,12 @@ Internet-Draft                YANG Packages                 October 2026
       automatic module version selection between different packages, as
       per Section 4.1.
 
+      As per [RFC7950] section 9.10.2, identities are only available for
+      use by the server for implemented modules.
+
+
+
+
 
 
 
@@ -1177,9 +1177,6 @@ Wilton, et al.            Expires 19 April 2027                [Page 21]
 
 Internet-Draft                YANG Packages                 October 2026
 
-
-      As per [RFC7950] section 9.10.2, identities are only available for
-      use by the server for implemented modules.
 
       If a module defines data nodes and types and the server only wants
       to use the types but not implement any data nodes from the module
@@ -1224,6 +1221,9 @@ Internet-Draft                YANG Packages                 October 2026
    file for the same package name and version.  The client then resolves
    the listed packages, together with any 'feature' entries to construct
    the complete datastore schema, as described in Section 5.4.3.
+
+
+
 
 
 
