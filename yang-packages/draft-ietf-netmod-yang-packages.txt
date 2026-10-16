@@ -104,7 +104,7 @@ Table of Contents
          6.1.1.2.  Backwards-compatible changes  . . . . . . . . . .  35
          6.1.1.3.  Editorial changes . . . . . . . . . . . . . . . .  35
        6.1.2.  Guidelines for Package Versions During Package
-               Development . . . . . . . . . . . . . . . . . . . . .  35
+               Development . . . . . . . . . . . . . . . . . . . . .  36
    7.  Package Conformance . . . . . . . . . . . . . . . . . . . . .  36
 
 
@@ -645,10 +645,10 @@ Internet-Draft                YANG Packages                 October 2026
    also be used by a referentially complete package to provide
    additional machine-readable dependency metadata.
 
-   Dependency metadata is not inherited from included packages and does
-   not participate in package resolution.  Tools may use it for package
-   selection or diagnostics, but this is outside the scope of this
-   document.
+   Dependency metadata is not inherited and does not participate in
+   ordinary package resolution.  For version compatibility assessment of
+   referentially incomplete packages, it provides the comparison context
+   defined in Section 6.1.1.
 
 3.3.  Schema referential completeness
 
@@ -1860,10 +1860,10 @@ Internet-Draft                YANG Packages                 October 2026
 
 6.1.1.  Updating a package with a new version
 
-   Package compatibility is determined by comparing the resolved package
-   schemas of the prior and updated package versions.  The comparison
-   MUST use the YANG schema tree comparison algorithm defined in
-   [I-D.ietf-netmod-yang-schema-comparison], applied to the compiled
+   Package version compatibility is determined by comparing the resolved
+   package schemas of the prior and updated package versions.  The
+   comparison MUST use the YANG schema tree comparison algorithm defined
+   in [I-D.ietf-netmod-yang-schema-comparison], applied to the compiled
    schema tree (i.e., the fully resolved schema representation, with
    deviations applied).  For this comparison, 'feature' and 'if-feature'
    statements MUST be ignored when constructing the compiled schema
@@ -1871,9 +1871,16 @@ Internet-Draft                YANG Packages                 October 2026
    enablement.  The comparison also covers all schemas mounted by the
    package, at their respective mount points.
 
-   For referentially incomplete packages, the schema MUST be compiled as
-   far as possible, subject to missing dependencies, and the comparison
-   algorithm applied to the resulting partially compiled schemas.
+   For compatibility assessment, each referentially incomplete package
+   version MUST identify sufficient dependency packages in its 'depends-
+   on/package' list to construct a referentially complete schema,
+   including all mounted schemas recursively.  The package and its
+   listed dependencies MUST be resolved as if directly included in a
+   single package definition, following Section 4.
+
+   The prior and updated package versions MUST each use their own listed
+   dependencies for this assessment; changes contributed by those
+   dependencies are included in the comparison.
 
    Changes to the resolved set of mandatory enabled features, including
    those at mount points, MUST be assessed separately.  Adding a feature
@@ -1891,13 +1898,6 @@ Internet-Draft                YANG Packages                 October 2026
    When a package definition is updated, the version associated with the
    package MUST be updated according to the YANG semantic version update
    rules in Section 4.5 of [I-D.ietf-netmod-yang-semver], using the
-   scope of changes determined by the schema comparison and the separate
-   assessment of mandatory enabled features, parent-references, and
-   mount properties, as described below.
-
-   Note, an NBC change to a YANG module does not necessarily result in
-   an NBC change to a package that uses that module.  For example,
-   renaming a grouping and updating all uses of that grouping in the
 
 
 
@@ -1906,6 +1906,13 @@ Wilton, et al.            Expires 19 April 2027                [Page 34]
 Internet-Draft                YANG Packages                 October 2026
 
 
+   scope of changes determined by the schema comparison and the separate
+   assessment of mandatory enabled features, parent-references, and
+   mount properties, as described below.
+
+   Note, an NBC change to a YANG module does not necessarily result in
+   an NBC change to a package that uses that module.  For example,
+   renaming a grouping and updating all uses of that grouping in the
    package schema can leave the compiled schema tree unchanged.  Such a
    change does not require an NBC package version update, even though
    the module change is NBC for other modules that reference the old
@@ -1945,13 +1952,6 @@ Internet-Draft                YANG Packages                 October 2026
    are unchanged.  Changes to package metadata or location information
    that do not affect that schema are also editorial.
 
-6.1.2.  Guidelines for Package Versions During Package Development
-
-   During development of a new package, or while updating a previously
-   released package, special care should be taken with the selection of
-   the version associated with the package.
-
-
 
 
 
@@ -1961,6 +1961,12 @@ Wilton, et al.            Expires 19 April 2027                [Page 35]
 
 Internet-Draft                YANG Packages                 October 2026
 
+
+6.1.2.  Guidelines for Package Versions During Package Development
+
+   During development of a new package, or while updating a previously
+   released package, special care should be taken with the selection of
+   the version associated with the package.
 
    General YANG Semver versioning guidance from Section 6 of
    [I-D.ietf-netmod-yang-semver] may be helpful, additional IETF
@@ -2004,12 +2010,6 @@ Internet-Draft                YANG Packages                 October 2026
    Sometimes a package definition may include multiple packages that
    implement different versions of a module.
 
-   As per the package definition rules in Section 3.1, a package can
-   only implement a single version of a module, and hence in cases of
-   conflicting versions in included packages/modules it is necessary to
-   resolve which version of the module is used.  The default behavior,
-   defined in Section 4.1 is to use automatic resolution, which is
-   generally the best choice.  Manual resolution could be used to select
 
 
 
@@ -2018,6 +2018,12 @@ Wilton, et al.            Expires 19 April 2027                [Page 36]
 Internet-Draft                YANG Packages                 October 2026
 
 
+   As per the package definition rules in Section 3.1, a package can
+   only implement a single version of a module, and hence in cases of
+   conflicting versions in included packages/modules it is necessary to
+   resolve which version of the module is used.  The default behavior,
+   defined in Section 4.1 is to use automatic resolution, which is
+   generally the best choice.  Manual resolution could be used to select
    a different module version instead, or even remove the module from
    the package entirely.  However, care must be taken if an older module
    version is chosen, or a non-backwards-compatible newer version is
@@ -2058,12 +2064,6 @@ Internet-Draft                YANG Packages                 October 2026
    deviation modules, and excludes enabled features to indicate the
    actual conformance of the server implementation.
 
-   Modules containing deviations are listed and treated like any other
-   implemented YANG module, with no special annotation in the package
-   definition; their names often indicate that they contain deviations,
-   which is a sensible and helpful naming convention.
-
-   An example of this approach is provided in Appendix A.2.1.
 
 
 
@@ -2073,6 +2073,13 @@ Wilton, et al.            Expires 19 April 2027                [Page 37]
 
 Internet-Draft                YANG Packages                 October 2026
 
+
+   Modules containing deviations are listed and treated like any other
+   implemented YANG module, with no special annotation in the package
+   definition; their names often indicate that they contain deviations,
+   which is a sensible and helpful naming convention.
+
+   An example of this approach is provided in Appendix A.2.1.
 
    If an implementation doesn't support any functionality in a module
    then it should exclude the module rather than using deviations to
@@ -2115,13 +2122,6 @@ Internet-Draft                YANG Packages                 October 2026
    working only with servers that advertise exactly the same version of
    a package in YANG library.  Instead, reasonable clients should be
    able to interoperate with any server that supports a package version
-   that is backwards compatible with the version that the client is
-   designed for, assuming that the client is designed to ignore
-   operational values for unknown data nodes.
-
-
-
-
 
 
 
@@ -2129,6 +2129,10 @@ Wilton, et al.            Expires 19 April 2027                [Page 38]
 
 Internet-Draft                YANG Packages                 October 2026
 
+
+   that is backwards compatible with the version that the client is
+   designed for, assuming that the client is designed to ignore
+   operational values for unknown data nodes.
 
    For example, a client coded to support 'example-foo' package at
    version 1.0.0 should interoperate with a server implementing
@@ -2170,10 +2174,6 @@ Internet-Draft                YANG Packages                 October 2026
    not apply to server implementation packages that use deviation
    modules to report implementation non-conformance, as described in
    Section 7.3.
-
-
-
-
 
 
 
@@ -2933,7 +2933,7 @@ Internet-Draft                YANG Packages                 October 2026
 
        container depends-on {
          description
-           "Provides informational metadata identifying packages that
+           "Provides metadata identifying packages that
             this package depends on, but that do not form part of the
             resolved package schema.
 

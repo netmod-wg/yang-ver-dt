@@ -455,10 +455,10 @@ module: ietf-yang-package-types
         resolved along with the incomplete package.  The same mechanism can
         also be used by a referentially complete package to provide additional
         machine-readable dependency metadata.</t>
-        <t>Dependency metadata is not inherited from included packages and
-        does not participate in package resolution.  Tools may use it for
-        package selection or diagnostics, but this is outside the scope of
-        this document.</t>
+        <t>Dependency metadata is not inherited and does not participate in
+        ordinary package resolution.  For version compatibility assessment of
+        referentially incomplete packages, it provides the comparison context
+        defined in <xref target="change_scope"/>.</t>
       </section>
 
       <section anchor="completeness" title="Schema referential completeness">
@@ -1469,7 +1469,7 @@ ietf-inet-types@2025-12-22.yang"
 
         <section anchor="change_scope"
                  title="Updating a package with a new version">
-          <t>Package compatibility is determined by comparing the resolved
+          <t>Package version compatibility is determined by comparing the resolved
           package schemas of the prior and updated package versions.  The
           comparison MUST use the YANG schema tree comparison algorithm
           defined in <xref target="I-D.ietf-netmod-yang-schema-comparison"/>,
@@ -1481,9 +1481,16 @@ ietf-inet-types@2025-12-22.yang"
           The comparison also covers all schemas mounted by the package, at
           their respective mount points.</t>
 
-          <t>For referentially incomplete packages, the schema MUST be compiled
-          as far as possible, subject to missing dependencies, and the comparison
-          algorithm applied to the resulting partially compiled schemas.</t>
+          <t>For compatibility assessment, each referentially incomplete
+          package version MUST identify sufficient dependency packages in its
+          'depends-on/package' list to construct a referentially complete
+          schema, including all mounted schemas recursively.  The package and
+          its listed dependencies MUST be resolved as if directly included in
+          a single package definition, following <xref target="resolution"/>.</t>
+
+          <t>The prior and updated package versions MUST each use their own
+          listed dependencies for this assessment; changes contributed by
+          those dependencies are included in the comparison.</t>
 
           <t>Changes to the resolved set of mandatory enabled features,
           including those at mount points, MUST be assessed separately.
@@ -2400,7 +2407,7 @@ module ietf-yang-package-types {
 
     container depends-on {
       description
-        "Provides informational metadata identifying packages that
+        "Provides metadata identifying packages that
          this package depends on, but that do not form part of the
          resolved package schema.
 
