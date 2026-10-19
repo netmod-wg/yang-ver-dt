@@ -84,11 +84,11 @@ Table of Contents
    4.  Package Resolution  . . . . . . . . . . . . . . . . . . . . .  15
      4.1.  Automatic Module Version Resolution . . . . . . . . . . .  19
    5.  YANG Package Usage  . . . . . . . . . . . . . . . . . . . . .  20
-     5.1.  Achieving package name uniqueness . . . . . . . . . . . .  21
+     5.1.  Achieving package name uniqueness . . . . . . . . . . . .  22
      5.2.  Specifying modules as implemented or import-only  . . . .  22
      5.3.  Referential completeness and YANG packages  . . . . . . .  23
      5.4.  Providing Package Definitions on a Server . . . . . . . .  23
-       5.4.1.  Package List  . . . . . . . . . . . . . . . . . . . .  23
+       5.4.1.  Package List  . . . . . . . . . . . . . . . . . . . .  24
        5.4.2.  Tree diagram  . . . . . . . . . . . . . . . . . . . .  24
        5.4.3.  YANG Library Package Bindings . . . . . . . . . . . .  24
      5.5.  YANG Package Files  . . . . . . . . . . . . . . . . . . .  25
@@ -450,12 +450,6 @@ Wilton, et al.            Expires 22 April 2027                 [Page 8]
 Internet-Draft                YANG Packages                 October 2026
 
 
-   Checksums associated with location URLs support file integrity
-   validation and caching.  Both supplying and using checksums are
-   OPTIONAL.  A consumer can validate a retrieved file or reuse a cached
-   file with a matching checksum instead of downloading it.  This
-   document currently defines SHA-256 checksums [RFC6234].
-
    The ietf-yang-package-types.yang module defines a grouping to specify
    the core elements of the YANG package structure that is used within
    YANG package files (ietf-ypkg.yang) and also on the server (ietf-
@@ -498,6 +492,12 @@ Internet-Draft                YANG Packages                 October 2026
        |  |  +-- location*           inet:uri
        |  |  +-- location-sha-256*   sha-256-hash
        |  |  +-- submodule* [name]
+       |  |     +-- name                module-name
+       |  |     +-- version             version-or-rev-date
+       |  |     +-- location*           inet:uri
+       |  |     +-- location-sha-256*   sha-256-hash
+       |  +-- feature*              scoped-feature
+       +-- excludes
 
 
 
@@ -506,12 +506,6 @@ Wilton, et al.            Expires 22 April 2027                 [Page 9]
 Internet-Draft                YANG Packages                 October 2026
 
 
-       |  |     +-- name                module-name
-       |  |     +-- version             version-or-rev-date
-       |  |     +-- location*           inet:uri
-       |  |     +-- location-sha-256*   sha-256-hash
-       |  +-- feature*              scoped-feature
-       +-- excludes
        |  +-- module*               module-name
        |  +-- import-only-module* [name]
        |  |  +-- name       module-name
@@ -552,7 +546,13 @@ Internet-Draft                YANG Packages                 October 2026
         [I-D.ietf-netmod-yang-semver].  Versioning YANG packages is
         further described in Section 6.1.
 
+   4.   A YANG package MAY represent a referentially complete set of
+        modules or MAY represent a set of modules with some module
+        import dependencies missing, as described in Section 3.3.
 
+   5.   If the resolved package schema is not referentially complete, as
+        defined in Section 3.3, the package definition's 'complete' flag
+        MUST be set to 'false'.
 
 
 
@@ -561,14 +561,6 @@ Wilton, et al.            Expires 22 April 2027                [Page 10]
 
 Internet-Draft                YANG Packages                 October 2026
 
-
-   4.   A YANG package MAY represent a referentially complete set of
-        modules or MAY represent a set of modules with some module
-        import dependencies missing, as described in Section 3.3.
-
-   5.   If the resolved package schema is not referentially complete, as
-        defined in Section 3.3, the package definition's 'complete' flag
-        MUST be set to 'false'.
 
    6.   Package definitions are hierarchical because a package can
         include other packages.  A package MUST NOT include itself at
@@ -611,18 +603,20 @@ Internet-Draft                YANG Packages                 October 2026
         file's exact octets, without changes or normalization, including
         of line endings.
 
+   12.  For each module implemented by a package, only a single version/
+        revision of that module MUST be implemented.  Conflicting module
+        versions (e.g. from package includes) MAY be resolved explicitly
+        (via "includes/module") or using automatic module version
+        resolution, as described in Section 4.1.
+
+
+
 
 
 Wilton, et al.            Expires 22 April 2027                [Page 11]
 
 Internet-Draft                YANG Packages                 October 2026
 
-
-   12.  For each module implemented by a package, only a single version/
-        revision of that module MUST be implemented.  Conflicting module
-        versions (e.g. from package includes) MAY be resolved explicitly
-        (via "includes/module") or using automatic module version
-        resolution, as described in Section 4.1.
 
    13.  Multiple versions/revisions of an import-only module MAY be
         listed, but any extraneous import-only module versions SHOULD be
@@ -664,6 +658,12 @@ Internet-Draft                YANG Packages                 October 2026
    definition, and hence do not form part of the resolved package
    schema.
 
+   The main anticipated use is for referentially incomplete packages,
+   where the dependencies identify packages that are expected to be
+   resolved along with the incomplete package.  The same mechanism can
+   also be used by a referentially complete package to provide
+   additional machine-readable dependency metadata.
+
 
 
 
@@ -673,12 +673,6 @@ Wilton, et al.            Expires 22 April 2027                [Page 12]
 
 Internet-Draft                YANG Packages                 October 2026
 
-
-   The main anticipated use is for referentially incomplete packages,
-   where the dependencies identify packages that are expected to be
-   resolved along with the incomplete package.  The same mechanism can
-   also be used by a referentially complete package to provide
-   additional machine-readable dependency metadata.
 
    Dependency metadata is not inherited and does not participate in
    ordinary package resolution.  For version compatibility assessment of
@@ -720,6 +714,12 @@ Internet-Draft                YANG Packages                 October 2026
    conformance and versioning is specified in terms of particular
    versions of YANG modules rather than for individual submodules.
 
+   However, YANG package definitions also include the list of submodules
+   included by a module, primarily to provide user-ordered locations
+   where each submodule definition can be obtained from.  If a canonical
+   location for a submodule is provided, it MUST be listed first.
+
+
 
 
 
@@ -729,11 +729,6 @@ Wilton, et al.            Expires 22 April 2027                [Page 13]
 
 Internet-Draft                YANG Packages                 October 2026
 
-
-   However, YANG package definitions also include the list of submodules
-   included by a module, primarily to provide user-ordered locations
-   where each submodule definition can be obtained from.  If a canonical
-   location for a submodule is provided, it MUST be listed first.
 
 3.5.  Package Mount Points
 
@@ -778,6 +773,11 @@ Internet-Draft                YANG Packages                 October 2026
    A package mount entry specifies the schema required at the mount
    instances identified by its mount-path.  The 'mount/mount-mode' leaf
    selects the "inline" or "shared-schema" mode defined by [RFC8528],
+   with inheritance and resolution specified in Section 4.  The server's
+   Schema Mount advertisement MUST be consistent with the package
+   definition and the requirements of the selected mode.
+
+
 
 
 
@@ -785,10 +785,6 @@ Wilton, et al.            Expires 22 April 2027                [Page 14]
 
 Internet-Draft                YANG Packages                 October 2026
 
-
-   with inheritance and resolution specified in Section 4.  The server's
-   Schema Mount advertisement MUST be consistent with the package
-   definition and the requirements of the selected mode.
 
    The 'mount/read-only' leaf specifies whether the mounted schema is
    read-only, with inheritance and resolution specified in Section 4.
@@ -834,6 +830,10 @@ Internet-Draft                YANG Packages                 October 2026
    be implemented by a device for a particular datastore.  A YANG schema
    can be thought of as comprising:
 
+      A set of implemented modules at specific versions,
+
+      A set of import-only modules, potentially with multiple versions
+      of a given module,
 
 
 
@@ -841,11 +841,6 @@ Wilton, et al.            Expires 22 April 2027                [Page 15]
 
 Internet-Draft                YANG Packages                 October 2026
 
-
-      A set of implemented modules at specific versions,
-
-      A set of import-only modules, potentially with multiple versions
-      of a given module,
 
       A set of enabled features,
 
@@ -890,6 +885,11 @@ Internet-Draft                YANG Packages                 October 2026
           union of all implemented modules in the resolved included
           packages.  Conflicting module versions can be resolved
           automatically as per Section 4.1, then overwritten (including
+          submodule and location information) by any entries in the
+          "includes/module" list, and finally filtered by any entries in
+          the "excludes/module" leaf-list.  Location leaf-lists for
+          duplicate inherited module references are merged using the
+          location lists rule.
 
 
 
@@ -897,12 +897,6 @@ Wilton, et al.            Expires 22 April 2027                [Page 16]
 
 Internet-Draft                YANG Packages                 October 2026
 
-
-          submodule and location information) by any entries in the
-          "includes/module" list, and finally filtered by any entries in
-          the "excludes/module" leaf-list.  Location leaf-lists for
-          duplicate inherited module references are merged using the
-          location lists rule.
 
        *  import-only modules: The set of import-only modules is the
           union of all import-only modules in the resolved included
@@ -946,6 +940,12 @@ Internet-Draft                YANG Packages                 October 2026
           feature" entries add to features enabled by inherited mounted
           packages and inherited "mount/feature" entries, as well as
           features enabled by locally listed mounted packages.  If the
+          same package version is present in both the inherited and
+          local "mount/package" entries, then the local entry overwrites
+          the inherited entry, including location information.  If the
+          same package name is present with different package versions,
+          then all package versions are retained.  If "inherit-mounted-
+          schema" is false, the inherited mounted packages, additional
 
 
 
@@ -954,12 +954,6 @@ Wilton, et al.            Expires 22 April 2027                [Page 17]
 Internet-Draft                YANG Packages                 October 2026
 
 
-          same package version is present in both the inherited and
-          local "mount/package" entries, then the local entry overwrites
-          the inherited entry, including location information.  If the
-          same package name is present with different package versions,
-          then all package versions are retained.  If "inherit-mounted-
-          schema" is false, the inherited mounted packages, additional
           features, parent-references, read-only status, and mount mode
           for that mount point are discarded, and the local "mount"
           entry defines the mounted schema for that mount point.  If
@@ -991,6 +985,31 @@ Internet-Draft                YANG Packages                 October 2026
           duplicate inherited references to the same submodule version,
           location leaf-lists are merged using the location lists rule.
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Wilton, et al.            Expires 22 April 2027                [Page 18]
+
+Internet-Draft                YANG Packages                 October 2026
+
+
        *  location lists: This rule applies when duplicate inherited
           package, module, import-only module, or submodule references
           identify the same version but have different location or
@@ -1002,20 +1021,12 @@ Internet-Draft                YANG Packages                 October 2026
           location leaf-list, except that values already present in the
           first location leaf-list are ignored.  Hence, the first
           occurrence of each location is retained and the relative order
-
-
-
-Wilton, et al.            Expires 22 April 2027                [Page 18]
-
-Internet-Draft                YANG Packages                 October 2026
-
-
           of non-duplicate locations is preserved.  Checksums MUST
           remain paired with their locations when locations are merged
           or replaced.  For duplicate locations, a supplied checksum
           takes precedence over 'x' or an absent checksum; conflicting
           supplied checksums MUST cause resolution to fail.  If any
-          checksum is retained, locations without checksums MUST have
+          checksum is retained, locations without checksums can use
           corresponding 'x' entries in the merged checksum leaf-list.
 
    Section 5.6.5 of [RFC7950] requires imports without a revision-date
@@ -1047,6 +1058,14 @@ Internet-Draft                YANG Packages                 October 2026
    module then a single version has to be chosen.  The following rules
    are used, in the order given, to automatically select the chosen
    version by comparing the version leaves of the module versions from
+
+
+
+Wilton, et al.            Expires 22 April 2027                [Page 19]
+
+Internet-Draft                YANG Packages                 October 2026
+
+
    the resolved included packages:
 
    1.  If both version leaves match the YANG Semver format, then they
@@ -1056,15 +1075,6 @@ Internet-Draft                YANG Packages                 October 2026
        [I-D.ietf-netmod-yang-semver].  Any "_compatible" or
        "_non_compatible" modifier, pre-release metadata, and build
        metadata are ignored for this numeric comparison:
-
-
-
-
-
-Wilton, et al.            Expires 22 April 2027                [Page 19]
-
-Internet-Draft                YANG Packages                 October 2026
-
 
        i    The module with the highest MAJOR version component is
             chosen.
@@ -1104,16 +1114,6 @@ Internet-Draft                YANG Packages                 October 2026
    This section provides information and guidance on how YANG packages
    can be used.
 
-   YANG packages can be defined and used for different purposes:
-
-
-
-
-
-
-
-
-
 
 
 
@@ -1121,6 +1121,8 @@ Wilton, et al.            Expires 22 April 2027                [Page 20]
 
 Internet-Draft                YANG Packages                 October 2026
 
+
+   YANG packages can be defined and used for different purposes:
 
    *  By standards development organizations and industry organizations
       - to specify common sets of YANG data models that can be used
@@ -1165,11 +1167,9 @@ Internet-Draft                YANG Packages                 October 2026
    datastore schema and equivalent YANG package definitions, e.g., see
    Section 5.4.
 
-5.1.  Achieving package name uniqueness
 
-   As specified in Section 3.1, YANG package names are globally unique.
-   Different versions of the same package share its name, while the name
-   and version together uniquely identify a package definition.
+
+
 
 
 
@@ -1177,6 +1177,18 @@ Wilton, et al.            Expires 22 April 2027                [Page 21]
 
 Internet-Draft                YANG Packages                 October 2026
 
+
+   Checksums associated with location URLs support file integrity
+   validation and caching.  Both supplying and using checksums are
+   OPTIONAL.  A consumer can validate a retrieved file or reuse a cached
+   file with a matching checksum instead of downloading it.  This
+   document currently defines SHA-256 checksums [RFC6234].
+
+5.1.  Achieving package name uniqueness
+
+   As specified in Section 3.1, YANG package names are globally unique.
+   Different versions of the same package share its name, while the name
+   and version together uniquely identify a package definition.
 
    There are a couple of ways of achieving this uniqueness requirement:
 
@@ -1211,6 +1223,17 @@ Internet-Draft                YANG Packages                 October 2026
       As per [RFC7950] section 9.10.2, identities are only available for
       use by the server for implemented modules.
 
+
+
+
+
+
+
+Wilton, et al.            Expires 22 April 2027                [Page 22]
+
+Internet-Draft                YANG Packages                 October 2026
+
+
       If a module defines data nodes and types and the server only wants
       to use the types but not implement any data nodes from the module
       then listing the module as import-only is clearer and simpler than
@@ -1222,17 +1245,6 @@ Internet-Draft                YANG Packages                 October 2026
       it may be helpful to list that module in the import-only module
       list (even if implemented) to ensure that the import dependency is
       always satisfied.
-
-
-
-
-
-
-
-Wilton, et al.            Expires 22 April 2027                [Page 22]
-
-Internet-Draft                YANG Packages                 October 2026
-
 
 5.3.  Referential completeness and YANG packages
 
@@ -1266,6 +1278,18 @@ Internet-Draft                YANG Packages                 October 2026
    the listed packages, together with any 'feature' entries to construct
    the complete datastore schema, as described in Section 5.4.3.
 
+
+
+
+
+
+
+
+Wilton, et al.            Expires 22 April 2027                [Page 23]
+
+Internet-Draft                YANG Packages                 October 2026
+
+
 5.4.1.  Package List
 
    A top level 'packages' container holds the list of all versions of
@@ -1280,15 +1304,6 @@ Internet-Draft                YANG Packages                 October 2026
    clients to select which package versions should be used by the
    server, or if package versions have been changed via applying
    different software packages or hot fixes.
-
-
-
-
-
-Wilton, et al.            Expires 22 April 2027                [Page 23]
-
-Internet-Draft                YANG Packages                 October 2026
-
 
 5.4.2.  Tree diagram
 
@@ -1323,6 +1338,14 @@ Internet-Draft                YANG Packages                 October 2026
    This means that conflicting module versions between the listed
    packages are resolved using the automatic module version resolution
    rules in Section 4.1.  As a result, the version that wins those rules
+
+
+
+Wilton, et al.            Expires 22 April 2027                [Page 24]
+
+Internet-Draft                YANG Packages                 October 2026
+
+
    is selected in the resolved package schema.  This allows an extra
    'hot fix' package to be added to the list of packages defining a
    schema to provide a later module version, but it cannot be used to
@@ -1335,16 +1358,6 @@ Internet-Draft                YANG Packages                 October 2026
    schema that exactly matches the schema defined by the YANG library
    'schema/module-set' leaf-list, and the resolved package schema MUST
    be referentially complete.
-
-
-
-
-
-
-Wilton, et al.            Expires 22 April 2027                [Page 24]
-
-Internet-Draft                YANG Packages                 October 2026
-
 
    Since these nodes augment into YANG library, then as per [RFC8525],
    the "/yang-library/content-id" leaf is updated if the packages or
@@ -1382,25 +1395,16 @@ Internet-Draft                YANG Packages                 October 2026
    3.  The file MUST use the ".ypkg" extension and the "application/
        yang-package+json" media type defined in Section 12.3.
 
-   4.  The filename MUST be "<package-name>@<version>.ypkg", with the
-       name and version matching the 'pkg-defn/name' and 'pkg-defn/
-       version' leafs.
-
-
-
-
-
-
-
-
-
-
 
 
 Wilton, et al.            Expires 22 April 2027                [Page 25]
 
 Internet-Draft                YANG Packages                 October 2026
 
+
+   4.  The filename MUST be "<package-name>@<version>.ypkg", with the
+       name and version matching the 'pkg-defn/name' and 'pkg-defn/
+       version' leafs.
 
    5.  The optional top-level 'schema' leaf identifies the package
        defining the schema of the entire file, including its envelope
@@ -1438,6 +1442,22 @@ Internet-Draft                YANG Packages                 October 2026
 
    The "ietf-ypkg" module has the following structure:
 
+
+
+
+
+
+
+
+
+
+
+
+Wilton, et al.            Expires 22 April 2027                [Page 26]
+
+Internet-Draft                YANG Packages                 October 2026
+
+
    module: ietf-ypkg
 
      structure yang-package:
@@ -1450,13 +1470,6 @@ Internet-Draft                YANG Packages                 October 2026
           +-- name        pkg-name
           +-- version     pkg-version
           ... remainder of yang-pkg-instance grouping ...
-
-
-
-Wilton, et al.            Expires 22 April 2027                [Page 26]
-
-Internet-Draft                YANG Packages                 October 2026
-
 
 5.6.  Off-Device Datastore Schema Advertisement
 
@@ -1488,6 +1501,19 @@ Internet-Draft                YANG Packages                 October 2026
 
    The module has the following structure:
 
+
+
+
+
+
+
+
+
+Wilton, et al.            Expires 22 April 2027                [Page 27]
+
+Internet-Draft                YANG Packages                 October 2026
+
+
    module: ietf-yang-device-schema
      +--ro device-schema
         +--ro device          string
@@ -1504,15 +1530,6 @@ Internet-Draft                YANG Packages                 October 2026
         +--ro datastore* [name]
            +--ro name      ds:datastore-ref
            +--ro schema    -> ../../schema/name
-
-
-
-
-
-Wilton, et al.            Expires 22 April 2027                [Page 27]
-
-Internet-Draft                YANG Packages                 October 2026
-
 
 5.6.1.  Device Schema Content Schema
 
@@ -1545,6 +1562,14 @@ Internet-Draft                YANG Packages                 October 2026
          "reference": "RFC XXXX: YANG Packages",
          "includes": {
            "module": [
+
+
+
+Wilton, et al.            Expires 22 April 2027                [Page 28]
+
+Internet-Draft                YANG Packages                 October 2026
+
+
              {
                "name": "ietf-yang-device-schema",
                "version": "0.1.0",
@@ -1562,14 +1587,6 @@ Internet-Draft                YANG Packages                 October 2026
                ]
              }
            ],
-
-
-
-Wilton, et al.            Expires 22 April 2027                [Page 28]
-
-Internet-Draft                YANG Packages                 October 2026
-
-
            "import-only-module": [
              {
                "name": "ietf-yang-package-types",
@@ -1601,6 +1618,14 @@ Internet-Draft                YANG Packages                 October 2026
                "location": [
                  "https://www.iana.org/assignments/yang-parameters/\
    ietf-yang-types@2025-12-22.yang"
+
+
+
+Wilton, et al.            Expires 22 April 2027                [Page 29]
+
+Internet-Draft                YANG Packages                 October 2026
+
+
                ]
              },
              {
@@ -1617,14 +1642,6 @@ Internet-Draft                YANG Packages                 October 2026
      }
    }
    <CODE ENDS>
-
-
-
-
-Wilton, et al.            Expires 22 April 2027                [Page 29]
-
-Internet-Draft                YANG Packages                 October 2026
-
 
 5.6.2.  Device Schema Example
 
@@ -1657,6 +1674,14 @@ Internet-Draft                YANG Packages                 October 2026
          {
            "date": "2026-10-12",
            "description": "Initial advertisement."
+
+
+
+Wilton, et al.            Expires 22 April 2027                [Page 30]
+
+Internet-Draft                YANG Packages                 October 2026
+
+
          }
        ],
        "content-data": {
@@ -1674,14 +1699,6 @@ Internet-Draft                YANG Packages                 October 2026
                    "version": "1.0.0",
                    "location": [
                      "https://example.org/yang/packages/\
-
-
-
-Wilton, et al.            Expires 22 April 2027                [Page 30]
-
-Internet-Draft                YANG Packages                 October 2026
-
-
    device-routing@1.0.0.ypkg"
                    ]
                  }
@@ -1709,6 +1726,18 @@ Internet-Draft                YANG Packages                 October 2026
    all direct and transitive import dependencies.  The rest of the
    instance data set is unchanged.
 
+
+
+
+
+
+
+
+Wilton, et al.            Expires 22 April 2027                [Page 31]
+
+Internet-Draft                YANG Packages                 October 2026
+
+
    {
      "content-schema": {
        "module": [
@@ -1722,21 +1751,6 @@ Internet-Draft                YANG Packages                 October 2026
        ]
      }
    }
-
-
-
-
-
-
-
-
-
-
-
-Wilton, et al.            Expires 22 April 2027                [Page 31]
-
-Internet-Draft                YANG Packages                 October 2026
-
 
 5.7.  YANG packages as schema for YANG instance data document
 
@@ -1771,20 +1785,6 @@ Internet-Draft                YANG Packages                 October 2026
 
    Example of YANG instance data file using a schema defined by a YANG
    package.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
