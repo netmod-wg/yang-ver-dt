@@ -450,6 +450,12 @@ Wilton, et al.            Expires 22 April 2027                 [Page 8]
 Internet-Draft                YANG Packages                 October 2026
 
 
+   Checksums associated with location URLs support file integrity
+   validation and caching.  Both supplying and using checksums are
+   OPTIONAL.  A consumer can validate a retrieved file or reuse a cached
+   file with a matching checksum instead of downloading it.  This
+   document currently defines SHA-256 checksums [RFC6234].
+
    The ietf-yang-package-types.yang module defines a grouping to specify
    the core elements of the YANG package structure that is used within
    YANG package files (ietf-ypkg.yang) and also on the server (ietf-
@@ -492,12 +498,6 @@ Internet-Draft                YANG Packages                 October 2026
        |  |  +-- location*           inet:uri
        |  |  +-- location-sha-256*   sha-256-hash
        |  |  +-- submodule* [name]
-       |  |     +-- name                module-name
-       |  |     +-- version             version-or-rev-date
-       |  |     +-- location*           inet:uri
-       |  |     +-- location-sha-256*   sha-256-hash
-       |  +-- feature*              scoped-feature
-       +-- excludes
 
 
 
@@ -506,6 +506,12 @@ Wilton, et al.            Expires 22 April 2027                 [Page 9]
 Internet-Draft                YANG Packages                 October 2026
 
 
+       |  |     +-- name                module-name
+       |  |     +-- version             version-or-rev-date
+       |  |     +-- location*           inet:uri
+       |  |     +-- location-sha-256*   sha-256-hash
+       |  +-- feature*              scoped-feature
+       +-- excludes
        |  +-- module*               module-name
        |  +-- import-only-module* [name]
        |  |  +-- name       module-name
@@ -546,13 +552,7 @@ Internet-Draft                YANG Packages                 October 2026
         [I-D.ietf-netmod-yang-semver].  Versioning YANG packages is
         further described in Section 6.1.
 
-   4.   A YANG package MAY represent a referentially complete set of
-        modules or MAY represent a set of modules with some module
-        import dependencies missing, as described in Section 3.3.
 
-   5.   If the resolved package schema is not referentially complete, as
-        defined in Section 3.3, the package definition's 'complete' flag
-        MUST be set to 'false'.
 
 
 
@@ -561,6 +561,14 @@ Wilton, et al.            Expires 22 April 2027                [Page 10]
 
 Internet-Draft                YANG Packages                 October 2026
 
+
+   4.   A YANG package MAY represent a referentially complete set of
+        modules or MAY represent a set of modules with some module
+        import dependencies missing, as described in Section 3.3.
+
+   5.   If the resolved package schema is not referentially complete, as
+        defined in Section 3.3, the package definition's 'complete' flag
+        MUST be set to 'false'.
 
    6.   Package definitions are hierarchical because a package can
         include other packages.  A package MUST NOT include itself at
@@ -592,23 +600,15 @@ Internet-Draft                YANG Packages                 October 2026
         used to retrieve that YANG artifact, it MUST be the first entry
         in the leaf-list.
 
-   11.  The optional 'location-sha-256' leaf-list provides SHA-256
-        checksums [RFC6234] for the files at the sibling 'location'
-        URLs.  The same rules apply to 'schema-location-sha-256' and
-        'schema-location'.  If present, a checksum leaf-list MUST have
-        the same number of entries as its location leaf-list, in the
-        same order; repeated checksum values are permitted.  Each
-        checksum is encoded as 64 lowercase hexadecimal digits and MUST
-        be computed over the file's exact octets, without changes or
-        normalization, including of line endings.
-
-   12.  Checksums are retrieval metadata used only for file integrity
-        checks and cache lookup.  A consumer MUST verify a supplied
-        checksum before using the corresponding file.  A cached file
-        with a matching checksum MAY be used instead of fetching the
-        file.
-
-
+   11.  The 'location-sha-256' leaf-list provides checksums for the
+        files at the sibling 'location' URLs.  The same rules apply to
+        'schema-location-sha-256' and 'schema-location'.  If present, a
+        checksum leaf-list MUST have the same number of entries as its
+        location leaf-list, in the same order; repeated checksum values
+        are permitted.  Each checksum is encoded as 64 lowercase
+        hexadecimal digits and MUST be computed over the file's exact
+        octets, without changes or normalization, including of line
+        endings.
 
 
 
@@ -618,35 +618,35 @@ Wilton, et al.            Expires 22 April 2027                [Page 11]
 Internet-Draft                YANG Packages                 October 2026
 
 
-   13.  For each module implemented by a package, only a single version/
+   12.  For each module implemented by a package, only a single version/
         revision of that module MUST be implemented.  Conflicting module
         versions (e.g. from package includes) MAY be resolved explicitly
         (via "includes/module") or using automatic module version
         resolution, as described in Section 4.1.
 
-   14.  Multiple versions/revisions of an import-only module MAY be
+   13.  Multiple versions/revisions of an import-only module MAY be
         listed, but any extraneous import-only module versions SHOULD be
         removed.  For a given module, each import-only revision retained
         in the resolved package schema with a YANG Semver label MUST
         have a unique version when modifiers, pre-release metadata, and
         build metadata are ignored.
 
-   15.  A package definition MUST NOT include the same module name in
+   14.  A package definition MUST NOT include the same module name in
         the 'includes/module' list and the 'excludes/module' leaf-list.
 
-   16.  A package definition MUST NOT include and exclude the same
+   15.  A package definition MUST NOT include and exclude the same
         import-only module version.  If an 'excludes/import-only-module'
         entry does not list any versions, then it excludes all versions
         of that import-only module and MUST NOT be used with any
         'includes/import-only-module' entry for the same module name.
 
-   17.  A package definition MUST NOT include the same feature name in
+   16.  A package definition MUST NOT include the same feature name in
         both the 'includes/feature' and 'excludes/feature' leaf-lists.
 
-   18.  A package definition MUST NOT exclude a module and list features
+   17.  A package definition MUST NOT exclude a module and list features
         defined by that module in the 'includes/feature' leaf-list.
 
-   19.  A package definition MAY include redundant information, e.g.,
+   18.  A package definition MAY include redundant information, e.g.,
         including a module or package version that is already present by
         an included package, or excluding a module that is not included
         by any included package.  However, such redundant information
@@ -654,7 +654,7 @@ Internet-Draft                YANG Packages                 October 2026
         schema is unambiguous, it is best to minimize redundant
         information where possible.
 
-   20.  Finally, standard YANG validation rules apply.  E.g., entries in
+   19.  Finally, standard YANG validation rules apply.  E.g., entries in
         the various lists MUST be unique by any list key.
 
 3.2.  Package dependencies
