@@ -1,8 +1,8 @@
 //| mill-version: 1.1.2
 //| mill-jvm-version: temurin:21.0.1
 //| mvnDeps:
-//| - uk.org.wilton::yang-pkg-lib:0.1.0
-//| - uk.org.wilton::yang-pkg-mill-plugin::0.1.0
+//| - uk.org.wilton::yang-pkg-lib:0.2.0
+//| - uk.org.wilton::yang-pkg-mill-plugin::0.2.0
 package build
 
 import mill._
@@ -106,6 +106,21 @@ object ExampleBaseTypesPkg_1_0_0 extends ExamplePkgDefn {
   def description =
     "Example package containing base IETF and IANA type modules"
   def reference = "XXX, draft-ietf-netmod-yang-packages"
+
+  override def locationChecksums = Task:
+    val client = HttpClient.newBuilder()
+      .followRedirects(HttpClient.Redirect.NORMAL)
+      .connectTimeout(Duration.ofSeconds(30)).build()
+    val urls = importOnlyModules.collect { case module: ImportOnlyModule => module }
+      .flatMap(_.locations).distinct
+    urls.map: url =>
+      val request = HttpRequest.newBuilder(URI.create(url))
+        .timeout(Duration.ofSeconds(30)).GET().build()
+      val response = client.send(request, HttpResponse.BodyHandlers.ofByteArray())
+      require(response.statusCode() == 200,
+        s"Checksum download failed for $url: HTTP ${response.statusCode()}")
+      url -> LocationChecksums.sha256(response.body())
+    .toMap
 
   def modules = Seq()
   override def importOnlyModules =
