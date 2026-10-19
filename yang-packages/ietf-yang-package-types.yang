@@ -103,6 +103,18 @@ module ietf-yang-package-types {
        or location.";
   }
 
+  typedef sha-256-hash {
+    type string {
+      pattern '[0-9a-f]{64}';
+    }
+    description
+      "A SHA-256 checksum of a file's exact octets, without
+       normalization, encoded as 64 lowercase hexadecimal digits.";
+    reference
+      "RFC 6234: US Secure Hash Algorithms (SHA and SHA-based
+       HMAC and HKDF)";
+  }
+
   typedef module-name {
     type yang:yang-identifier;
     description
@@ -273,6 +285,26 @@ module ietf-yang-package-types {
     }
   }
 
+  grouping location-checksums {
+    description
+      "Optional checksums paired with a sibling location leaf-list.";
+
+    leaf-list location-sha-256 {
+      type sha-256-hash;
+      must "count(../location-sha-256) = count(../location)" {
+        error-message
+          "Each location must have a corresponding checksum.";
+      }
+      ordered-by user;
+      description
+        "If present, this leaf-list MUST have the same number of
+         entries as 'location', in the same order. Each entry is
+         the checksum of the file at the corresponding location.
+         Identical files at different locations have repeated
+         checksum values.";
+    }
+  }
+
   grouping yang-pkg-location {
     description
       "Parameters for locating a YANG package instance";
@@ -290,6 +322,7 @@ module ietf-yang-package-types {
          If a canonical location for this package is provided,
          it MUST be the first entry in the leaf-list.";
     }
+    uses location-checksums;
   }
 
   grouping submodule-identification-leafs {
@@ -333,6 +366,7 @@ module ietf-yang-package-types {
           If a canonical location for this submodule is provided,
           it MUST be the first entry in the leaf-list.";
       }
+      uses location-checksums;
     }
   }
 
@@ -371,6 +405,7 @@ module ietf-yang-package-types {
          it MUST be the first entry in the leaf-list.";
     }
 
+    uses location-checksums;
     uses submodule-identification-leafs;
   }
 

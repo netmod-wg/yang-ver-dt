@@ -308,25 +308,30 @@ module: ietf-yang-package-types
     +-- complete?              boolean
     +-- includes
     |  +-- package* [name version]
-    |  |  +-- name        pkg-name
-    |  |  +-- version     pkg-version
-    |  |  +-- location*   inet:uri
+    |  |  +-- name                pkg-name
+    |  |  +-- version             pkg-version
+    |  |  +-- location*           inet:uri
+    |  |  +-- location-sha-256*   sha-256-hash
     |  +-- module* [name]
-    |  |  +-- name         module-name
-    |  |  +-- version      version-or-rev-date
-    |  |  +-- location*    inet:uri
+    |  |  +-- name                module-name
+    |  |  +-- version             version-or-rev-date
+    |  |  +-- location*           inet:uri
+    |  |  +-- location-sha-256*   sha-256-hash
     |  |  +-- submodule* [name]
-    |  |     +-- name        module-name
-    |  |     +-- version     version-or-rev-date
-    |  |     +-- location*   inet:uri
+    |  |     +-- name                module-name
+    |  |     +-- version             version-or-rev-date
+    |  |     +-- location*           inet:uri
+    |  |     +-- location-sha-256*   sha-256-hash
     |  +-- import-only-module* [name version]
-    |  |  +-- name         module-name
-    |  |  +-- version      version-or-rev-date
-    |  |  +-- location*    inet:uri
+    |  |  +-- name                module-name
+    |  |  +-- version             version-or-rev-date
+    |  |  +-- location*           inet:uri
+    |  |  +-- location-sha-256*   sha-256-hash
     |  |  +-- submodule* [name]
-    |  |     +-- name        module-name
-    |  |     +-- version     version-or-rev-date
-    |  |     +-- location*   inet:uri
+    |  |     +-- name                module-name
+    |  |     +-- version             version-or-rev-date
+    |  |     +-- location*           inet:uri
+    |  |     +-- location-sha-256*   sha-256-hash
     |  +-- feature*              scoped-feature
     +-- excludes
     |  +-- module*               module-name
@@ -336,18 +341,20 @@ module: ietf-yang-package-types
     |  +-- feature*              scoped-feature
     +-- depends-on
     |  +-- package* [name version]
-    |     +-- name        pkg-name
-    |     +-- version     pkg-version
-    |     +-- location*   inet:uri
+    |     +-- name                pkg-name
+    |     +-- version             pkg-version
+    |     +-- location*           inet:uri
+    |     +-- location-sha-256*   sha-256-hash
     +-- mount* [mount-path]
        +-- mount-path                pkg-ypath
        +-- inherit-mounted-schema?   boolean
        +-- read-only?                boolean
        +-- mount-mode?               enumeration
        +-- package* [name version]
-       |  +-- name        pkg-name
-       |  +-- version     pkg-version
-       |  +-- location*   inet:uri
+       |  +-- name                pkg-name
+       |  +-- version             pkg-version
+       |  +-- location*           inet:uri
+       |  +-- location-sha-256*   sha-256-hash
        +-- feature*                  scoped-feature
        +-- parent-reference*         pkg-ypath
         ]]></artwork>
@@ -405,6 +412,21 @@ module: ietf-yang-package-types
             import-only module, or submodule includes a canonical location
             used to retrieve that YANG artifact, it MUST be the first entry in
             the leaf-list.</t>
+
+            <t>The optional 'location-sha-256' leaf-list provides SHA-256
+            checksums <xref target="RFC6234"/> for the files at the sibling
+            'location' URLs. The same rules apply to 'schema-location-sha-256'
+            and 'schema-location'. If present, a checksum leaf-list MUST have
+            the same number of entries as its location leaf-list, in the same
+            order; repeated checksum values are permitted. Each checksum is
+            encoded as 64 lowercase hexadecimal digits and MUST be computed
+            over the file's exact octets, without changes or normalization,
+            including of line endings.</t>
+
+            <t>Checksums are retrieval metadata used only for file integrity
+            checks and cache lookup. A consumer MUST verify a supplied checksum
+            before using the corresponding file. A cached file with a matching
+            checksum MAY be used instead of fetching the file.</t>
 
             <t>For each module implemented by a package, only a single
             version/revision of that module MUST be implemented.   Conflicting
@@ -737,7 +759,11 @@ module: ietf-yang-package-types
             appended to the first location leaf-list, except that values already
             present in the first location leaf-list are ignored.  Hence, the
             first occurrence of each location is retained and the relative order
-            of non-duplicate locations is preserved.</t>
+            of non-duplicate locations is preserved. Checksums MUST remain
+            paired with their locations when locations are merged or replaced.
+            Conflicting supplied checksums for the same location MUST cause
+            resolution to fail. If any retained location lacks a checksum, the
+            merged checksum leaf-list MUST be omitted.</t>
           </list></t>
       </list>
       </t>
@@ -1025,9 +1051,10 @@ module: ietf-yl-packages
 
   augment /yanglib:yang-library/yanglib:schema:
     +--ro package* [name version]
-    |  +--ro name        -> /pkgs:packages/package/name
-    |  +--ro version     leafref
-    |  +--ro location*   inet:uri
+    |  +--ro name                -> /pkgs:packages/package/name
+    |  +--ro version             leafref
+    |  +--ro location*           inet:uri
+    |  +--ro location-sha-256*   sha-256-hash
     +--ro feature*   pkg-types:scoped-feature
           ]]></artwork>
           </figure>
@@ -1093,8 +1120,9 @@ module: ietf-yl-packages
 module: ietf-ypkg
 
   structure yang-package:
-    +-- schema?           pkg-types:pkg-reference
-    +-- schema-location*  inet:uri
+    +-- schema?                  pkg-types:pkg-reference
+    +-- schema-location*         inet:uri
+    +-- schema-location-sha-256* pkg-types:sha-256-hash
     +-- pkg-defn
        // Uses the yang-pkg-instance grouping defined in
        // ietf-yang-package-types.yang
@@ -1142,9 +1170,10 @@ module: ietf-yang-device-schema
      +--ro schema* [name]
      |  +--ro name       string
      |  +--ro package* [name version]
-     |  |  +--ro name        pkg-name
-     |  |  +--ro version     pkg-version
-     |  |  +--ro location*   inet:uri
+     |  |  +--ro name                pkg-name
+     |  |  +--ro version             pkg-version
+     |  |  +--ro location*           inet:uri
+     |  |  +--ro location-sha-256*   sha-256-hash
      |  +--ro feature*   pkg-types:scoped-feature
      +--ro datastore* [name]
         +--ro name      ds:datastore-ref
@@ -1365,8 +1394,9 @@ module: ietf-yang-inst-data-pkg
                       /yid:content-schema-spec:
     +--:(pkg-schema)
        +-- pkg-schema
-          +-- schema      pkg-types:pkg-reference
-          +-- location*   inet:uri
+          +-- schema              pkg-types:pkg-reference
+          +-- location*           inet:uri
+          +-- location-sha-256*   sha-256-hash
         ]]></artwork>
         </figure>
 
@@ -2006,6 +2036,18 @@ module ietf-yang-package-types {
        or location.";
   }
 
+  typedef sha-256-hash {
+    type string {
+      pattern '[0-9a-f]{64}';
+    }
+    description
+      "A SHA-256 checksum of a file's exact octets, without
+       normalization, encoded as 64 lowercase hexadecimal digits.";
+    reference
+      "RFC 6234: US Secure Hash Algorithms (SHA and SHA-based
+       HMAC and HKDF)";
+  }
+
   typedef module-name {
     type yang:yang-identifier;
     description
@@ -2176,6 +2218,26 @@ module ietf-yang-package-types {
     }
   }
 
+  grouping location-checksums {
+    description
+      "Optional checksums paired with a sibling location leaf-list.";
+
+    leaf-list location-sha-256 {
+      type sha-256-hash;
+      must "count(../location-sha-256) = count(../location)" {
+        error-message
+          "Each location must have a corresponding checksum.";
+      }
+      ordered-by user;
+      description
+        "If present, this leaf-list MUST have the same number of
+         entries as 'location', in the same order. Each entry is
+         the checksum of the file at the corresponding location.
+         Identical files at different locations have repeated
+         checksum values.";
+    }
+  }
+
   grouping yang-pkg-location {
     description
       "Parameters for locating a YANG package instance";
@@ -2193,6 +2255,7 @@ module ietf-yang-package-types {
          If a canonical location for this package is provided,
          it MUST be the first entry in the leaf-list.";
     }
+    uses location-checksums;
   }
 
   grouping submodule-identification-leafs {
@@ -2236,6 +2299,7 @@ module ietf-yang-package-types {
           If a canonical location for this submodule is provided,
           it MUST be the first entry in the leaf-list.";
       }
+      uses location-checksums;
     }
   }
 
@@ -2274,6 +2338,7 @@ module ietf-yang-package-types {
          it MUST be the first entry in the leaf-list.";
     }
 
+    uses location-checksums;
     uses submodule-identification-leafs;
   }
 
@@ -2737,6 +2802,21 @@ module ietf-ypkg {
          the name and version of the explicitly identified or
          default schema package. Otherwise, at least one download
          URL MUST be provided in this leaf-list.";
+    }
+
+    leaf-list schema-location-sha-256 {
+      type pkg-types:sha-256-hash;
+      must "count(../schema-location-sha-256) = "
+         + "count(../schema-location)" {
+        error-message
+          "Each schema location must have a corresponding checksum.";
+      }
+      ordered-by user;
+      description
+        "Optional file checksums corresponding to 'schema-location'.
+         If present, this leaf-list MUST have the same number of
+         entries, in the same order. Identical files at different
+         locations have repeated checksum values.";
     }
 
     container pkg-defn {
@@ -3480,6 +3560,9 @@ ietf-yang-structure-ext@2020-06-17.yang"
     of advertisements and referenced package and YANG library files before
     relying on their contents.</t>
 
+    <t>Integrity checks depend on obtaining the expected checksums from a
+    trusted source.</t>
+
     <section anchor="yang-security" title="YANG Module Security Considerations">
       <t>This section is modeled after the template described in Section 3.7
       of <xref target="RFC9907"/>.</t>
@@ -3782,6 +3865,7 @@ ietf-yang-structure-ext@2020-06-17.yang"
       <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.2119.xml"/>
       <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.3688.xml"/>
       <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.6020.xml"/>
+      <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.6234.xml"/>
       <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.6242.xml"/>
       <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.6838.xml"/>
       <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.7950.xml"/>
