@@ -422,9 +422,10 @@ module: ietf-yang-package-types
             <t>The 'location-sha-256' leaf-list provides checksums for the
             files at the sibling 'location' URLs. The same rules apply to
             'schema-location-sha-256' and 'schema-location'. If present, a
-            checksum leaf-list MUST have
-            the same number of entries as its location leaf-list, in the same
-            order; repeated checksum values are permitted. Each checksum is
+            checksum leaf-list MUST have the same number of entries as its
+            location leaf-list, in the same order; repeated values are
+            permitted. The value 'x' indicates that no checksum is provided
+            for the corresponding location. Each checksum is
             encoded as 64 lowercase hexadecimal digits and MUST be computed
             over the file's exact octets, without changes or normalization,
             including of line endings.</t>
@@ -753,7 +754,8 @@ module: ietf-yang-package-types
             <t><spanx style="verb">location lists</spanx>:  This rule applies
             when duplicate inherited package, module, import-only module, or
             submodule references identify the same version but have different
-            location leaf-list values.  The referenced content and metadata are
+            location or checksum leaf-list values. The referenced content and
+            metadata are
             expected to be equivalent.  The location leaf-lists are merged
             pairwise in the order that the included package entries are listed.
             For each pairwise merge, values from the second location leaf-list are
@@ -762,9 +764,11 @@ module: ietf-yang-package-types
             first occurrence of each location is retained and the relative order
             of non-duplicate locations is preserved. Checksums MUST remain
             paired with their locations when locations are merged or replaced.
-            Conflicting supplied checksums for the same location MUST cause
-            resolution to fail. If any retained location lacks a checksum, the
-            merged checksum leaf-list MUST be omitted.</t>
+            For duplicate locations, a supplied checksum takes precedence
+            over 'x' or an absent checksum; conflicting supplied checksums
+            MUST cause resolution to fail. If any checksum is retained,
+            locations without checksums MUST have corresponding 'x' entries
+            in the merged checksum leaf-list.</t>
           </list></t>
       </list>
       </t>
@@ -2039,11 +2043,12 @@ module ietf-yang-package-types {
 
   typedef sha-256-hash {
     type string {
-      pattern '[0-9a-f]{64}';
+      pattern '[0-9a-f]{64}|x';
     }
     description
       "A SHA-256 checksum of a file's exact octets, without
-       normalization, encoded as 64 lowercase hexadecimal digits.";
+       normalization, encoded as 64 lowercase hexadecimal digits,
+       or 'x' if no checksum is provided.";
     reference
       "RFC 6234: US Secure Hash Algorithms (SHA and SHA-based
        HMAC and HKDF)";
@@ -2227,13 +2232,14 @@ module ietf-yang-package-types {
       type sha-256-hash;
       must "count(../location-sha-256) = count(../location)" {
         error-message
-          "Each location must have a corresponding checksum.";
+          "Each location must have a corresponding checksum entry.";
       }
       ordered-by user;
       description
         "If present, this leaf-list MUST have the same number of
-         entries as 'location', in the same order. Each entry is
-         the checksum of the file at the corresponding location.
+         entries as 'location', in the same order. Each entry gives
+         the checksum of the file at the corresponding location,
+         or 'x' if no checksum is provided.
          Identical files at different locations have repeated
          checksum values.";
     }
@@ -2810,7 +2816,7 @@ module ietf-ypkg {
       must "count(../schema-location-sha-256) = "
          + "count(../schema-location)" {
         error-message
-          "Each schema location must have a corresponding checksum.";
+          "Each schema location must have a checksum entry.";
       }
       ordered-by user;
       description
