@@ -11,6 +11,8 @@ This target checks the YANG modules, regenerates package examples and tree diagr
 
 For prose-only XML changes, render the text without regenerating embedded content by running `../mill DraftXml.renderText` from `yang-packages`.
 
-Rendering uploads the full draft XML to the IETF Author Tools text-render endpoint at `author-tools.ietf.org` and downloads the rendered text. The user has authorized these uploads to IETF Author Tools / RFC Editor tools for draft generation; no additional confirmation is needed for this workflow. Network access to `author-tools.ietf.org` is required.
+Building updated TXT or HTML drafts, including uploading the full draft XML to IETF Author Tools / RFC Editor tools for rendering, is authorized and does not require explicit user permission or additional confirmation. The current text-render workflow uploads XML to `author-tools.ietf.org` and downloads the rendered text; network access to that service is required.
+
+Publishing or submitting a new version of the draft to the IETF Datatracker REQUIRES explicit user permission. Authorization to edit, build, render, or upload to IETF Author Tools does not authorize publication or submission to Datatracker.
 
 Review the XML and generated text together, and include both in the same commit when the XML change is intended to update the published draft. Do not edit the generated `.txt` by hand.
