@@ -398,12 +398,12 @@ object DeviceRoutingPkg extends ExamplePkgDefn {
       yang.packages.tools.lib.Module(
         "vendor-ietf-bgp-deviations",
         ModuleVersion("2026-06-22"),
-        Seq()
+        Seq("https://example.org/yang/modules/vendor-ietf-bgp-deviations@2026-06-22.yang")
       ),
       yang.packages.tools.lib.Module(
         "device-isis-extensions",
         ModuleVersion("1.2.3"),
-        Seq()
+        Seq("https://example.org/yang/modules/device-isis-extensions@1.2.3.yang")
       )
     )
   def excludedModules =
@@ -430,7 +430,7 @@ object DeviceRoutingPkg extends ExamplePkgDefn {
           YangPackageRef(
             PkgName(ExampleRoutingPkg.name),
             PkgVersion(ExampleRoutingPkg.version),
-            Seq()
+            Seq(s"https://example.org/yang/packages/${ExampleRoutingPkg.name}@${ExampleRoutingPkg.version}.ypkg")
           )
         ),
         modules = modules.collect:
@@ -476,7 +476,7 @@ object VendorIsisHotfixPkg extends ExamplePkgDefn {
       yang.packages.tools.lib.Module(
         "device-isis-extensions",
         ModuleVersion("1.2.4_compatible"),
-        Seq()
+        Seq("https://example.org/yang/modules/device-isis-extensions@1.2.4_compatible.yang")
       )
     )
 }
@@ -622,7 +622,8 @@ object ExampleVersionedRoutingPkg_4_0_0 extends ExampleVersionedRoutingPkg {
     )
   override def modules =
     Seq(
-      yang.packages.tools.lib.Module("example-routing-core", ModuleVersion("1.5.0"), Seq()),
+      yang.packages.tools.lib.Module("example-routing-core", ModuleVersion("1.5.0"),
+        Seq("https://example.org/yang/example-routing-core@1.5.0.yang")),
       yang.packages.tools.lib.Module("example-routing-policy", ModuleVersion("1.0.0"), Seq()),
       yang.packages.tools.lib.Module("vendor-routing-deviations", ModuleVersion("2026-06-22"), Seq()),
       yang.packages.tools.lib.Module("example-isis", ModuleVersion("1.0.0"), Seq())
@@ -648,7 +649,10 @@ object ExampleVersionedRoutingPkg_4_0_1 extends ExampleVersionedRoutingPkg {
       yang.packages.tools.lib.Module(
         "example-routing-core",
         ModuleVersion("1.5.0"),
-        Seq("https://example.org/yang/example-routing-core@1.5.0.yang")
+        Seq(
+          "https://example.org/yang/example-routing-core@1.5.0.yang",
+          "https://mirror.example.org/yang/example-routing-core@1.5.0.yang"
+        )
       ),
       yang.packages.tools.lib.Module("example-routing-policy", ModuleVersion("1.0.0"), Seq()),
       yang.packages.tools.lib.Module("vendor-routing-deviations", ModuleVersion("2026-06-22"), Seq()),
@@ -755,15 +759,12 @@ object ExampleResolutionAccessPkg extends ExampleResolutionPkg {
       yang.packages.tools.lib.Module(
         "example-resolution-acl",
         ModuleVersion("1.1.0"),
-        Seq("example:location-qux")
+        Seq()
       ),
       yang.packages.tools.lib.Module(
         "example-resolution-transport",
         ModuleVersion("1.2.0"),
-        Seq(
-          "example:location-foo",
-          "example:location-bar"
-        )
+        Seq()
       )
     )
   override def mandatoryFeatures =
@@ -783,10 +784,7 @@ object ExampleResolutionRoutingPkg extends ExampleResolutionPkg {
       yang.packages.tools.lib.Module(
         "example-resolution-transport",
         ModuleVersion("1.2.0"),
-        Seq(
-          "example:location-foo",
-          "example:location-baz"
-        )
+        Seq()
       )
     )
   override def mandatoryFeatures =
@@ -807,7 +805,7 @@ object ExampleResolutionDevicePkg extends ExampleResolutionPkg {
       yang.packages.tools.lib.Module(
         "example-resolution-acl",
         ModuleVersion("1.1.0"),
-        Seq("example:location-quux")
+        Seq()
       )
     )
   override def excludedModules =
@@ -1152,8 +1150,29 @@ object DraftXml extends mill.Module:
     s"https://example.org/yang/packages/${packageFileName(pkg)}"
 
   private def packageCodeBlock(artifact: PackageArtifact) =
+    // Abbreviate only the embedded definitions; standalone files retain locations.
+    val elideLocations = Set(
+      "device-routing@1.0.0.ypkg",
+      "example-network-device@1.1.2.ypkg",
+      "example-routing-types@1.0.0.ypkg",
+      "example-routing@1.3.1.ypkg",
+      "example-ab@0.1.0.ypkg",
+      "example-c@0.1.0.ypkg"
+    ).contains(packageFileName(artifact.pkg))
+    val source = os.read(artifact.path)
+    val displayed = if elideLocations then
+      val json = ujson.read(source)
+      def omitLocations(value: ujson.Value): Unit = value match
+        case obj: ujson.Obj =>
+          obj.obj.remove("location")
+          obj.obj.values.foreach(omitLocations)
+        case arr: ujson.Arr => arr.arr.foreach(omitLocations)
+        case _ => ()
+      omitLocations(json)
+      ujson.write(json, indent = 2)
+    else source
     s"""<CODE BEGINS> file "${packageFileName(artifact.pkg)}"
-       |${foldLongLines(os.read(artifact.path).trim, maxCol = 69).trim}
+       |${foldLongLines(displayed.trim, maxCol = 69).trim}
        |<CODE ENDS>""".stripMargin
 
   private def sanitizePackageLocations(text: String, packageRefs: Seq[PathRef]) =
@@ -1174,7 +1193,8 @@ object DraftXml extends mill.Module:
         "package" -> ujson.Arr(
           ujson.Obj(
             "name" -> DeviceRoutingPkg.name,
-            "version" -> DeviceRoutingPkg.version
+            "version" -> DeviceRoutingPkg.version,
+            "location" -> ujson.Arr(packageExampleLocation(DeviceRoutingPkg))
           )
         )
       )
@@ -1305,8 +1325,10 @@ object DraftXml extends mill.Module:
     val outDir = dir / "generated" / "yang-library"
     os.makeDir.all(outDir)
     fullLibraryExamples.map: (filename, names, setName, schemaName) =>
-      val refs = names.map(n => YangPackageRef(PkgName(n),
-        PkgVersion(if n == "example-c" then "0.1.0" else "1.0.0")))
+      val refs = names.map: name =>
+        val version = if name == "example-c" then "0.1.0" else "1.0.0"
+        YangPackageRef(PkgName(name), PkgVersion(version),
+          Seq(s"https://example.org/yang/packages/$name@$version.ypkg"))
       // Resolve multiple advertised roots using the shared resolver's normal include rules.
       // The synthetic root is not advertised or added to the package catalogue.
       val definition = if refs.size == 1 then definitions((refs.head.name, refs.head.version))
@@ -1364,6 +1386,10 @@ object DraftXml extends mill.Module:
               full("ietf-yang-library:yang-library")("content-id")
             snippet("ietf-yang-library:yang-library")("datastore") =
               full("ietf-yang-library:yang-library")("datastore")
+            if filename == "device-routing-library.json" then
+              val displayedRef = snippet("ietf-yang-library:yang-library")("schema")(0)("ietf-yl-packages:package")(0)
+              val completeRef = full("ietf-yang-library:yang-library")("schema")(0)("ietf-yl-packages:package")(0)
+              displayedRef("location") = completeRef("location")
             s"<CODE BEGINS> file \"$filename\"\n" +
               foldLongLines(ujson.write(snippet, indent = 2), maxCol = 69).trim + "\n<CODE ENDS>"
         )
