@@ -1,8 +1,8 @@
 //| mill-version: 1.1.2
 //| mill-jvm-version: temurin:21.0.1
 //| mvnDeps:
-//| - uk.org.wilton::yang-pkg-lib:0.1.0
-//| - uk.org.wilton::yang-pkg-mill-plugin::0.1.0
+//| - uk.org.wilton::yang-pkg-lib:0.2.0
+//| - uk.org.wilton::yang-pkg-mill-plugin::0.2.0
 package build
 
 import mill._
@@ -95,7 +95,23 @@ object IetfDeviceSchemaPkg_0_1_0 extends IetfPkgDefn:
     "ietf-inet-types@2025-12-22"
   )
 
-object ExampleBaseTypesPkg_1_0_0 extends ExamplePkgDefn {
+trait ExampleChecksummedTypesPkg extends ExamplePkgDefn:
+  override def locationChecksums = Task:
+    val client = HttpClient.newBuilder()
+      .followRedirects(HttpClient.Redirect.NORMAL)
+      .connectTimeout(Duration.ofSeconds(30)).build()
+    val urls = importOnlyModules.collect { case module: ImportOnlyModule => module }
+      .flatMap(_.locations).distinct
+    urls.map: url =>
+      val request = HttpRequest.newBuilder(URI.create(url))
+        .timeout(Duration.ofSeconds(30)).GET().build()
+      val response = client.send(request, HttpResponse.BodyHandlers.ofByteArray())
+      require(response.statusCode() == 200,
+        s"Checksum download failed for $url: HTTP ${response.statusCode()}")
+      url -> LocationChecksums.sha256(response.body())
+    .toMap
+
+object ExampleBaseTypesPkg_1_0_0 extends ExampleChecksummedTypesPkg {
   def name = "example-base-types"
   def version = "1.0.0"
   override def timestamp = "2026-03-20T17:52:47.188322Z"
@@ -122,14 +138,14 @@ object ExampleBaseTypesPkg_1_0_0 extends ExamplePkgDefn {
       ),
       ImportOnlyModule(
         "ietf-netconf-acm",
-        ModuleVersion("2012-02-22"),
-        Seq("https://www.iana.org/assignments/yang-parameters/ietf-netconf-acm@2012-02-22.yang")
+        ModuleVersion("2018-02-14"),
+        Seq("https://www.iana.org/assignments/yang-parameters/ietf-netconf-acm@2018-02-14.yang")
       )
     )
 }
 
 // Same as above but with updated RFC references and module versions.
-object ExampleBaseTypesPkg_1_1_0 extends ExamplePkgDefn {
+object ExampleBaseTypesPkg_1_1_0 extends ExampleChecksummedTypesPkg {
   def name = "example-base-types"
   def version = "1.1.0"
   override def versionDescription =
@@ -718,11 +734,13 @@ object ExampleResolutionCommonPkg_1_0_0 extends ExampleResolutionPkg {
   def description = "Example common package for resolution examples"
   override def modules =
     Seq(
-      yang.packages.tools.lib.Module("example-resolution-base", ModuleVersion("1.0.0"), Seq())
+      yang.packages.tools.lib.Module("example-resolution-base", ModuleVersion("1.0.0"),
+        Seq())
     )
   override def importOnlyModules =
     Seq(
-      ImportOnlyModule("example-resolution-types", ModuleVersion("1.0.0"), Seq())
+      ImportOnlyModule("example-resolution-types", ModuleVersion("1.0.0"),
+        Seq())
     )
   override def mandatoryFeatures =
     Seq("example-resolution-base:basic")
@@ -998,8 +1016,9 @@ object DraftXml extends mill.Module:
         """module: ietf-ypkg
           |
           |  structure yang-package:
-          |    +-- schema?           pkg-types:pkg-reference
-          |    +-- schema-location*  inet:uri
+          |    +-- schema?                  pkg-types:pkg-reference
+          |    +-- schema-location*         inet:uri
+          |    +-- schema-location-sha-256* pkg-types:sha-256-hash
           |    +-- pkg-defn
           |       // Uses the yang-pkg-instance grouping defined in
           |       // ietf-yang-package-types.yang
@@ -1165,6 +1184,7 @@ object DraftXml extends mill.Module:
       def omitLocations(value: ujson.Value): Unit = value match
         case obj: ujson.Obj =>
           obj.obj.remove("location")
+          obj.obj.remove("location-sha-256")
           obj.obj.values.foreach(omitLocations)
         case arr: ujson.Arr => arr.arr.foreach(omitLocations)
         case _ => ()
@@ -1221,7 +1241,7 @@ object DraftXml extends mill.Module:
   private def writeExamplePackages(packageRefs: Seq[PathRef], locations: Seq[(String, String)]) =
     val outDir = dir / "generated" / "packages"
     os.makeDir.all(outDir)
-    examplePackages.zip(packageRefs).map: (pkg, ref) =>
+    val artifacts = examplePackages.zip(packageRefs).map: (pkg, ref) =>
       val path = outDir / packageFileName(pkg)
       val sanitized = sanitizePackageLocations(os.read(ref.path), packageRefs)
       val versionedLocations = locations.foldLeft(sanitized):
@@ -1231,6 +1251,34 @@ object DraftXml extends mill.Module:
       os.write.over(path, if packageJson.endsWith("\n") then packageJson else packageJson + "\n")
       println(s"Package written to $path")
       PackageArtifact(pkg, path)
+
+    val moduleSources = Seq(
+      "vendor-ietf-bgp-deviations@2026-06-22.yang" ->
+        (dir / "example-modules/device/vendor-ietf-bgp-deviations.yang"),
+      "device-isis-extensions@1.2.3.yang" ->
+        (dir / "example-modules/device/device-isis-extensions@2026-06-21.yang"),
+      "device-isis-extensions@1.2.4_compatible.yang" ->
+        (dir / "example-modules/device/device-isis-extensions@2026-06-22.yang")
+    ).map: (filename, path) =>
+      s"https://example.org/yang/modules/$filename" -> LocationChecksums.sha256File(path)
+    .toMap
+    // Illustrative checksum for the fictional routing-core module, shared by both mirrors.
+    val routingCoreChecksum = "6f132f03b78c441108ea08f8adf823d454d5c90733e3b2c0e72b919a789ed158"
+    val checksummedPackages = Set("device-routing", "vendor-isis-hotfix")
+    artifacts.foreach: artifact =>
+      val pkg = artifact.pkg
+      if checksummedPackages(pkg.name) then
+        val packageHashes = artifacts.map: included =>
+          packageExampleLocation(included.pkg) -> LocationChecksums.sha256File(included.path)
+        .toMap
+        val checksums = moduleSources ++ packageHashes
+        Helper.readPkgFile(artifact.path).withLocationChecksums(checksums.get)
+          .writeToFile(artifact.path)
+      else if pkg.name == "example-versioned-routing" && Set("4.0.0", "4.0.1")(pkg.version) then
+        Helper.readPkgFile(artifact.path).withLocationChecksums(location =>
+          Option.when(location.endsWith("/example-routing-core@1.5.0.yang"))(routingCoreChecksum)
+        ).writeToFile(artifact.path)
+    artifacts
 
   private def writeTreeFiles(trees: Seq[PathRef]) =
     val outDir = dir / "generated" / "tree"
@@ -1328,7 +1376,9 @@ object DraftXml extends mill.Module:
       val refs = names.map: name =>
         val version = if name == "example-c" then "0.1.0" else "1.0.0"
         YangPackageRef(PkgName(name), PkgVersion(version),
-          Seq(s"https://example.org/yang/packages/$name@$version.ypkg"))
+          Seq(s"https://example.org/yang/packages/$name@$version.ypkg"),
+          locationSha256 = Seq(LocationChecksums.sha256File(
+            artifacts.find(a => a.pkg.name == name && a.pkg.version == version).get.path)))
       // Resolve multiple advertised roots using the shared resolver's normal include rules.
       // The synthetic root is not advertised or added to the package catalogue.
       val definition = if refs.size == 1 then definitions((refs.head.name, refs.head.version))
@@ -1390,6 +1440,7 @@ object DraftXml extends mill.Module:
               val displayedRef = snippet("ietf-yang-library:yang-library")("schema")(0)("ietf-yl-packages:package")(0)
               val completeRef = full("ietf-yang-library:yang-library")("schema")(0)("ietf-yl-packages:package")(0)
               displayedRef("location") = completeRef("location")
+              displayedRef("location-sha-256") = completeRef("location-sha-256")
             s"<CODE BEGINS> file \"$filename\"\n" +
               foldLongLines(ujson.write(snippet, indent = 2), maxCol = 69).trim + "\n<CODE ENDS>"
         )

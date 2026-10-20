@@ -308,25 +308,30 @@ module: ietf-yang-package-types
     +-- complete?              boolean
     +-- includes
     |  +-- package* [name version]
-    |  |  +-- name        pkg-name
-    |  |  +-- version     pkg-version
-    |  |  +-- location*   inet:uri
+    |  |  +-- name                pkg-name
+    |  |  +-- version             pkg-version
+    |  |  +-- location*           inet:uri
+    |  |  +-- location-sha-256*   sha-256-hash
     |  +-- module* [name]
-    |  |  +-- name         module-name
-    |  |  +-- version      version-or-rev-date
-    |  |  +-- location*    inet:uri
+    |  |  +-- name                module-name
+    |  |  +-- version             version-or-rev-date
+    |  |  +-- location*           inet:uri
+    |  |  +-- location-sha-256*   sha-256-hash
     |  |  +-- submodule* [name]
-    |  |     +-- name        module-name
-    |  |     +-- version     version-or-rev-date
-    |  |     +-- location*   inet:uri
+    |  |     +-- name                module-name
+    |  |     +-- version             version-or-rev-date
+    |  |     +-- location*           inet:uri
+    |  |     +-- location-sha-256*   sha-256-hash
     |  +-- import-only-module* [name version]
-    |  |  +-- name         module-name
-    |  |  +-- version      version-or-rev-date
-    |  |  +-- location*    inet:uri
+    |  |  +-- name                module-name
+    |  |  +-- version             version-or-rev-date
+    |  |  +-- location*           inet:uri
+    |  |  +-- location-sha-256*   sha-256-hash
     |  |  +-- submodule* [name]
-    |  |     +-- name        module-name
-    |  |     +-- version     version-or-rev-date
-    |  |     +-- location*   inet:uri
+    |  |     +-- name                module-name
+    |  |     +-- version             version-or-rev-date
+    |  |     +-- location*           inet:uri
+    |  |     +-- location-sha-256*   sha-256-hash
     |  +-- feature*              scoped-feature
     +-- excludes
     |  +-- module*               module-name
@@ -336,18 +341,20 @@ module: ietf-yang-package-types
     |  +-- feature*              scoped-feature
     +-- depends-on
     |  +-- package* [name version]
-    |     +-- name        pkg-name
-    |     +-- version     pkg-version
-    |     +-- location*   inet:uri
+    |     +-- name                pkg-name
+    |     +-- version             pkg-version
+    |     +-- location*           inet:uri
+    |     +-- location-sha-256*   sha-256-hash
     +-- mount* [mount-path]
        +-- mount-path                pkg-ypath
        +-- inherit-mounted-schema?   boolean
        +-- read-only?                boolean
        +-- mount-mode?               enumeration
        +-- package* [name version]
-       |  +-- name        pkg-name
-       |  +-- version     pkg-version
-       |  +-- location*   inet:uri
+       |  +-- name                pkg-name
+       |  +-- version             pkg-version
+       |  +-- location*           inet:uri
+       |  +-- location-sha-256*   sha-256-hash
        +-- feature*                  scoped-feature
        +-- parent-reference*         pkg-ypath
         ]]></artwork>
@@ -405,6 +412,17 @@ module: ietf-yang-package-types
             import-only module, or submodule includes a canonical location
             used to retrieve that YANG artifact, it MUST be the first entry in
             the leaf-list.</t>
+
+            <t>The 'location-sha-256' leaf-list provides checksums for the
+            files at the sibling 'location' URLs. The same rules apply to
+            'schema-location-sha-256' and 'schema-location'. If present, a
+            checksum leaf-list MUST have the same number of entries as its
+            location leaf-list, in the same order; repeated values are
+            permitted. The value 'x' indicates that no checksum is provided
+            for the corresponding location. Each checksum is
+            encoded as 64 lowercase hexadecimal digits and MUST be computed
+            over the file's exact octets, without changes or normalization,
+            including of line endings.</t>
 
             <t>For each module implemented by a package, only a single
             version/revision of that module MUST be implemented.   Conflicting
@@ -730,14 +748,21 @@ module: ietf-yang-package-types
             <t><spanx style="verb">location lists</spanx>:  This rule applies
             when duplicate inherited package, module, import-only module, or
             submodule references identify the same version but have different
-            location leaf-list values.  The referenced content and metadata are
+            location or checksum leaf-list values. The referenced content and
+            metadata are
             expected to be equivalent.  The location leaf-lists are merged
             pairwise in the order that the included package entries are listed.
             For each pairwise merge, values from the second location leaf-list are
             appended to the first location leaf-list, except that values already
             present in the first location leaf-list are ignored.  Hence, the
             first occurrence of each location is retained and the relative order
-            of non-duplicate locations is preserved.</t>
+            of non-duplicate locations is preserved. Checksums MUST remain
+            paired with their locations when locations are merged or replaced.
+            For duplicate locations, a supplied checksum takes precedence
+            over 'x' or an absent checksum; conflicting supplied checksums
+            MUST cause resolution to fail. If any checksum is retained,
+            locations without checksums can use corresponding 'x' entries
+            in the merged checksum leaf-list.</t>
           </list></t>
       </list>
       </t>
@@ -855,6 +880,13 @@ module: ietf-yang-package-types
       on the device as a list of known packages and relationships between 
       YANG library datastore schema and equivalent YANG package definitions,
       e.g., see <xref target="on-device-pkg-definitions"/>.</t>
+
+      <t>Checksums associated with module, submodule, and package location
+      URLs support file integrity validation and caching. Both supplying and
+      using checksums are OPTIONAL.
+      A consumer can validate a retrieved file or reuse a cached file with a
+      matching checksum instead of downloading it. This document currently
+      defines SHA-256 checksums <xref target="RFC6234"/>.</t>
 
       <section anchor="package-scope"
                title="Achieving package name uniqueness">
@@ -1025,9 +1057,10 @@ module: ietf-yl-packages
 
   augment /yanglib:yang-library/yanglib:schema:
     +--ro package* [name version]
-    |  +--ro name        -> /pkgs:packages/package/name
-    |  +--ro version     leafref
-    |  +--ro location*   inet:uri
+    |  +--ro name                -> /pkgs:packages/package/name
+    |  +--ro version             leafref
+    |  +--ro location*           inet:uri
+    |  +--ro location-sha-256*   sha-256-hash
     +--ro feature*   pkg-types:scoped-feature
           ]]></artwork>
           </figure>
@@ -1093,8 +1126,9 @@ module: ietf-yl-packages
 module: ietf-ypkg
 
   structure yang-package:
-    +-- schema?           pkg-types:pkg-reference
-    +-- schema-location*  inet:uri
+    +-- schema?                  pkg-types:pkg-reference
+    +-- schema-location*         inet:uri
+    +-- schema-location-sha-256* pkg-types:sha-256-hash
     +-- pkg-defn
        // Uses the yang-pkg-instance grouping defined in
        // ietf-yang-package-types.yang
@@ -1142,9 +1176,10 @@ module: ietf-yang-device-schema
      +--ro schema* [name]
      |  +--ro name       string
      |  +--ro package* [name version]
-     |  |  +--ro name        pkg-name
-     |  |  +--ro version     pkg-version
-     |  |  +--ro location*   inet:uri
+     |  |  +--ro name                pkg-name
+     |  |  +--ro version             pkg-version
+     |  |  +--ro location*           inet:uri
+     |  |  +--ro location-sha-256*   sha-256-hash
      |  +--ro feature*   pkg-types:scoped-feature
      +--ro datastore* [name]
         +--ro name      ds:datastore-ref
@@ -1365,8 +1400,9 @@ module: ietf-yang-inst-data-pkg
                       /yid:content-schema-spec:
     +--:(pkg-schema)
        +-- pkg-schema
-          +-- schema      pkg-types:pkg-reference
-          +-- location*   inet:uri
+          +-- schema              pkg-types:pkg-reference
+          +-- location*           inet:uri
+          +-- location-sha-256*   sha-256-hash
         ]]></artwork>
         </figure>
 
@@ -2006,6 +2042,19 @@ module ietf-yang-package-types {
        or location.";
   }
 
+  typedef sha-256-hash {
+    type string {
+      pattern '[0-9a-f]{64}|x';
+    }
+    description
+      "A SHA-256 checksum of a file's exact octets, without
+       normalization, encoded as 64 lowercase hexadecimal digits,
+       or 'x' if no checksum is provided.";
+    reference
+      "RFC 6234: US Secure Hash Algorithms (SHA and SHA-based
+       HMAC and HKDF)";
+  }
+
   typedef module-name {
     type yang:yang-identifier;
     description
@@ -2176,6 +2225,27 @@ module ietf-yang-package-types {
     }
   }
 
+  grouping location-checksums {
+    description
+      "Optional checksums paired with a sibling location leaf-list.";
+
+    leaf-list location-sha-256 {
+      type sha-256-hash;
+      must "count(../location-sha-256) = count(../location)" {
+        error-message
+          "Each location must have a corresponding checksum entry.";
+      }
+      ordered-by user;
+      description
+        "If present, this leaf-list MUST have the same number of
+         entries as 'location', in the same order. Each entry gives
+         the checksum of the file at the corresponding location,
+         or 'x' if no checksum is provided.
+         Identical files at different locations have repeated
+         checksum values.";
+    }
+  }
+
   grouping yang-pkg-location {
     description
       "Parameters for locating a YANG package instance";
@@ -2193,6 +2263,7 @@ module ietf-yang-package-types {
          If a canonical location for this package is provided,
          it MUST be the first entry in the leaf-list.";
     }
+    uses location-checksums;
   }
 
   grouping submodule-identification-leafs {
@@ -2236,6 +2307,7 @@ module ietf-yang-package-types {
           If a canonical location for this submodule is provided,
           it MUST be the first entry in the leaf-list.";
       }
+      uses location-checksums;
     }
   }
 
@@ -2274,6 +2346,7 @@ module ietf-yang-package-types {
          it MUST be the first entry in the leaf-list.";
     }
 
+    uses location-checksums;
     uses submodule-identification-leafs;
   }
 
@@ -2737,6 +2810,21 @@ module ietf-ypkg {
          the name and version of the explicitly identified or
          default schema package. Otherwise, at least one download
          URL MUST be provided in this leaf-list.";
+    }
+
+    leaf-list schema-location-sha-256 {
+      type pkg-types:sha-256-hash;
+      must "count(../schema-location-sha-256) = "
+         + "count(../schema-location)" {
+        error-message
+          "Each schema location must have a checksum entry.";
+      }
+      ordered-by user;
+      description
+        "Optional file checksums corresponding to 'schema-location'.
+         If present, this leaf-list MUST have the same number of
+         entries, in the same order. Identical files at different
+         locations have repeated checksum values.";
     }
 
     container pkg-defn {
@@ -3480,6 +3568,9 @@ ietf-yang-structure-ext@2020-06-17.yang"
     of advertisements and referenced package and YANG library files before
     relying on their contents.</t>
 
+    <t>Integrity checks depend on obtaining the expected checksums from a
+    trusted source.</t>
+
     <section anchor="yang-security" title="YANG Module Security Considerations">
       <t>This section is modeled after the template described in Section 3.7
       of <xref target="RFC9907"/>.</t>
@@ -3782,6 +3873,7 @@ ietf-yang-structure-ext@2020-06-17.yang"
       <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.2119.xml"/>
       <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.3688.xml"/>
       <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.6020.xml"/>
+      <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.6234.xml"/>
       <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.6242.xml"/>
       <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.6838.xml"/>
       <xi:include href="https://bib.ietf.org/public/rfc/bibxml/reference.RFC.7950.xml"/>
@@ -3830,9 +3922,10 @@ ietf-yang-structure-ext@2020-06-17.yang"
       small, but complete YANG package definitions.  For the remaining
       examples, the focus is on illustrating particular features of YANG
       packages, and so whilst the packages are complete and will compile, they
-      leave out some of the optional fields.  Locations may be omitted for
-      clarity where they do not help illustrate the example.  The complete
-      examples linked from this appendix retain location information.</t>
+      leave out some of the optional fields.  Locations and their SHA-256
+      hashes may be omitted for clarity where they do not help illustrate the
+      example.  The complete examples linked from this appendix retain
+      location information.</t>
 
       <t>Long lines in examples are wrapped using the mechanism defined in
       <xref target="RFC8792"/>.</t>
@@ -3842,9 +3935,9 @@ ietf-yang-structure-ext@2020-06-17.yang"
       definitions that may be published by an SDO,
       illustrated using the YANG package file format defined in
       <xref target="package_files"/>.  The version numbers chosen are somewhat
-      arbitrary, and illustrative.  Locations are shown for both versions
-      of the basic types package and omitted from the other definitions for
-      clarity.</t>
+      arbitrary, and illustrative.  Locations and SHA-256 hashes are shown
+      for both versions of the basic types package.  Locations and hashes
+      are omitted from the other definitions for clarity.</t>
 
       <texttable anchor="common_package_examples"
                  title="Common example packages">
@@ -3902,6 +3995,10 @@ type modules",
             "location": [
               "https://www.iana.org/assignments/yang-parameters/\
 ietf-yang-types@2010-09-24.yang"
+            ],
+            "location-sha-256": [
+              "20174b34ca220d63f76af47d7f7feee702bcfd80c3bfca17c83cb\
+ee1cbff467c"
             ]
           },
           {
@@ -3910,14 +4007,22 @@ ietf-yang-types@2010-09-24.yang"
             "location": [
               "https://www.iana.org/assignments/yang-parameters/\
 ietf-inet-types@2010-09-24.yang"
+            ],
+            "location-sha-256": [
+              "56d9a520d328804254e48f16e5909cd9bab9bc0a89142adfce20a\
+6ac6197193c"
             ]
           },
           {
             "name": "ietf-netconf-acm",
-            "version": "2012-02-22",
+            "version": "2018-02-14",
             "location": [
               "https://www.iana.org/assignments/yang-parameters/\
-ietf-netconf-acm@2012-02-22.yang"
+ietf-netconf-acm@2018-02-14.yang"
+            ],
+            "location-sha-256": [
+              "796951c3b64cc602d62a012312cf1a14255c97d12e99a5c5a2c93\
+2c2df4cadbf"
             ]
           }
         ]
@@ -3933,7 +4038,9 @@ ietf-netconf-acm@2012-02-22.yang"
                title="Example Basic Types YANG package, version 1.1.0">
         <t>An updated version of the basic types package that includes updated
         versions of the types modules and follows the YANG Semver versioning
-        rules.</t>
+        rules.  The locations and SHA-256 hashes of "ietf-yang-types" and
+        "ietf-inet-types" change with their module versions.  The
+        "ietf-netconf-acm" version, location, and hash remain unchanged.</t>
         <figure>
           <artwork><![CDATA[
 <CODE BEGINS> file "example-base-types@1.1.0.ypkg"
@@ -3957,6 +4064,10 @@ type modules",
             "location": [
               "https://www.iana.org/assignments/yang-parameters/\
 ietf-yang-types@2025-12-22.yang"
+            ],
+            "location-sha-256": [
+              "5e4ff4c837f303050fa46369987f11eb909c24dae2d4ec338342a\
+7aa596f7b2b"
             ]
           },
           {
@@ -3965,6 +4076,10 @@ ietf-yang-types@2025-12-22.yang"
             "location": [
               "https://www.iana.org/assignments/yang-parameters/\
 ietf-inet-types@2025-12-22.yang"
+            ],
+            "location-sha-256": [
+              "2fb39c45cd28d95f60838e5f74ac509d780d18f3c5bf78db25104\
+9a4d022e266"
             ]
           },
           {
@@ -3973,6 +4088,10 @@ ietf-inet-types@2025-12-22.yang"
             "location": [
               "https://www.iana.org/assignments/yang-parameters/\
 ietf-netconf-acm@2018-02-14.yang"
+            ],
+            "location-sha-256": [
+              "796951c3b64cc602d62a012312cf1a14255c97d12e99a5c5a2c93\
+2c2df4cadbf"
             ]
           }
         ]
@@ -4320,8 +4439,8 @@ expected to support.",
         removes enabled features that are not supported, adds a
         YANG module containing deviations to other YANG modules, and adds a
         vendor device-isis-extensions YANG module, version 1.2.3, that
-        augments the base ietf-isis module.  Locations are omitted for
-        clarity.</t>
+        augments the base ietf-isis module.  Locations and hashes are omitted
+        for clarity.</t>
         <figure>
           <artwork><![CDATA[
 <CODE BEGINS> file "device-routing@1.0.0.ypkg"
@@ -4382,8 +4501,8 @@ expected to support.",
         <t>The resolved package schema and the advertised module-set include
         the management modules used by this advertisement and match as
         required by <xref target="yang-lib-binding"/>.</t>
-        <t>The schema binding includes a package retrieval location.
-        Other location information is omitted for clarity.</t>
+        <t>The schema binding includes a package retrieval location and its
+        SHA-256 hash.  Other location information is omitted for clarity.</t>
         <figure>
           <artwork><![CDATA[
 <CODE BEGINS> file "device-routing-library.json"
@@ -4415,6 +4534,10 @@ expected to support.",
             "location": [
               "https://example.org/yang/packages/\
 device-routing@1.0.0.ypkg"
+            ],
+            "location-sha-256": [
+              "f57ff2144bae715bfc6428812059d5e2b9ffcc26a2e070cc38b99\
+519c3a89ab1"
             ]
           }
         ]
@@ -4430,7 +4553,7 @@ device-routing@1.0.0.ypkg"
         "schema": "device-routing datastore schema"
       }
     ],
-    "content-id": "924ff3012f0d1fef"
+    "content-id": "f24aff399e1f26ae"
   },
   "ietf-yang-packages:packages": {
     "package": [
@@ -4489,7 +4612,7 @@ IANA type modules",
         complete example below is permitted in the published RFC.  The hotfix
         and example-c examples later in this appendix contain similar links;
         please review them consistently.</t>
-        <t><eref target="https://github.com/netmod-wg/yang-ver-dt/blob/packages-post-09-updates/yang-packages/generated/yang-library/device-routing-library.json">Complete device-routing-library.json example</eref></t>
+        <t><eref target="https://github.com/netmod-wg/yang-ver-dt/blob/codex%2Fpackages-sha256-integrity/yang-packages/generated/yang-library/device-routing-library.json">Complete device-routing-library.json example</eref></t>
       </section>
 
       <section anchor="hotfix-pkg-example" title="Hotfix Package Example">
@@ -4532,6 +4655,10 @@ IANA type modules",
             "location": [
               "https://example.org/yang/modules/\
 device-isis-extensions@1.2.4_compatible.yang"
+            ],
+            "location-sha-256": [
+              "9e3dd3aad97eb1b5fd1165d9767b48be65d2f701a2ef5537dc544\
+a67bc871363"
             ]
           }
         ]
@@ -4544,6 +4671,10 @@ device-isis-extensions@1.2.4_compatible.yang"
             "location": [
               "https://example.org/yang/packages/\
 device-routing@1.0.0.ypkg"
+            ],
+            "location-sha-256": [
+              "f57ff2144bae715bfc6428812059d5e2b9ffcc26a2e070cc38b99\
+519c3a89ab1"
             ]
           }
         ]
@@ -4580,9 +4711,9 @@ device-routing@1.0.0.ypkg"
         updated YANG library information at all, and just rely on the advertised
         schema package bindings and the location URLs to fetch the packages and
         modules and fully resolve the schema off the device.</t>
-        <t>The hotfix package definition includes retrieval locations.
-        Locations are omitted from its YANG library advertisement for
-        clarity.</t>
+        <t>The hotfix package definition includes locations and SHA-256 hashes.
+        Locations and hashes are omitted from its YANG library advertisement
+        for clarity.</t>
         <figure>
           <artwork><![CDATA[
 <CODE BEGINS> file "device-routing-hotfix-library.json"
@@ -4633,7 +4764,7 @@ device-routing@1.0.0.ypkg"
         "schema": "device-routing datastore schema"
       }
     ],
-    "content-id": "9eadf0b2557adc16"
+    "content-id": "a461be1bdb6f67c6"
   },
   "ietf-yang-packages:packages": {
     "package": [
@@ -4650,16 +4781,17 @@ device-routing@1.0.0.ypkg"
 <CODE ENDS>
         ]]></artwork>
         </figure>
-        <t><eref target="https://github.com/netmod-wg/yang-ver-dt/blob/packages-post-09-updates/yang-packages/generated/yang-library/device-routing-hotfix-library.json">Complete device-routing-hotfix-library.json example</eref></t>
+        <t><eref target="https://github.com/netmod-wg/yang-ver-dt/blob/codex%2Fpackages-sha256-integrity/yang-packages/generated/yang-library/device-routing-hotfix-library.json">Complete device-routing-hotfix-library.json example</eref></t>
       </section>
     </section>
 
     <section anchor="versioning_examples" title="Package Versioning Examples">
       <t>This section provides examples of versioning packages.  The
       examples are non-normative, and for brevity only the relevant package
-      definition fields are shown in the package files.  Locations are
-      omitted except for "example-routing-core" in versions 4.0.0 and
-      4.0.1, which illustrate adding a retrieval location.</t>
+      definition fields are shown in the package files.  Locations and hashes
+      are omitted except for "example-routing-core" in versions 4.0.0 and
+      4.0.1, which illustrate adding a retrieval location.  The hash values for
+      this fictional module are illustrative.</t>
 
       <t>The examples illustrate the history of a single package,
       "example-versioned-routing".  Each example highlights whether the
@@ -4959,6 +5091,10 @@ ISIS.",
             "location": [
               "https://example.org/yang/\
 example-routing-core@1.5.0.yang"
+            ],
+            "location-sha-256": [
+              "6f132f03b78c441108ea08f8adf823d454d5c90733e3b2c0e72b9\
+19a789ed158"
             ]
           },
           {
@@ -4992,7 +5128,8 @@ example-routing-core@1.5.0.yang"
         <t>In version 4.0.1, the referenced module versions are unchanged, but
         an additional retrieval location for "example-routing-core" is added.
         The original location is retained.  Both locations retrieve the same
-        module file, so the module version is unchanged.  This does not
+        module file, so the module version and SHA-256 hash are unchanged;
+        the hash is repeated for the additional location.  This does not
         change the resolved package schema, so it is an editorial package update.
         The same classification would apply if the module version had already
         been resolved from an included package and the package explicitly
@@ -5033,6 +5170,12 @@ example-routing-core@1.5.0.yang"
 example-routing-core@1.5.0.yang",
               "https://mirror.example.org/yang/\
 example-routing-core@1.5.0.yang"
+            ],
+            "location-sha-256": [
+              "6f132f03b78c441108ea08f8adf823d454d5c90733e3b2c0e72b9\
+19a789ed158",
+              "6f132f03b78c441108ea08f8adf823d454d5c90733e3b2c0e72b9\
+19a789ed158"
             ]
           },
           {
@@ -5064,7 +5207,7 @@ example-routing-core@1.5.0.yang"
 
     <section anchor="resolution_examples" title="Package Resolution Examples">
       <t>This section provides examples of package resolution.  The examples
-      are non-normative.  Locations are omitted for clarity.</t>
+      are non-normative.  Locations and hashes are omitted for clarity.</t>
 
       <t>As described in <xref target="resolution"/>, resolving a set of
       packages produces a YANG schema: a set of implemented modules,
@@ -5392,8 +5535,8 @@ examples",
       <t>This section provides examples of how to exclude implemented modules,
       import-only modules, and enabled features in a package definition.
 
-      The examples are non-normative.  Locations are omitted throughout
-      this section for clarity.</t>
+      The examples are non-normative.  Locations and hashes are omitted
+      throughout this section for clarity.</t>
 
       <section anchor="module_and_feature_exclusion"
                title="Example of excluding modules and an enabled feature">
@@ -5410,7 +5553,7 @@ examples",
         needed for "foo" because "example-module-a" remains implemented.
         The package also adds the implemented "example-module-c" module.</t>
         <t>The third figure shows the resulting schema in YANG Library format,
-        but with locations elided for brevity.</t>
+        but with locations and hashes elided for brevity.</t>
         <figure>
           <artwork><![CDATA[
 <CODE BEGINS> file "example-ab@0.1.0.ypkg"
@@ -5519,7 +5662,7 @@ disables foo, and adds C",
 
 {
   "ietf-yang-library:yang-library": {
-    "content-id": "7ef8eef0e645ece0",
+    "content-id": "d884ec1203bc96f1",
     "datastore": [
       {
         "name": "ietf-datastores:running",
@@ -5589,7 +5732,7 @@ associated types"
 <CODE ENDS>
         ]]></artwork>
         </figure>
-        <t><eref target="https://github.com/netmod-wg/yang-ver-dt/blob/packages-post-09-updates/yang-packages/generated/yang-library/example-c-library@0.1.0.json">Complete example-c-library@0.1.0.json example</eref></t>
+        <t><eref target="https://github.com/netmod-wg/yang-ver-dt/blob/codex%2Fpackages-sha256-integrity/yang-packages/generated/yang-library/example-c-library@0.1.0.json">Complete example-c-library@0.1.0.json example</eref></t>
       </section>
 
       <section anchor="resolution-nested-exclusions"
