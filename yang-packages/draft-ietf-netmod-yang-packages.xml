@@ -3952,7 +3952,8 @@ ietf-yang-structure-ext@2020-06-17.yang"
         <c>example-network-device</c>
         <c>1.1.2</c>
         <c>Basic network device system, interface, access control, key chain,
-        and IP modules.</c>
+        IP, NETCONF with NMDA support, YANG library, and package advertisement
+        modules.</c>
 
         <c>example-routing-types</c>
         <c>1.0.0</c>
@@ -4112,16 +4113,19 @@ ietf-netconf-acm@2018-02-14.yang"
         YANG modules, with import dependencies, to implement a basic network
         device without any dynamic routing or layer 2 services. E.g., it
         includes functionality such as system information, interface and basic
-        IP configuration.  It includes the package (and hence all modules,
+        IP configuration, NETCONF with NMDA support, YANG library, and package
+        advertisement.  It includes
+        the package (and hence all modules,
         enabled features, etc.) from the example-base-types package.  This
-        package also enables features for system authentication, including
+        package also enables the NETCONF writable-running feature, features
+        for system authentication, including
         local users and RADIUS-based authentication, and enables IPv6 privacy
         autoconfiguration for the IP module.</t>
 
         <t>As for all 'complete' YANG packages, all import dependencies are fully
-        resolved. Because this example uses YANG modules that have been
-        standardized before YANG semantic versioning, the modules are
-        referenced by revision date rather than version.</t>
+        resolved. Modules standardized before YANG semantic versioning are
+        referenced by revision date; modules with YANG Semver labels are
+        referenced by those labels.</t>
 
         <figure>
           <artwork><![CDATA[
@@ -4171,15 +4175,78 @@ might be expected to support.",
             "version": "2018-02-14"
           },
           {
+            "name": "ietf-netconf",
+            "version": "2011-06-01"
+          },
+          {
+            "name": "ietf-netconf-nmda",
+            "version": "2019-01-07"
+          },
+          {
             "name": "ietf-key-chain",
             "version": "2017-06-15"
           },
           {
             "name": "ietf-ip",
             "version": "2018-02-22"
+          },
+          {
+            "name": "ietf-yang-library",
+            "version": "2019-01-04"
+          },
+          {
+            "name": "ietf-datastores",
+            "version": "2018-02-14"
+          },
+          {
+            "name": "ietf-yang-packages",
+            "version": "0.10.0"
+          },
+          {
+            "name": "ietf-yl-packages",
+            "version": "0.10.0"
+          },
+          {
+            "name": "ietf-yang-library-semver",
+            "version": "0.24.0"
+          }
+        ],
+        "import-only-module": [
+          {
+            "name": "ietf-netconf-with-defaults",
+            "version": "2011-06-01"
+          },
+          {
+            "name": "ietf-origin",
+            "version": "2018-02-14"
+          },
+          {
+            "name": "ietf-yang-metadata",
+            "version": "2016-08-05"
+          },
+          {
+            "name": "ietf-yang-package-types",
+            "version": "0.10.0"
+          },
+          {
+            "name": "ietf-yang-revisions",
+            "version": "2026-06-26"
+          },
+          {
+            "name": "ietf-yang-semver",
+            "version": "0.25.0"
+          },
+          {
+            "name": "ietf-yang-types",
+            "version": "2025-12-22"
+          },
+          {
+            "name": "ietf-inet-types",
+            "version": "2025-12-22"
           }
         ],
         "feature": [
+          "ietf-netconf:writable-running",
           "ietf-system:authentication",
           "ietf-system:local-users",
           "ietf-system:radius",
@@ -4424,12 +4491,16 @@ expected to support.",
                title="YANG library advertisement for device-routing">
         <t>The following abbreviated JSON shows the device's operational
         YANG library and package advertisement.  The schema is bound to
-        "device-routing", and the package catalogue lists that package and
+        "device-routing" for both the running and operational datastores,
+        and the package catalogue lists that package and
         its recursively included packages.  Module and import-only module details are elided.  Package entries retain their names, versions,
         and descriptions; all other package fields are elided.  The deprecated
         "/modules-state" subtree is also omitted.  Ellipsis strings indicate
         omitted data and are not literal values returned by the device.
         Complete package definitions are shown in the earlier examples.</t>
+        <t>The resolved package schema and the advertised module-set include
+        the management modules used by this advertisement and match as
+        required by <xref target="yang-lib-binding"/>.</t>
         <t>The schema binding includes a package retrieval location and its
         SHA-256 hash.  Other location information is omitted for clarity.</t>
         <figure>
@@ -4476,9 +4547,13 @@ device-routing@1.0.0.ypkg"
       {
         "name": "ietf-datastores:running",
         "schema": "device-routing datastore schema"
+      },
+      {
+        "name": "ietf-datastores:operational",
+        "schema": "device-routing datastore schema"
       }
     ],
-    "content-id": "570650a02a1f5ec5"
+    "content-id": "f24aff399e1f26ae"
   },
   "ietf-yang-packages:packages": {
     "package": [
@@ -4537,7 +4612,7 @@ IANA type modules",
         complete example below is permitted in the published RFC.  The hotfix
         and example-c examples later in this appendix contain similar links;
         please review them consistently.</t>
-        <t><eref target="https://github.com/netmod-wg/yang-ver-dt/blob/packages-post-09-updates/yang-packages/generated/yang-library/device-routing-library.json">Complete device-routing-library.json example</eref></t>
+        <t><eref target="https://github.com/netmod-wg/yang-ver-dt/blob/codex%2Fpackages-sha256-integrity/yang-packages/generated/yang-library/device-routing-library.json">Complete device-routing-library.json example</eref></t>
       </section>
 
       <section anchor="hotfix-pkg-example" title="Hotfix Package Example">
@@ -4616,7 +4691,8 @@ device-routing@1.0.0.ypkg"
         making use of automatic conflict resolution, as per
         <xref target="auto-module-version-resolution"/>, to automatically select
         the later version (1.2.4_compatible) of the device-isis-extensions
-        YANG module.  The YANG library module-set contents would be updated so
+        YANG module.  Both running and operational continue to reference the
+        same datastore schema.  The YANG library module-set contents would be updated so
         that the "device-module-set" contains device-isis-extensions version
         "1.2.4_compatible" rather than previous version, "1.2.3".  The YANG
         library "content-id" would also change because the
@@ -4682,9 +4758,13 @@ device-routing@1.0.0.ypkg"
       {
         "name": "ietf-datastores:running",
         "schema": "device-routing datastore schema"
+      },
+      {
+        "name": "ietf-datastores:operational",
+        "schema": "device-routing datastore schema"
       }
     ],
-    "content-id": "8dd9f47b6b9921ba"
+    "content-id": "a461be1bdb6f67c6"
   },
   "ietf-yang-packages:packages": {
     "package": [
@@ -4701,7 +4781,7 @@ device-routing@1.0.0.ypkg"
 <CODE ENDS>
         ]]></artwork>
         </figure>
-        <t><eref target="https://github.com/netmod-wg/yang-ver-dt/blob/packages-post-09-updates/yang-packages/generated/yang-library/device-routing-hotfix-library.json">Complete device-routing-hotfix-library.json example</eref></t>
+        <t><eref target="https://github.com/netmod-wg/yang-ver-dt/blob/codex%2Fpackages-sha256-integrity/yang-packages/generated/yang-library/device-routing-hotfix-library.json">Complete device-routing-hotfix-library.json example</eref></t>
       </section>
     </section>
 
@@ -5652,7 +5732,7 @@ associated types"
 <CODE ENDS>
         ]]></artwork>
         </figure>
-        <t><eref target="https://github.com/netmod-wg/yang-ver-dt/blob/packages-post-09-updates/yang-packages/generated/yang-library/example-c-library@0.1.0.json">Complete example-c-library@0.1.0.json example</eref></t>
+        <t><eref target="https://github.com/netmod-wg/yang-ver-dt/blob/codex%2Fpackages-sha256-integrity/yang-packages/generated/yang-library/example-c-library@0.1.0.json">Complete example-c-library@0.1.0.json example</eref></t>
       </section>
 
       <section anchor="resolution-nested-exclusions"
