@@ -269,11 +269,30 @@ object ExampleNetworkDevicePkg extends ExamplePkgDefn {
       ietfModule("iana-if-type", "2026-03-17"),
       ietfModule("ietf-interfaces", "2018-02-20"),
       ietfModule("ietf-netconf-acm", "2018-02-14"),
+      ietfModule("ietf-netconf", "2011-06-01"),
+      ietfModule("ietf-netconf-nmda", "2019-01-07"),
       ietfModule("ietf-key-chain", "2017-06-15"),
       ietfModule("ietf-ip", "2018-02-22"),
+    ) ++ Seq(
+      "ietf-yang-library@2019-01-04",
+      "ietf-datastores@2018-02-14",
+      "ietf-yang-packages@0.10.0",
+      "ietf-yl-packages@0.10.0",
+      "ietf-yang-library-semver@0.24.0"
     )
+  override def importOnlyModules = Seq(
+    "ietf-netconf-with-defaults@2011-06-01",
+    "ietf-origin@2018-02-14",
+    "ietf-yang-metadata@2016-08-05",
+    "ietf-yang-package-types@0.10.0",
+    "ietf-yang-revisions@2026-06-26",
+    "ietf-yang-semver@0.25.0",
+    "ietf-yang-types@2025-12-22",
+    "ietf-inet-types@2025-12-22"
+  )
   override def mandatoryFeatures =
     Seq(
+      "ietf-netconf:writable-running",
       "ietf-system:authentication",
       "ietf-system:local-users",
       "ietf-system:radius",
@@ -1246,9 +1265,18 @@ object DraftXml extends mill.Module:
     mill.api.BuildCtx.workspaceRoot / "example-modules/device/vendor-ietf-bgp-deviations.yang"
   )
 
+  def managementExampleSources = Task.Sources(
+    mill.api.BuildCtx.workspaceRoot / "ietf-yang-packages.yang",
+    mill.api.BuildCtx.workspaceRoot / "ietf-yl-packages.yang",
+    mill.api.BuildCtx.workspaceRoot / "ietf-yang-package-types.yang",
+    mill.api.BuildCtx.workspaceRoot / os.up / "yang-semver" / "ietf-yang-library-semver.yang",
+    mill.api.BuildCtx.workspaceRoot / os.up / "yang-semver" / "ietf-yang-semver.yang",
+    mill.api.BuildCtx.workspaceRoot / os.up / "yang-module-versioning" / "ietf-yang-revisions.yang"
+  )
+
   def fullExampleMetadata = Task:
     val sources = ExampleAbPackage.implementedSources() ++ ExampleAbPackage.importedSources() ++
-      ExampleCPackage.implementedSources() ++ deviceExampleSources()
+      ExampleCPackage.implementedSources() ++ deviceExampleSources() ++ managementExampleSources()
     Helper.extractYangLibraryMetadata(sources.map(_.path))
 
   private def writeFullLibraryExamples(
@@ -1266,7 +1294,11 @@ object DraftXml extends mill.Module:
         // and revision-date versions. Fictional semver modules use the source fixtures.
         val meta = fromSource.orElse:
           if version.isRevisionDate && (name.startsWith("ietf-") || name.startsWith("iana-")) then
-            Some(library.ModuleMetadata(s"urn:ietf:params:xml:ns:yang:$name", Some(version.toString)))
+            // The base NETCONF module uses the protocol namespace (RFC 6241).
+            val namespace = if name.toString == "ietf-netconf" then
+              "urn:ietf:params:xml:ns:netconf:base:1.0"
+            else s"urn:ietf:params:xml:ns:yang:$name"
+            Some(library.ModuleMetadata(namespace, Some(version.toString)))
           else None
         meta.map(m => s"$name@$version" -> m)
     .toMap
@@ -1283,10 +1315,13 @@ object DraftXml extends mill.Module:
         case ResolutionResult.Success(value, _) => value
         case ResolutionResult.Failure(errors, _) => sys.error(errors.mkString("; "))
       val plain = resolved.toYangLibrary(metadata)
+      val datastoreNames = if names.contains("device-routing") then
+        Seq("ietf-datastores:running", "ietf-datastores:operational")
+      else Seq("ietf-datastores:running")
       val bound = plain.copy(
         moduleSets = Seq(plain.moduleSets.head.copy(name = setName)),
         schemas = Seq(plain.schemas.head.copy(name = schemaName, moduleSets = Seq(setName), packages = refs)),
-        datastores = Seq(library.Datastore("ietf-datastores:running", schemaName)), contentId = "")
+        datastores = datastoreNames.map(library.Datastore(_, schemaName)), contentId = "")
       val hash = Helper.yangLibraryContentIdentifier(
         library.YangLibraryJson.renderLibrary(bound, indent = -1))
       val lib = bound.copy(contentId = hash)
@@ -1327,6 +1362,8 @@ object DraftXml extends mill.Module:
             val snippet = ujson.read(unfoldLongLines(m.group(1)))
             snippet("ietf-yang-library:yang-library")("content-id") =
               full("ietf-yang-library:yang-library")("content-id")
+            snippet("ietf-yang-library:yang-library")("datastore") =
+              full("ietf-yang-library:yang-library")("datastore")
             s"<CODE BEGINS> file \"$filename\"\n" +
               foldLongLines(ujson.write(snippet, indent = 2), maxCol = 69).trim + "\n<CODE ENDS>"
         )
