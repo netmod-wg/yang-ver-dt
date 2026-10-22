@@ -12,12 +12,19 @@
 <?rfc compact="yes"?>
 <?rfc subcompact="no"?>
 <rfc category="std" ipr="trust200902"
-    docName="draft-ietf-netmod-yang-schema-comparison-09" updates="7950"
+    docName="draft-ietf-netmod-yang-schema-comparison-10" updates="7950"
     submissionType="IETF" consensus="true">
   <front>
     <title abbrev="YANG Schema Comparison">YANG Schema Comparison</title>
-    <author initials="P." role="editor" surname="Andersson"
-        fullname="Per Andersson">
+    <author initials="M." role="editor" surname="Vaško" fullname="Michal Vaško">
+      <organization abbrev="CESNET">
+        CESNET
+      </organization>
+      <address>
+        <email>mvasko@cesnet.cz</email>
+      </address>
+    </author>
+    <author initials="P." surname="Andersson" fullname="Per Andersson">
       <organization abbrev="Ionio Systems">
         Ionio Systems
       </organization>
@@ -33,23 +40,17 @@
         <email>rwilton@cisco.com</email>
       </address>
     </author>
-    <author initials="M." surname="Vaško" fullname="Michal Vaško">
-      <organization abbrev="CESNET">
-        CESNET
-      </organization>
-      <address>
-        <email>mvasko@cesnet.cz</email>
-      </address>
-    </author>
     <date/>
     <abstract>
         <t>
-            This document specifies an algorithm for comparing two revisions of a
-            YANG schema to determine the scope of changes and produce a list of
-            the changes between the revisions. The output of the algorithm can be
-            used to help select an appropriate revision-label or YANG semantic
-            version number for a new revision. Included is also a YANG module
-            describing the possible output of this algorithm.
+            This document specifies an algorithm with two input variants for
+            comparing revisions of a YANG schema to determine the scope of
+            changes and produce a list of the changes between the revisions.
+            The output of the algorithm can be used to help select an
+            appropriate YANG semantic version number for a new YANG Module
+            revision. It also specifies a YANG module for YANG-structured
+            output of these algorithms, that can be easily consumed in a
+            machine-readable way.
         </t>
     </abstract>
   </front>
@@ -57,50 +58,36 @@
     <section anchor="intro" numbered="true" toc="default">
       <name>Introduction</name>
         <t>
-            This document defines the algorithm for comparing two revisions of a
-            YANG schema. There are two kinds of YANG schemas: compiled schemas
-            (on-the-wire schema) and parsed schemas (textual schemas).
+            This document defines a common algorithm for comparing two
+            revisions of a YANG schema. As input, there can be two types of
+            YANG schema representations: single locally resolved YANG modules
+            or fully resolved set of YANG modules (on-the-wire schema). The
+            algorithm output for each of these representations serves a
+            different purpose. It can help YANG authors with assigning the
+            correct semantic version of a module based on
+            <xref target="I-D.ietf-netmod-yang-semver" format="default"/> or
+            tools processing YANG instance data can use it to learn about the
+            exact data changes, respectively.
         </t>
         <t>
-            The compiled schema is what tools use when working with any kind of
-            YANG data. Generally, in all the YANG modules, all the schema nodes
-            need to be fully resolved and have their final form. For example,
-            every "uses" statement is replaced with the nodes from the
-            corresponding "grouping", every type that references a "typedef" is
-            replaced with the referenced type and so on. On the other hand, the
-            parsed schema is comprised of all the YANG modules together as they
-            are. This means no statements are resolved and they remain
-            exactly as they appear in the YANG modules.
+            The algorithm operates in a straightforward way traversing all the
+            statements and their substatements in both the old and new module
+            representations collecting identified changes. These are then
+            reported in a concise output with information about the overall
+            backwards compatibility between the two modules. Exact output
+            format is out of scope for this document but Appendix A includes an
+            example of a YANG module whose YANG data can represent all the
+            possible changes and so a complete output of this algorithm.
         </t>
         <t>
-            To determine whether a new revision of a YANG 1.1 module is or is
-            not backwards-compatible based on all the rules in
-            <xref target="RFC7950" format="default"/>
-            and <xref target="I-D.ietf-netmod-yang-module-versioning" format="default"/>
-            ,
-            both of these schemas would be required. Similarly, for YANG 1.0,
-            the rules in
-            <xref target="RFC6020" format="default"/>
-            apply.
-            This document defines an algorithm for comparing either only the
-            compiled schema or both the parsed and compiled schemas.
-        </t>
-        <t>
-            The output of this algorithm can be utilized by tools processing
-            YANG instance data to determine what changes they should
-            expect and even how to transform instance data valid for an old
-            revision of a YANG module to make instance data that is valid for
-            an older revision valid for a newer revision of the same YANG
-            module. Such tools are typically clients or servers of
-            YANG-driven protocols, e.g. NETCONF, RESTCONF, or gRPC.
-        </t>
-        <t>
-            But, the generated data can also be used by YANG module authors to
-            check all the changes made between two revisions. Additionally, it
-            can assist with deciding which semantic version the new revision of
-            the module should use based on the
-            <xref target="I-D.ietf-netmod-yang-semver" format="default"/>
-            document.
+            Every change is classified as editorial, backwards-compatible, or
+            non-backwards-compatible. This conformance is decided based on
+            rules found in other documents, specifically
+            <xref target="RFC7950" format="default"/>,
+            <xref target="I-D.ietf-netmod-yang-module-versioning" format="default"/>,
+            and <xref target="I-D.ietf-netmod-yang-semver" format="default"/>.
+            For older YANG 1.0 modules, the rules in
+            <xref target="RFC6020" format="default"/> apply instead.
         </t>
     </section>
     <section anchor="terminology" numbered="true" toc="default">
@@ -110,8 +97,9 @@
    "OPTIONAL" in this document are to be interpreted as described in BCP 14
    <xref target="RFC2119" format="default"/> <xref target="RFC8174" format="default"/> when, and only when, they
    appear in all capitals, as shown here.</t>
-      <t>This document makes use of the following terminology introduced in
-      the YANG 1.1 Data Modeling Language <xref target="RFC7950"/>:
+      <t>
+          This document makes use of the following terminology introduced in
+          the YANG 1.1 Data Modeling Language <xref target="RFC7950"/>:
         <list style="symbols">
           <t>module</t>
           <t>schema node</t>
@@ -119,257 +107,393 @@
           <t>data definition statement</t>
         </list>
       </t>
+      <t>
+          In addition, this document uses the following terminology:
+        <list style="symbols">
+            <t>locally resolved module: A parsed YANG module with all its
+                submodules and local references resolved.</t>
+            <t>fully resolved schema: A locally resolved module with all the
+                imported references resolved as well and with non data
+                definition statements removed.</t>
+        </list>
+      </t>
     </section>
-    <section anchor="parsed_schema" numbered="true" toc="default">
-        <name>Parsed schema tree</name>
+    <section anchor="schema_representations" numbered="true" toc="default">
+        <name>Schema representations</name>
         <t>
-            When a YANG module is parsed and its contents stored
-            in an internal representation without any statement
-            resolution or modification, the result is a parsed
-            schema tree. Such a schema tree can be written into
-            a YANG module and it should be exactly the same as
-            the loaded source YANG module.
+            The YANG language defines several statements that act as syntactic
+            abstraction and need to be processed before a YANG module can be
+            used for handling YANG instance data. For example, a “uses”
+            statement is replaced by all the substatements of a referenced
+            “grouping” statement or a “typedef” statement can be linked to
+            other “type” statements. The referenced statements can be local
+            (defined in the same module, or included submodule) but also
+            foreign (defined in another imported module).
         </t>
+        <section anchor="locally_resolved_module" numbered="true" toc="default">
+            <name>Locally resolved module (single module)</name>
+            <t>
+                This representation of a YANG module includes all submodules of the
+                main module but resolves only statements that reference other
+                statements found in the same module. No references to imported
+                modules (that are using an imported prefix) are resolved.
+            </t>
+            <t>
+                For example, any changes of a referenced “typedef” or “grouping”
+                defined in an imported module would not affect the locally resolved
+                module and are out of scope for this representation.
+            </t>
+            <t>
+                All the rules for classifying individual statement changes
+                mentioned in <xref target="change_conformance" format="default"/>
+                apply to this module representation.
+            </t>
+            <section anchor="local_deviation" numbered="true" toc="default">
+                <name>Deviation</name>
+                <t>
+                    Regardless of whether the “deviation” target node is local
+                    in the same module or in an imported module, it is never
+                    resolved and applied. Instead, the “deviation” statement
+                    with all its substatements is kept in the locally resolved
+                    module so that it can be considered in the schema
+                    comparison algorithm.
+                </t>
+            </section>
+            <section anchor="local_refine" numbered="true" toc="default">
+                <name>Refine</name>
+                <t>
+                    The “refine” statement is processed differently based on
+                    whether the affected “grouping” is defined in an imported
+                    module or the local YANG module. In the former case, when
+                    the relevant grouping is imported, the “refine” is not
+                    resolved and kept in the module. And then examined in the
+                    comparison algorithm, similarly to the “deviation” statement.
+                </t>
+                <t>
+                    However, all the “refine” statements targeting a local
+                    “grouping” are applied on the nodes of the grouping when
+                    the “uses” is resolved. After processing the “refine”
+                    statements with all its substatements, they are effectively
+                    removed from the locally resolved module to avoid reporting
+                    changes of any “refine” statements twice.
+                </t>
+            </section>
+            <section anchor="local_augment" numbered="true" toc="default">
+                <name>Augment</name>
+                <t>
+                    All the “augment” statements are processed similarly to
+                    “refine” statements. Meaning that augments of imported
+                    groupings are not resolved and compared directly while
+                    augments of local groupings are applied and then removed
+                    from the module.
+                </t>
+            </section>
+        </section>
+        <section anchor="fully_resolved_schema" numbered="true" toc="default">
+            <name>Fully resolved schema (set of modules)</name>
+            <t>
+                The fully resolved schema representation consists of one or
+                more YANG modules. Each of these is fully resolved according to
+                the rules of the YANG language meaning that every referenced
+                statement, including to other imported modules, is resolved,
+                unlike locally resolved modules. The result is one large tree
+                with schema nodes of all the YANG modules. The comparison
+                algorithm MAY then choose to compare top-level schema node
+                subtrees belonging only to a single YANG module.
+            </t>
+            <t>
+                Next, all the statements used only for syntactic abstraction
+                that do not affect YANG instance data are removed. Note that
+                the “description” or “units” statements are kept because they
+                may influence the data. Also, “error-app-tag” and
+                “error-message” statements remain in the fully resolved schema
+                for applications to learn that the generated error information
+                has changed.
+            </t>
+            <t>
+                The steps taken when fully resolving a module include:
+            </t>
+            <ul spacing="normal">
+                <li>
+                    All submodules of a single module are merged to create one
+                    large YANG module.
+                </li>
+                <li>
+                    "Import" statements are resolved by finding the referenced
+                    YANG modules and making their contents available.
+                </li>
+                <li>
+                    "Uses" statements are replaced by the referenced
+                    "groupings" and the YANG nodes they define.
+
+                    Any “when” statement of the “uses” is moved down to all the
+                    direct descendant schema nodes of the “grouping”.
+                </li>
+                <li>
+                    Types referencing any "typedef" statements are replaced
+                    with the actual type details.
+                </li>
+                <li>
+                    Augments are resolved by placing the included YANG nodes in
+                    their targets.
+
+                    Any “when” statement of the “augment” is moved down to all
+                    the direct descendant schema nodes of the “augment”.
+                </li>
+                <li>
+                    "Deviation" and "refine" statements are applied by changing
+                    the appropriate schema nodes.
+                </li>
+                <li>
+                    All the "if-feature" statements are evaluated based on the
+                    enabled "features" of implemented YANG modules and the
+                    disabled schema nodes are removed.
+                </li>
+                <li>
+                    All the extension-instances have a matching “extension”
+                    defintion.
+                </li>
+            </ul>
+            <t>
+                After the resolution, the following statements are completely
+                removed with their substatements:
+            </t>
+            <ul spacing="normal">
+                <li>organization</li>
+                <li>contact</li>
+                <li>reference</li>
+                <li>import</li>
+                <li>include</li>
+                <li>revision</li>
+                <li>typedef</li>
+                <li>grouping</li>
+                <li>augment</li>
+                <li>deviation</li>
+                <li>feature</li>
+                <li>if-feature</li>
+                <li>refine</li>
+                <li>extension</li>
+            </ul>
+            <t>
+                Also, these schema nodes are removed but replaced with their
+                schema node substatements:
+            </t>
+            <ul spacing="normal">
+                <li>choice</li>
+                <li>case</li>
+            </ul>
+            <t>
+                The term “schema” was chosen instead of “module” on purpose
+                because when statements are imported from external modules, the
+                resulting schema then includes statements from several YANG
+                modules. But the fully resolved schema representation of a
+                module always includes only the top-level schema node trees of
+                that module.
+            </t>
+            <t>
+                Only a subset of the module update rules in
+                <xref target="change_conformance" format="default"/> apply for
+                the fully resolved schema. Specifically, the rules for removed
+                statements cannot be applied but other present statements are
+                processed normally.
+            </t>
+            <t>
+                How the concrete set of YANG modules of a fully resolved schema
+                is described is out of scope of this document. But suitable
+                existing structures include YANG data of “ietf-yang-library” from
+                <xref target="RFC8525" format="default"/> or
+                “ietf-yang-package-instance” in
+                <xref target="I-D.ietf-netmod-yang-packages" format="default"/>.
+            </t>
+        </section>
+        <section anchor="choosing_representation" numbered="true" toc="default">
+            <name>Choosing a schema representation</name>
+            <t>
+                Selecting a suitable schema representation for the comparison
+                algorithm depends on the desired purpose. But for a complete
+                set of changes, both the representations should be compared and
+                their output merged to get the combined output of the two
+                comparisons.
+            </t>
+            <t>
+                YANG module authors will primarily be interested in the locally
+                resolved module representation. Using it for the comparison
+                algorithm will yield all the changes that occurred in the
+                specific YANG module only while ignoring any possible changes
+                in imported modules. This information can then directly be used
+                to decide the correct semantic version of the new revision of
+                this module. The rules for selecting versions are defined in
+                <xref target="I-D.ietf-netmod-yang-semver" format="default"/>.
+            </t>
+            <t>
+                Any YANG-based application handling YANG instance data always
+                uses the fully resolved schema representation. So, when running
+                the schema comparison algorithm with the intent of learning the
+                changes in the corresponding valid YANG instance data of the
+                module, this representation should be used. With some
+                additional information, the output of this comparison can then
+                also be used to transform valid data of the old schema revision
+                to data valid for the new schema revision. All these tools and
+                applications are typically clients or servers of YANG-driven
+                protocols, e.g. NETCONF, RESTCONF, or gRPC.
+            </t>
+            <section anchor="representation_examples" numbered="true" toc="default">
+                <name>Examples</name>
+                <t>
+                    To illustrate the different output of the comparison
+                    algorithm each schema representation can generate for the
+                    same YANG module changes, following are a few examples.
+                </t>
+                <t>
+                    When a “typedef” or “grouping” name changes, the algorithm
+                    for locally resolved module will detect the change and
+                    report it as non-backwards-compatible. This is useful
+                    especially when importing such a module to learn that any
+                    references to the original statements will no longer be
+                    valid. However, if using the fully resolved schema, this
+                    difference will not be detected at all since it does not
+                    affect YANG instance data corresponding to this module.
+                </t>
+                <t>
+                    Another specific use-case is when a module with “uses” that
+                    referenced an external “grouping” replaces that “uses” node
+                    directly with schema nodes in the “grouping” effectively
+                    resolving the “uses” similarly to a YANG module parser.
+                    Such a change is non-backwards-compatible based on the YANG
+                    1.1 updating rules and reported that way when using a
+                    locally resolved module. But the fully resolved schemas
+                    will be completely the same before and after the change so
+                    the comparison algorithm will not generate any changes and
+                    report full compatibility of the old and the new modules
+                    with their instance data.
+                </t>
+            </section>
+        </section>
     </section>
-    <section anchor="compiled_schema" numbered="true" toc="default">
-        <name>Compiled schema tree</name>
+    <section anchor="comparison_algorithm" numbered="true" toc="default">
+        <name>Comparison algorithm</name>
         <t>
-            The compiled schema node tree resolves all the statements used for
-            syntactic abstraction and simplification to
-            obtain one schema node tree with only data nodes.
-            Textual fields are kept as well because they may
-            affect backwards compatibility of the whole YANG module.
-        </t>
-        <t>
-            The steps taken when compiling a parsed schema are:
-        </t>
-        <ul spacing="normal">
-            <li>
-                "Import" statements are resolved by finding the referenced
-                YANG modules and making their contents available.
-            </li>
-            <li>
-                All submodules of a single module are merged to create one
-                large YANG module.
-            </li>
-            <li>
-                "Uses" statements are replaced by the referenced "groupings"
-                and the YANG nodes they define.
-            </li>
-            <li>
-                Types referencing any "typedef" statements are replaced
-                with the actual type details.
-            </li>
-            <li>
-                Augments are resolved by placing the included YANG nodes
-                in their targets.
-            </li>
-            <li>
-                "Deviation" and "refine" statements are applied by changing
-                the appropriate schema nodes.
-            </li>
-            <li>
-                All the "if-feature" statements are evaluated based on the
-                enabled "features" of implemented YANG modules
-                and the disabled schema nodes are removed.
-            </li>
-        </ul>
-        <t>
-            After the compilation, the result is still a valid YANG module
-            without the following statements:
-        </t>
-        <ul spacing="normal">
-            <li>import</li>
-            <li>include</li>
-            <li>revision</li>
-            <li>typedef</li>
-            <li>grouping</li>
-            <li>augment</li>
-            <li>deviation</li>
-            <li>feature</li>
-            <li>if-feature</li>
-            <li>refine</li>
-            <li>extension</li>
-        </ul>
-    </section>
-    <section anchor="generic_comparison_algorithm" numbered="true" toc="default">
-        <name>YANG schema tree comparison algorithm</name>
-        <t>
-            This algorithm is defined for separate YANG modules. When comparing
-            the compiled schema, all the non-data-node statements are
-            first considered and then all the data nodes,
-            recursively. These data definition statements that are not data
-            nodes are skipped:
-        </t>
-        <ul spacing="normal">
-            <li>choice</li>
-            <li>case</li>
-        </ul>
-        <t>
-            When comparing the parsed schema, the algorithm operates in the
-            same fashion but compares all the YANG statements. However, only
-            statements in the selected YANG module are compared ignoring
-            imported and included modules.
+            This algorithm is defined for individual locally resolved
+            modules and fully resolved schemas. All the statements are
+            compared with their content, recursively, in the old revision
+            and the new revision of the module or schema. Depth-first
+            search order for the statement traversal SHOULD be used.
         </t>
         <t>
             The non data definition statements are considered modified when
-            their content is changed or any of their substatements are changed.
-            If a statement is present in the old revision of a module and
-            missing in the new revision, it is considered removed. Conversely,
-            if missing in the old revision but present in the new revision,
-            it is considered added.
+            their content is changed or any of their substatements are
+            changed. If a statement is present in the old revision and
+            missing in the new revision, it is considered removed.
+            Conversely, if missing in the old revision but present in the
+            new revision, it is considered added.
         </t>
         <t>
             Data definition statements are compared similarly except that a
-            change in a descendant data definition
-            statement is not considered a change of the parent data definition
-            statement but a separate change instead.
+            change in a descendant data definition statement is not
+            considered a change of the parent data definition statement but
+            a separate change instead.
         </t>
         <t>
-            Only statements with any changes are reported and included in the
-            algorithm output.
+            Only statements with any changes are reported and included in
+            the comparison algorithm output.
         </t>
         <section anchor="module_identification" numbered="true" toc="default">
             <name>Module identification</name>
             <t>
-                When generating the comparison output of two compiled schemas,
-                unique identification of the modules in question is included.
-                For both the old and the new revision
-                of the module, its name, revision, list of submodules,
-                and a leaf-list of enabled features is included. In
-                addition, the same information is reported for all the
+                When generating the comparison output of two modules,
+                unique identification of these modules SHOULD be included.
+                For both the old and the new revision of the base module,
+                its name, revision, list of submodules, and a leaf-list of
+                enabled features is included. For the fully resolved
+                schema, the same information is also reported for all the
                 imported YANG modules, recursively. This ensures that if
                 any other output is produced with a different set of
-                changes for two YANG modules, their identification information
-                must also differ.
-            </t>
-        </section>
-        <section anchor="change_content" numbered="true" toc="default">
-            <name>Change content</name>
-            <t>
-                Non-data-definition statements are uniquely identified with
-                their YANG identifier and data definition statements
-                with their absolute schema node-ids.
-            </t>
-            <t>
-                For every change, the changed statement and the parent of the
-                changed statement are included. While
-                redundant in many cases, it allows the algorithm to uniquely
-                report changes in nested statements, e.g. an extension instance
-                change in the type of a leaf statement. Also, all the unchanged
-                substatements with their value or content are included for
-                every changed statement, for both the older and the newer
-                revision of the YANG module, if applicable.
-                This ensures that the output includes all the possibly required
-                information without relying on learning it from the YANG modules
-                themselves.
+                changes for two fully resolved schemas, their
+                identification information must also differ.
             </t>
         </section>
         <section anchor="change_conformance" numbered="true" toc="default">
             <name>Change conformance</name>
             <t>
-                Every change is classified as editorial, backwards-compatible or
-                non-backwards-compatible. The classification is based on Section
-                11. of <xref target="RFC7950" format="default"/> that mentions
-                most of the possible changes between two revisions of a YANG 1.1
-                module and Section 3.1. of <xref target="I-D.ietf-netmod-yang-module-versioning" format="default"/>
-                adds more details about the exact conformance of statements with
-                various "status" statement values.
+                Every change is classified as editorial,
+                backwards-compatible, or non-backwards-compatible. The
+                classification is based on Section 11 of
+                <xref target="RFC7950" format="default"/> which mentions
+                most of the possible changes between two revisions of a
+                YANG 1.1 module and Section 3.1 of
+                <xref target="I-D.ietf-netmod-yang-module-versioning" format="default"/>
+                adds more details about the exact conformance of statements
+                with various "status" statement values. Finally,
+                <xref target="I-D.ietf-netmod-yang-semver" format="default"/>
+                defines what classifies as an editorial change.
             </t>
             <t>
-                The following text establishes general rules of how change
-                conformance is determined. Unless there are other statement-specific
-                rules in the aforementioned documents, these should always apply.
+                General non-normative explanation of change conformance
+                classification can be found in
+                <xref target="change_conformance_principles" format="default"/>.
             </t>
-            <section anchor="editorial_change" numbered="true" toc="default">
-                <name>Editorial change</name>
+            <section anchor="conformance_devs_refines_augs" numbered="true" toc="default">
+                <name>Deviations, Refines, and Augments</name>
                 <t>
-                    An editorial change MUST NOT affect valid YANG data of the YANG module
-                    in any way. That is, it MUST NOT make the valid data value space
-                    smaller or larger and it MUST remain exactly the same as in the module
-                    revision without the change. Also, for a change to be editorial,
-                    it MUST NOT affect any YANG module importing the changed YANG module.
+                    All the statement change conformance follows the
+                    general rules above if these statements are present in
+                    the schema representation, see
+                    <xref target="schema_representations" format="default"/>.
+                    But this clarification is added to make certain that
+                    the rules are interpreted correctly.
                 </t>
                 <t>
-                    In addition to obvious editorial changes such as fixing a typo
-                    in a "description", changing the local "prefix" of the module is also
-                    categorized as editorial because it does not directly affect
-                    importing modules. Or, replacing a "uses" statement directly with the
-                    nodes in the referenced "grouping" without any changes.
-                </t>
-            </section>
-            <section anchor="bc_change" numbered="true" toc="default">
-                <name>Backwards-compatible change</name>
-                <t>
-                    For a change to be backwards-compatible, it MUST expand the value
-                    space of valid YANG data. That is, all the valid YANG data nodes
-                    and values before the change must remain valid but additional nodes
-                    or values can also become valid after the change. Also,
-                    backwards-compatible changes may influence importing modules but
-                    MUST NOT cause them to become invalid. In other words, they may
-                    expose new statements whose removal would then be considered a
-                    non-backwards-compatible change but generally must not change the
-                    already exposed statements.
+                    Since “deviation” and “refine” statements are not among
+                    the allowed statements that can be changed when
+                    updating a module in Section 11 of
+                    <xref target="RFC7950" format="default"/>, any
+                    non-editorial change of these statements or their
+                    substatements is treated as non-backwards-compatible.
                 </t>
                 <t>
-                    For some examples, the majority of possible backwards-compatible
-                    changes are specifically mentioned directly in
-                    <xref target="RFC7950" format="default"/>.
-                </t>
-            </section>
-            <section anchor="nbc_change" numbered="true" toc="default">
-                <name>Non-backwards-compatible change</name>
-                <t>
-                    If a change is not editorial nor backwards-compatible, it MUST be
-                    categorized as non-backwards-compatible. Such changes shrink the value
-                    space of valid YANG data, causing some previously valid nodes or values
-                    to no longer be valid. Also, any change that may cause an importing
-                    module to become invalid according to the YANG specification MUST be
-                    non-backwards-compatible.
+                    But since “augment” statements can only add schema
+                    nodes, these can be processed and compared normally.
                 </t>
                 <t>
-                    Examples of less common or less obvious
-                    compatibility-breaking changes are changing the
-                    "yang-version" of a YANG module or expanding the size of a
-                    "type". The former change may break importing modules
-                    because of specific rules defined for the "import"
-                    statement and the target module's YANG version. Changing a
-                    "type" of a leaf from "uint32" to "uint64" may seem to fit
-                    the definition of a backwards-compatible change, but it may
-                    not be so for some data encodings that use a fixed binary
-                    data chunk (which would grow in size) or even a text format
-                    that may use a different encoding for the two types.
-                    Specifically, the JSON YANG data format
-                    <xref target="RFC7951" format="default"/> encodes a "uint32"
-                    value as a JSON number but a "uint64" as a JSON string.
+                    So, for example, even if removing the “mandatory”
+                    statement is considered backwards-compatible, a new
+                    “deviation” removing the “mandatory” statement from its
+                    target node is considered a non-backwards-compatible
+                    change. Similarly a “refine” of the “description” of a
+                    node is classified as non-backward-compatible change.
+                    However, a change in the “description” of a “deviation”
+                    statement is treated as a standard “description” change
+                    because it describes the “deviation” statement itself
+                    and does not affect the deviation target node.
                 </t>
             </section>
-            <section anchor="change_conformance_exts" numbered="true" toc="default">
-                <name>Extensions</name>
+            <section anchor="conformance_extensions" numbered="true" toc="default">
+                <name>Conformance extensions</name>
                 <t>
-                    There are cases when it may be impossible for tooling to
-                    accurately determine the conformance of a change but a
-                    default conformance is always assumed for every statement.
-                    The affected ambiguous statements with their default
-                    conformances are:
+                    There are cases when it may be impossible for tooling
+                    to accurately determine the conformance of a change but
+                    a default conformance is always assumed for every
+                    statement. The affected ambiguous statements with their
+                    default conformances are:
                 </t>
                 <ul spacing="normal">
                     <li>pattern - NBC</li>
                     <li>when - NBC</li>
                     <li>must - NBC</li>
-                    <li>description - ED</li>
-                    <li>reference - ED</li>
-                    <li>presence - ED</li>
+                    <li>description - Editorial</li>
+                    <li>reference - Editorial</li>
+                    <li>presence - Editorial</li>
                     <li>extension instance - BC</li>
                 </ul>
                 <t>
-                    Normally, any modification of these statements is reported
-                    as the default change conformance. However, if the author
-                    of the new revision of a YANG module determines that the
-                    change of one of the aforementioned statements has a
-                    different conformance based on the compatibility rules for
-                    the specific statement, they can decide to use the special
-                    extension instances to signify this fact. These are:
+                    Normally, any modification of these statements is
+                    reported with the default change conformance. However,
+                    if the author of the new revision of a YANG module
+                    determines that the change of one of the aforementioned
+                    statements has a different conformance based on the
+                    compatibility rules for the specific statement, they
+                    can decide to use the special extension instances to
+                    signify this fact. These are:
                 </t>
                 <ul spacing="normal">
                     <li>ed-change-at SEMVER</li>
@@ -377,60 +501,56 @@
                     <li>nbc-change-at SEMVER</li>
                 </ul>
                 <t>
-                    They determine the conformance of the change of the marked statement
-                    to be editorial, backwards-compatible, or non-backwards-compatible,
-                    respectively. The argument is a semantic version of the YANG module
-                    revision that introduced the specific change and these extension
-                    instances are sticky, meaning they remain in the module even in its
-                    later revisions.
+                    They determine the conformance of the change of the
+                    marked statement to be editorial, backwards-compatible,
+                    or non-backwards-compatible, respectively. The argument
+                    is a semantic version of the YANG module revision that
+                    introduced the specific change and these extension
+                    instances are sticky, meaning they remain in the module
+                    even in its later revisions. Also, a YANG statement can
+                    have multiple conformance extension statements. For
+                    example, when a pattern changes in multiple versions of
+                    a module, each change can be marked with an extension
+                    to explicitly state the conformance of the change.
                 </t>
             </section>
         </section>
-        <section anchor="parsed_compiled_changes" numbered="true" toc="default">
-            <name>Compiled and parsed schema changes</name>
+        <section anchor="algorithm_variants_support" numbered="true" toc="default">
+            <name>Algorithm variants support</name>
             <t>
-                Either only compiled data node changes are reported or both
-                compiled and parsed statements are compared and their changes
-                generated depending on which features are enabled of the
-                "ietf-yang-schema-comparison" YANG module.
+                Tools implementing schema comparison SHOULD support
+                comparing locally resolved modules, fully resolved schemas,
+                and both representations together. In case the comparison
+                generates YANG data for the
+                "ietf-yang-schema-comparison-output" YANG module, simple
+                XPath filters can be used to select any subset of changes.
             </t>
             <t>
-                In the latter case, compiled data node changes are generated
-                normally. Then, all the other statements are compared in their
-                original parsed form skipping sattements already represented
-                in the compiled schema. Specifically, all the data node
-                statements are found in the compiled schema tree meaning they
-                are not compared the second time as part of the parsed schema
-                tree comparison.
+                Data definition statements are present in both the locally
+                resolved module and fully resolved schema. So if both
+                representations are compared normally, there would be
+                duplicate changes reported in the algorithm output. These
+                duplicate changes MUST be avoided and filtered out.
             </t>
         </section>
-    </section>
-    <section anchor="comparison_tooling" numbered="true" toc="default">
-        <name>Comparison tooling</name>
-        <t>
-            The "yanglint" tool from the libyang library (in separate Git
-            branch `schema_comparison`) is able to generate the
-            "ietf-yang-schema-comparison" YANG data describing two revisions
-            of a YANG module.
-        </t>
     </section>
     <section anchor="yang_module_schema_cmp" numbered="true" toc="default">
         <name>Schema Comparison YANG Module</name>
         <t keepWithNext="true">
-            YANG module with extensions for fine-tuning the classification of
-            differences between two revisions of YANG schemas.
+            YANG module with extensions for fine-tuning the classification
+            of differences between two revisions of YANG schemas.
         </t>
-        <sourcecode name="ietf-yang-schema-comparison@2026-07-03.yang" type=""
+        <sourcecode name="ietf-yang-schema-comparison@2026-09-02.yang" type=""
             markers="true"><![CDATA[
 module ietf-yang-schema-comparison {
   yang-version 1.1;
   namespace "urn:ietf:params:xml:ns:yang:ietf-yang-schema-comparison";
-  prefix schema-cmp;
+  prefix yscmp;
 
   organization
     "IETF NETMOD (Network Modeling) Working Group";
   contact
-    "WG List: NETCONF WG list <mailto:netmod@ietf.org>
+    "WG List: NETMOD WG list <mailto:netmod@ietf.org>
      WG Web:  https://datatracker.ietf.org/wg/netmod
 
      Author:  Michal Vaško
@@ -471,7 +591,7 @@ module ietf-yang-schema-comparison {
   // RFC Ed.: replace XXXX (inc above) with actual RFC number and
   // remove this note.
 
-  revision 2026-07-03 {
+  revision 2026-09-02 {
     description
       "Initial revision.";
     reference
@@ -534,7 +654,6 @@ module ietf-yang-schema-comparison {
        Configuration Protocol (NETCONF), section 10";
   }
 }
-
 ]]></sourcecode>
     </section>
     <section anchor="contributor" numbered="true" toc="default">
@@ -559,55 +678,65 @@ module ietf-yang-schema-comparison {
         <li>Per Andersson</li>
       </ul>
       <t>The idea of a tooling-based comparison of YANG module revisions was
-   first described in <xref target="I-D.clacla-netmod-yang-model-update" format="default"/>.
+   first described in <xref target="I-D.clacla-netmod-yang-model-update"/>.
    This document builds on those initial ideas.</t>
     </section>
     <section anchor="security" numbered="true" toc="default">
-      <name>Security Considerations</name>
-      <t>This section follows the template defined in Section 3.7.1 of
-        <xref target="RFC8407"/>.</t>
-
-      <t>The YANG modules specified in this document define extensions
-        ("ietf-yang-schema-comparison") and a schema for data
-        ("ietf-yang-schema-comparison-output") that are designed to be used
-        by offline tooling to generate output describing the differences
-        between two supplied YANG modules.</t>
-
-      <t>The YANG module specified in this document MAY be accessed via network
-        management protocols such as NETCONF <xref target="RFC6241"/> or
-        RESTCONF <xref target="RFC8040"/>. The lowest NETCONF layer is the
-        secure transport layer, and the mandatory-to-implement secure transport
-        is Secure Shell (SSH) <xref target="RFC6242"/>. The lowest RESTCONF
-        layer is HTTPS, and the mandatory-to-implement secure transport is TLS
-        <xref target="RFC8446"/>.</t>
-
-      <t>The Network Configuration Access Control Model (NACM)
-        <xref target="RFC8341"/> provides the means to restrict access for
-        particular NETCONF or RESTCONF users to a preconfigured subset of all
-        available NETCONF or RESTCONF protocol operations and content.</t>
-
-      <t>When the module is used by offline tooling, there are no security
-        considerations, since the user has full access to all YANG modules
-        being used.</t>
-
-      <t>The "schema-comparison" structure defined in the
-        "ietf-yang-schema-comparison-output" module contains all the
-        groupings reflecting the changes between YANG modules. If instances
-        of this structure are generated or published by online tooling, care
-        needs to be taken so that information about non-public YANG modules is
-        not inadvertently disclosed.</t>
-
-      <t>Since the module does not define any RPCs, actions, or notifications,
-        the security considerations for such statements are not provided here.</t>
+        <name>Security Considerations</name>
+        <t>
+            This section is modeled after the template described in Section 3.7.1
+            of <xref target="RFC9907"/>.
+        </t>
+        <t>
+            The YANG modules specified in this document define extensions
+            ("ietf-yang-schema-comparison") and a schema for data
+            ("ietf-yang-schema-comparison-output") that are designed to be used
+            by offline tooling to generate output describing the differences
+            between two supplied YANG modules.
+        </t>
+        <t>
+            The YANG module specified in this document MAY be accessed via
+            network management protocols such as NETCONF
+            <xref target="RFC6241"/> or RESTCONF <xref target="RFC8040"/>. The
+            lowest NETCONF layer is the secure transport layer, and the
+            mandatory-to-implement secure transport is Secure Shell (SSH)
+            <xref target="RFC6242"/>. The lowest RESTCONF layer is HTTPS, and
+            the mandatory-to-implement secure transport is TLS
+            <xref target="RFC8446"/>.
+        </t>
+        <t>
+            The Network Configuration Access Control Model (NACM)
+            <xref target="RFC8341"/> provides the means to restrict access for
+            particular NETCONF or RESTCONF users to a preconfigured subset of
+            all available NETCONF or RESTCONF protocol operations and content.
+        </t>
+        <t>
+            When the module is used by offline tooling, there are no security
+            considerations, since the user has full access to all YANG modules
+            being used.
+        </t>
+        <t>
+            The "schema-comparison" structure defined in the
+            "ietf-yang-schema-comparison-output" module contains all the
+            groupings reflecting the changes between YANG modules. If instances
+            of this structure are generated or published by online tooling,
+            care needs to be taken so that information about non-public YANG
+            modules is not inadvertently disclosed.
+        </t>
+        <t>
+            Since the module does not define any RPCs, actions, or
+            notifications, the security considerations for such statements are
+            not provided here.
+        </t>
     </section>
     <section anchor="iana" numbered="true" toc="default">
       <name>IANA Considerations</name>
       <section anchor="xml-registry" numbered="true" toc="default">
         <name>The "IETF XML" Registry</name>
         <t>This document registers two URIs in the "ns" subregistry of
-          the IETF XML Registry <xref target="RFC3688" format="default"/>
+          the IETF XML Registry <xref target="RFC3688"/>
           maintained at <eref target="https://www.iana.org/assignments/xml-registry/xml-registry.xhtml#ns"/>.
-          Following the format defined in <xref target="RFC3688" format="default"/>,
+          Following the format defined in <xref target="RFC3688"/>,
           the following registrations are requested:</t>
         <t>
           <figure align="center">
@@ -623,7 +752,6 @@ XML: N/A, the requested URI is an XML namespace.
           </figure>
         </t>
       </section>
-
       <section anchor="yang-module-registrations" numbered="true" toc="default">
         <name>The "YANG Module Names" Registry</name>
         <t>This document registers two YANG modules in the YANG Module Names
@@ -663,12 +791,13 @@ XML: N/A, the requested URI is an XML namespace.
         <?rfc include='reference.RFC.8040'?>
         <?rfc include='reference.RFC.8174'?>
         <?rfc include='reference.RFC.8341'?>
-        <?rfc include='reference.RFC.8407'?>
         <?rfc include='reference.RFC.8446'?>
         <?rfc include='reference.RFC.8525'?>
         <?rfc include='reference.RFC.8791'?>
+        <?rfc include='reference.RFC.9907'?>
         <?ref include='reference.I-D.ietf-netmod-yang-semver'?>
         <?ref include='reference.I-D.ietf-netmod-yang-module-versioning'?>
+        <?ref include='reference.I-D.ietf-netmod-yang-packages'?>
     </references>
     <references title="Informative References">
         <?ref include='reference.I-D.clacla-netmod-yang-model-update'?>
@@ -676,20 +805,41 @@ XML: N/A, the requested URI is an XML namespace.
     <section anchor="yang_module_schema_cmp_out">
         <name>Schema Comparison Algorithm Output YANG Module</name>
         <t keepWithNext="true">
-            This YANG module defines the specific output of the schema comparison
-            algorithm, supporting comparison of either the compiled schema tree
-            or both the parsed and compiled schema trees of a YANG module. The
-            "ietf-yang-schema-comparison-output" YANG module imports definitions
-            from the "ietf-yang-types" module defined in <xref target="RFC6991" format="default"/>, the
-            "ietf-yang-library" module defined in <xref target="RFC8525" format="default"/>, and the
-            "ietf-yang-structure-ext" module defined in <xref target="RFC8791" format="default"/>.
+            This YANG module defines the specific output of the schema
+            comparison algorithm, supporting comparison of the locally
+            resolved module, fully resolved schema, or both. The
+            "ietf-yang-schema-comparison-output" YANG module imports
+            definitions from the "ietf-yang-types" module defined in
+            <xref target="RFC6991"/>, the "ietf-yang-library" module defined in
+            <xref target="RFC8525"/>, and the "ietf-yang-structure-ext" module
+            defined in <xref target="RFC8791"/>.
         </t>
-        <sourcecode name="ietf-yang-schema-comparison-output@2026-07-03.yang" type=""
+        <t>
+            Generating schema comparison data in the form of YANG instance data
+            compliant with this YANG module is optional but makes it easier for
+            further automatic processing by tools and also allows for simple
+            filtering of the data.
+        </t>
+        <t>
+            Non data definition statements are uniquely identified with their
+            YANG identifier and data definition statements with their absolute
+            schema node-ids. For every change, the changed statement and the
+            parent of the changed statement are included. While redundant in
+            many cases, it allows the algorithm to uniquely report changes in
+            nested statements, e.g. an extension instance change in the type of
+            a leaf statement. Also, all the unchanged substatements with their
+            value or content are included for every changed statement, for both
+            the older and the newer revision of the YANG module, if applicable.
+            This ensures that the output includes all the possibly required
+            information without relying on learning it from the YANG modules
+            themselves.
+        </t>
+        <sourcecode name="ietf-yang-schema-comparison-output@2026-09-02.yang" type=""
             markers="true"><![CDATA[
 module ietf-yang-schema-comparison-output {
   yang-version 1.1;
   namespace "urn:ietf:params:xml:ns:yang:ietf-yang-schema-comparison-output";
-  prefix schema-cmp-out;
+  prefix yscmp-out;
 
   import ietf-yang-types {
     prefix yang;
@@ -706,11 +856,16 @@ module ietf-yang-schema-comparison-output {
     reference
       "RFC 8791: YANG Data Structure Extensions";
   }
+  import ietf-yang-semver {
+    prefix ysv;
+    reference
+      "RFC XXXX: YANG Semantic Versioning";
+  }
 
   organization
     "IETF NETMOD (Network Modeling) Working Group";
   contact
-    "WG List: NETCONF WG list <mailto:netmod@ietf.org>
+    "WG List: NETMOD WG list <mailto:netmod@ietf.org>
      WG Web:  https://datatracker.ietf.org/wg/netmod
 
      Author:  Michal Vaško
@@ -755,22 +910,11 @@ module ietf-yang-schema-comparison-output {
   // RFC Ed.: replace XXXX (inc above) with actual RFC number and
   // remove this note.
 
-  revision 2026-07-03 {
+  revision 2026-09-02 {
     description
       "Initial revision.";
     reference
       "RFC XXXX: YANG Schema Comparison";
-  }
-
-  feature parsed-schema {
-    description
-      "Compare also the statements removed from the compiled schema to
-       get all the backwards-compatible and non-backwards-compatible
-       changes possible for a YANG module.";
-    reference
-      "RFC 7950: The YANG 1.1 Data Modeling Language, section 11;
-       RFC 6020: YANG - A Data Modeling Language for the Network
-       Configuration Protocol (NETCONF), section 10";
   }
 
   typedef schema-node-path {
@@ -812,14 +956,6 @@ module ietf-yang-schema-comparison-output {
       enum description {
         description
           "YANG statement 'description'.";
-      }
-      enum deviate {
-        description
-          "YANG statement 'deviate'.";
-      }
-      enum deviation {
-        description
-          "YANG statement 'deviation'.";
       }
       enum enum {
         description
@@ -888,10 +1024,10 @@ module ietf-yang-schema-comparison-output {
       enum node {
         description
           "YANG statement 'container', 'leaf', 'leaf-list', 'list',
-           'anydata', 'anyxml', 'rpc', 'action', or 'notification'. If
-           the parsed schema is also compared, it can additionally be
-           'choice', 'case', 'input', 'output', 'uses', 'augment', or
-           'grouping'.";
+           'anydata', 'anyxml', 'rpc', 'action', or 'notification'.
+           If the locally resolved module is also compared, it can
+           additionally be 'choice', 'case', 'input', 'output',
+           'uses', 'augment', or 'grouping'.";
       }
       enum ordered-by {
         description
@@ -976,8 +1112,7 @@ module ietf-yang-schema-comparison-output {
       type yanglib:revision-identifier;
     }
     description
-      "Module or submodule revision. If it has none, an empty value is
-       used.";
+      "Module or submodule revision. If it has none, an empty value is used.";
   }
 
   grouping if-feature-stmts {
@@ -1004,7 +1139,7 @@ module ietf-yang-schema-comparison-output {
       type yang:yang-identifier;
       mandatory true;
       description
-        "Name of the extension defition of an extension instance.";
+        "Name of the extension definition of an extension instance.";
     }
     leaf argument {
       type string;
@@ -1278,7 +1413,8 @@ module ietf-yang-schema-comparison-output {
           "Enum statement name.";
       }
       uses if-feature-stmts {
-        if-feature "parsed-schema";
+        description
+          "Populated only for locally resolved module.";
       }
       leaf description {
         type string;
@@ -1310,7 +1446,8 @@ module ietf-yang-schema-comparison-output {
           "Bit statement name.";
       }
       uses if-feature-stmts {
-        if-feature "parsed-schema";
+        description
+          "Populated only for locally resolved module.";
       }
       leaf description {
         type string;
@@ -1348,9 +1485,9 @@ module ietf-yang-schema-comparison-output {
     uses ext-instance-stmts;
   }
 
-  grouping type-parsed-substmts {
+  grouping type-local-substmts {
     description
-      "Describes a parsed type statement change.";
+      "Describes a locally resolved module type statement change.";
     leaf name {
       type yang:yang-identifier;
       description
@@ -1392,7 +1529,10 @@ module ietf-yang-schema-comparison-output {
       leaf inverted {
         type empty;
         description
-          "Inverted substatement value.";
+          "Presence indicates that the pattern's 'modifier'
+           substatement is 'invert-match'.";
+        reference
+          "RFC 7950 Section 9.4.6";
       }
       uses restriction-substmts;
     }
@@ -1474,10 +1614,10 @@ module ietf-yang-schema-comparison-output {
     uses ext-instance-stmts;
   }
 
-  grouping refine-deviate-node-substmts {
+  grouping refine-node-substmts {
     description
       "All substatements of a data-definition node that can be changed
-       by both a refine and deviate statement.";
+       by a refine statement.";
     uses must-stmts;
     leaf-list default {
       type string;
@@ -1510,7 +1650,7 @@ module ietf-yang-schema-comparison-output {
     description
       "All substatements of a data-definition node.";
     uses if-feature-stmts {
-      if-feature "parsed-schema";
+      when "../../locally-resolved";
     }
     uses when-stmts;
     leaf description {
@@ -1524,7 +1664,7 @@ module ietf-yang-schema-comparison-output {
         "Reference substatement value.";
     }
     uses status-stmt;
-    uses refine-deviate-node-substmts;
+    uses refine-node-substmts;
     leaf-list key {
       type yang:yang-identifier;
       description
@@ -1573,8 +1713,8 @@ module ietf-yang-schema-comparison-output {
       description
         "Indicates whether a presence substatement is defined for
          the container in the compiled schema. The textual argument
-         of 'presence' is reported via the parsed schema comparison
-         (see the 'presence' leaf in 'parsed-substmts').";
+         of 'presence' is reported via the locally resolved module
+         comparison (see the 'presence' leaf in 'local-substmts').";
     }
     uses ext-instance-stmts;
   }
@@ -1588,13 +1728,13 @@ module ietf-yang-schema-comparison-output {
         "YANG version substatement value.";
     }
     leaf prefix {
-      if-feature "parsed-schema";
+      when "../../../locally-resolved";
       type string;
       description
         "Prefix substatement value.";
     }
     container import {
-      if-feature "parsed-schema";
+      when "../../../locally-resolved";
       presence "Exists only when there is a difference in this import.";
       description
         "Import substatements.";
@@ -1628,7 +1768,7 @@ module ietf-yang-schema-comparison-output {
       uses ext-instance-stmts;
     }
     container include {
-      if-feature "parsed-schema";
+      when "../../../locally-resolved";
       presence
         "Exists only when there is a difference in this include.";
       description
@@ -1677,7 +1817,7 @@ module ietf-yang-schema-comparison-output {
         "Reference substatement value.";
     }
     container extension {
-      if-feature "parsed-schema";
+      when "../../../locally-resolved";
       presence
         "Exists only when there is a difference in this extension.";
       description
@@ -1707,7 +1847,7 @@ module ietf-yang-schema-comparison-output {
       uses ext-instance-stmts;
     }
     container feature {
-      if-feature "parsed-schema";
+      when "../../../locally-resolved";
       presence
         "Exists only when there is a difference in this feature.";
       description
@@ -1742,90 +1882,13 @@ module ietf-yang-schema-comparison-output {
           "Identity statement name.";
       }
       uses if-feature-stmts {
-        if-feature "parsed-schema";
+        when "../../../locally-resolved";
       }
       leaf-list base {
-        if-feature "parsed-schema";
+        when "../../../../locally-resolved";
         type yang:yang-identifier;
         description
           "List of bases of an identity.";
-      }
-      uses ext-instance-stmts;
-    }
-    container deviation {
-      if-feature "parsed-schema";
-      presence
-        "Exists only when there is a difference in this deviation.";
-      description
-        "Deviation substatements.";
-      leaf target {
-        type string;
-        mandatory true;
-        description
-          "Deviation target argument.";
-      }
-      list deviate {
-        min-elements 1;
-        description
-          "List of deviate substatements.";
-        leaf argument {
-          type enumeration {
-            enum not-supported {
-              description
-                "Deviate 'not-supported' argument value.";
-            }
-            enum add {
-              description
-                "Deviate 'add' argument value.";
-            }
-            enum replace {
-              description
-                "Deviate 'replace' argument value.";
-            }
-            enum delete {
-              description
-                "Deviate 'delete' argument value.";
-            }
-          }
-          mandatory true;
-          description
-            "Deviate argument value.";
-        }
-        uses refine-deviate-node-substmts;
-        container type {
-          description
-            "Type substatement.";
-          uses type-parsed-substmts;
-          list union-type {
-            description
-              "List of a union type substatements.";
-            uses type-parsed-substmts;
-          }
-        }
-        leaf units {
-          type string;
-          description
-            "Units substatement value.";
-        }
-        list unique {
-          description
-            "List of unique substatements.";
-          leaf-list node {
-            type yang:yang-identifier;
-            description
-              "List of nodes referenced by a unique substatement.";
-          }
-        }
-      }
-      leaf description {
-        type string;
-        description
-          "Description substatement value.";
-      }
-      leaf reference {
-        type string;
-        description
-          "Reference substatement value.";
       }
       uses ext-instance-stmts;
     }
@@ -1839,13 +1902,11 @@ module ietf-yang-schema-comparison-output {
     }
   }
 
-  grouping parsed-substmts {
+  grouping local-substmts {
     description
-      "All parsed-only statements that can be direct substatements of a
-       module or nested in a node.";
-    uses if-feature-stmts {
-      if-feature "parsed-schema";
-    }
+      "All locally-resolved-module-only statements that can be direct
+       substatements of a module or nested in a node.";
+    uses if-feature-stmts;
     uses when-stmts;
     leaf description {
       type string;
@@ -1858,15 +1919,15 @@ module ietf-yang-schema-comparison-output {
         "Reference substatement value.";
     }
     uses status-stmt;
-    uses refine-deviate-node-substmts;
+    uses refine-node-substmts;
     container type {
       description
         "Type substatement.";
-      uses type-parsed-substmts;
+      uses type-local-substmts;
       list union-type {
         description
           "List of a union type substatements.";
-        uses type-parsed-substmts;
+        uses type-local-substmts;
       }
     }
     leaf units {
@@ -1958,27 +2019,28 @@ module ietf-yang-schema-comparison-output {
       "Identification details of a processed YANG module.";
     leaf module {
       type yang:yang-identifier;
-      mandatory true;
       description
         "Compared module name.";
     }
     leaf revision {
       type revision-or-empty;
-      mandatory true;
       description
         "Compared module revision.";
+    }
+    leaf version {
+      type ysv:version;
+      description
+        "Compared module semantic version, if defined.";
     }
     list submodule {
       key "name revision";
       leaf name {
         type yang:yang-identifier;
-        mandatory true;
         description
           "Submodule name.";
       }
       leaf revision {
         type revision-or-empty;
-        mandatory true;
         description
           "Submodule revision.";
       }
@@ -1992,12 +2054,12 @@ module ietf-yang-schema-comparison-output {
     }
   }
 
-  grouping parsed-info {
+  grouping local-info {
     description
-      "Information about all the changed parsed-only statements.";
-    list parsed-comparison {
+      "Information about all the changed locally-resolved-module-only statements.";
+    list local-comparison {
       description
-        "Information about parsed-only statement changes.";
+        "Information about locally-resolved-module-only statement changes.";
       leaf parent-path {
         type schema-stmt-path;
         description
@@ -2056,22 +2118,22 @@ module ietf-yang-schema-comparison-output {
       uses change-info;
       container old {
         description
-          "Changed parsed statements in the older revision of the YANG
+          "Changed local statements in the older revision of the YANG
            module.";
-        uses parsed-substmts;
+        uses local-substmts;
       }
       container new {
         description
-          "Changed parsed statements in the newer revision of the YANG
+          "Changed local statements in the newer revision of the YANG
            module.";
-        uses parsed-substmts;
+        uses local-substmts;
       }
     }
   }
 
   grouping node-info {
     description
-      "Information about all the changed compiled nodes.";
+      "Information about all the changed nodes.";
     list node-comparison {
       key "node";
       ordered-by user;
@@ -2146,16 +2208,36 @@ module ietf-yang-schema-comparison-output {
   sx:structure schema-comparison {
     description
       "Schema comparison details.";
-    list schema {
+    list comparison {
+      must "locally-resolved or fully-resolved" {
+        description
+          "As the comparison input, locally resolved module, fully
+           resolved module, or both must be used.";
+      }
       description
         "Instance of a schema comparison of 2 YANG modules in different
          revisions with all their imports.";
+      leaf locally-resolved {
+        type empty;
+        description
+          "Locally resolved module has been used for the comparison.";
+        reference
+          "RFC XXXX Section 3.1.";
+      }
+      leaf fully-resolved {
+        type empty;
+        description
+          "Fully resolved schema has been used for the comparison.";
+        reference
+          "RFC XXXX Section 3.2.";
+      }
       container source {
         description
           "Source module information.";
         uses module-params;
       }
       list source-import {
+        when "../fully-resolved";
         key "module revision";
         description
           "List of source module imported modules information.";
@@ -2167,6 +2249,7 @@ module ietf-yang-schema-comparison-output {
         uses module-params;
       }
       list target-import {
+        when "../fully-resolved";
         key "module revision";
         description
           "List of target module imported modules information.";
@@ -2191,34 +2274,1365 @@ module ietf-yang-schema-comparison-output {
           uses module-substmts;
         }
       }
-      uses parsed-info {
-        if-feature "parsed-schema";
+      uses local-info {
+        when "locally-resolved";
       }
       uses node-info;
     }
   }
 }
-
 ]]></sourcecode>
+        <section anchor="yang_module_schema_cmp_out_tree">
+            <name>Tree diagram</name>
+            <t keepWithNext="true">
+                The “ietf-yang-schema-comparison-output” YANG module has the
+                following structure:
+            </t>
+            <figure>
+                <artwork>
+module: ietf-yang-schema-comparison-output
+
+ structure schema-comparison:
+   +-- comparison*
+      +-- locally-resolved?           empty
+      +-- fully-resolved?             empty
+      +-- source
+      |  +-- module?            yang:yang-identifier
+      |  +-- revision?          revision-or-empty
+      |  +-- version?           ysv:version
+      |  +-- submodule* [name revision]
+      |  |  +-- name        yang:yang-identifier
+      |  |  +-- revision    revision-or-empty
+      |  +-- enabled-feature*   yang:yang-identifier
+      +-- source-import* [module revision]
+      |  +-- module             yang:yang-identifier
+      |  +-- revision           revision-or-empty
+      |  +-- version?           ysv:version
+      |  +-- submodule* [name revision]
+      |  |  +-- name        yang:yang-identifier
+      |  |  +-- revision    revision-or-empty
+      |  +-- enabled-feature*   yang:yang-identifier
+      +-- target
+      |  +-- module?            yang:yang-identifier
+      |  +-- revision?          revision-or-empty
+      |  +-- version?           ysv:version
+      |  +-- submodule* [name revision]
+      |  |  +-- name        yang:yang-identifier
+      |  |  +-- revision    revision-or-empty
+      |  +-- enabled-feature*   yang:yang-identifier
+      +-- target-import* [module revision]
+      |  +-- module             yang:yang-identifier
+      |  +-- revision           revision-or-empty
+      |  +-- version?           ysv:version
+      |  +-- submodule* [name revision]
+      |  |  +-- name        yang:yang-identifier
+      |  |  +-- revision    revision-or-empty
+      |  +-- enabled-feature*   yang:yang-identifier
+      +-- conformance                 enumeration
+      +-- suggested-target-version    ysv:version
+      +-- module-comparison*
+      |  +-- changed* [stmt]
+      |  |  +-- stmt           stmt-type
+      |  |  +-- parent-stmt?   stmt-type
+      |  |  +-- change         enumeration
+      |  |  +-- conformance    enumeration
+      |  +-- old
+      |  |  +-- yang-version?   string
+      |  |  +-- prefix?         string
+      |  |  +-- import!
+      |  |  |  +-- module           yang:yang-identifier
+      |  |  |  +-- prefix           yang:yang-identifier
+      |  |  |  +-- revision-date?   yanglib:revision-identifier
+      |  |  |  +-- description?     string
+      |  |  |  +-- reference?       string
+      |  |  |  +-- ext-instance*
+      |  |  |     +-- module           yang:yang-identifier
+      |  |  |     +-- name             yang:yang-identifier
+      |  |  |     +-- argument?        string
+      |  |  |     +-- substatements?   anydata
+      |  |  +-- include!
+      |  |  |  +-- submodule        yang:yang-identifier
+      |  |  |  +-- revision-date?   yanglib:revision-identifier
+      |  |  |  +-- description?     string
+      |  |  |  +-- reference?       string
+      |  |  |  +-- ext-instance*
+      |  |  |     +-- module           yang:yang-identifier
+      |  |  |     +-- name             yang:yang-identifier
+      |  |  |     +-- argument?        string
+      |  |  |     +-- substatements?   anydata
+      |  |  +-- organization?   string
+      |  |  +-- contact?        string
+      |  |  +-- description?    string
+      |  |  +-- reference?      string
+      |  |  +-- extension!
+      |  |  |  +-- name            yang:yang-identifier
+      |  |  |  +-- argument?       string
+      |  |  |  +-- status          enumeration
+      |  |  |  +-- description?    string
+      |  |  |  +-- reference?      string
+      |  |  |  +-- ext-instance*
+      |  |  |     +-- module           yang:yang-identifier
+      |  |  |     +-- name             yang:yang-identifier
+      |  |  |     +-- argument?        string
+      |  |  |     +-- substatements?   anydata
+      |  |  +-- feature!
+      |  |  |  +-- name            yang:yang-identifier
+      |  |  |  +-- if-feature*     string
+      |  |  |  +-- status          enumeration
+      |  |  |  +-- description?    string
+      |  |  |  +-- reference?      string
+      |  |  |  +-- ext-instance*
+      |  |  |     +-- module           yang:yang-identifier
+      |  |  |     +-- name             yang:yang-identifier
+      |  |  |     +-- argument?        string
+      |  |  |     +-- substatements?   anydata
+      |  |  +-- identity
+      |  |  |  +-- name            yang:yang-identifier
+      |  |  |  +-- if-feature*     string
+      |  |  |  +-- base*           string
+      |  |  |  +-- ext-instance*
+      |  |  |     +-- module           yang:yang-identifier
+      |  |  |     +-- name             yang:yang-identifier
+      |  |  |     +-- argument?        string
+      |  |  |     +-- substatements?   anydata
+      |  |  +-- deviation!
+      |  |  |  +-- target          string
+      |  |  |  +-- deviate*
+      |  |  |  |  +-- argument        enumeration
+      |  |  |  |  +-- must*
+      |  |  |  |  |  +-- condition?       string
+      |  |  |  |  |  +-- description?     string
+      |  |  |  |  |  +-- reference?       string
+      |  |  |  |  |  +-- error-message?   string
+      |  |  |  |  |  +-- error-app-tag?   string
+      |  |  |  |  |  +-- ext-instance*
+      |  |  |  |  |     +-- module           yang:yang-identifier
+      |  |  |  |  |     +-- name             yang:yang-identifier
+      |  |  |  |  |     +-- argument?        string
+      |  |  |  |  |     +-- substatements?   anydata
+      |  |  |  |  +-- default*        string
+      |  |  |  |  +-- config?         boolean
+      |  |  |  |  +-- mandatory?      boolean
+      |  |  |  |  +-- min-elements?   uint32
+      |  |  |  |  +-- max-elements?   uint32
+      |  |  |  |  +-- type
+      |  |  |  |  |  +-- name?               string
+      |  |  |  |  |  +-- range
+      |  |  |  |  |  |  +-- restriction?     string
+      |  |  |  |  |  |  +-- description?     string
+      |  |  |  |  |  |  +-- reference?       string
+      |  |  |  |  |  |  +-- error-message?   string
+      |  |  |  |  |  |  +-- error-app-tag?   string
+      |  |  |  |  |  |  +-- ext-instance*
+      |  |  |  |  |  |     +-- module           yang:yang-identifier
+      |  |  |  |  |  |     +-- name             yang:yang-identifier
+      |  |  |  |  |  |     +-- argument?        string
+      |  |  |  |  |  |     +-- substatements?   anydata
+      |  |  |  |  |  +-- length
+      |  |  |  |  |  |  +-- restriction?     string
+      |  |  |  |  |  |  +-- description?     string
+      |  |  |  |  |  |  +-- reference?       string
+      |  |  |  |  |  |  +-- error-message?   string
+      |  |  |  |  |  |  +-- error-app-tag?   string
+      |  |  |  |  |  |  +-- ext-instance*
+      |  |  |  |  |  |     +-- module           yang:yang-identifier
+      |  |  |  |  |  |     +-- name             yang:yang-identifier
+      |  |  |  |  |  |     +-- argument?        string
+      |  |  |  |  |  |     +-- substatements?   anydata
+      |  |  |  |  |  +-- fraction-digits?    uint8
+      |  |  |  |  |  +-- pattern*
+      |  |  |  |  |  |  +-- expression?      string
+      |  |  |  |  |  |  +-- inverted?        boolean
+      |  |  |  |  |  |  +-- description?     string
+      |  |  |  |  |  |  +-- reference?       string
+      |  |  |  |  |  |  +-- error-message?   string
+      |  |  |  |  |  |  +-- error-app-tag?   string
+      |  |  |  |  |  |  +-- ext-instance*
+      |  |  |  |  |  |     +-- module           yang:yang-identifier
+      |  |  |  |  |  |     +-- name             yang:yang-identifier
+      |  |  |  |  |  |     +-- argument?        string
+      |  |  |  |  |  |     +-- substatements?   anydata
+      |  |  |  |  |  +-- enum* [name]
+      |  |  |  |  |  |  +-- name            yang:yang-identifier
+      |  |  |  |  |  |  +-- if-feature*     string
+      |  |  |  |  |  |  +-- description?    string
+      |  |  |  |  |  |  +-- reference?      string
+      |  |  |  |  |  |  +-- value?          int32
+      |  |  |  |  |  |  +-- status          enumeration
+      |  |  |  |  |  |  +-- ext-instance*
+      |  |  |  |  |  |     +-- module           yang:yang-identifier
+      |  |  |  |  |  |     +-- name             yang:yang-identifier
+      |  |  |  |  |  |     +-- argument?        string
+      |  |  |  |  |  |     +-- substatements?   anydata
+      |  |  |  |  |  +-- bit* [name]
+      |  |  |  |  |  |  +-- name            yang:yang-identifier
+      |  |  |  |  |  |  +-- if-feature*     string
+      |  |  |  |  |  |  +-- description?    string
+      |  |  |  |  |  |  +-- reference?      string
+      |  |  |  |  |  |  +-- position?       uint32
+      |  |  |  |  |  |  +-- status          enumeration
+      |  |  |  |  |  |  +-- ext-instance*
+      |  |  |  |  |  |     +-- module           yang:yang-identifier
+      |  |  |  |  |  |     +-- name             yang:yang-identifier
+      |  |  |  |  |  |     +-- argument?        string
+      |  |  |  |  |  |     +-- substatements?   anydata
+      |  |  |  |  |  +-- path?               string
+      |  |  |  |  |  +-- require-instance?   boolean
+      |  |  |  |  |  +-- base*               string
+      |  |  |  |  |  +-- ext-instance*
+      |  |  |  |  |  |  +-- module           yang:yang-identifier
+      |  |  |  |  |  |  +-- name             yang:yang-identifier
+      |  |  |  |  |  |  +-- argument?        string
+      |  |  |  |  |  |  +-- substatements?   anydata
+      |  |  |  |  |  +-- union-type*
+      |  |  |  |  |     +-- name?               string
+      |  |  |  |  |     +-- range
+      |  |  |  |  |     |  +-- restriction?     string
+      |  |  |  |  |     |  +-- description?     string
+      |  |  |  |  |     |  +-- reference?       string
+      |  |  |  |  |     |  +-- error-message?   string
+      |  |  |  |  |     |  +-- error-app-tag?   string
+      |  |  |  |  |     |  +-- ext-instance*
+      |  |  |  |  |     |     +-- module           yang:yang-identifier
+      |  |  |  |  |     |     +-- name             yang:yang-identifier
+      |  |  |  |  |     |     +-- argument?        string
+      |  |  |  |  |     |     +-- substatements?   anydata
+      |  |  |  |  |     +-- length
+      |  |  |  |  |     |  +-- restriction?     string
+      |  |  |  |  |     |  +-- description?     string
+      |  |  |  |  |     |  +-- reference?       string
+      |  |  |  |  |     |  +-- error-message?   string
+      |  |  |  |  |     |  +-- error-app-tag?   string
+      |  |  |  |  |     |  +-- ext-instance*
+      |  |  |  |  |     |     +-- module           yang:yang-identifier
+      |  |  |  |  |     |     +-- name             yang:yang-identifier
+      |  |  |  |  |     |     +-- argument?        string
+      |  |  |  |  |     |     +-- substatements?   anydata
+      |  |  |  |  |     +-- fraction-digits?    uint8
+      |  |  |  |  |     +-- pattern*
+      |  |  |  |  |     |  +-- expression?      string
+      |  |  |  |  |     |  +-- inverted?        boolean
+      |  |  |  |  |     |  +-- description?     string
+      |  |  |  |  |     |  +-- reference?       string
+      |  |  |  |  |     |  +-- error-message?   string
+      |  |  |  |  |     |  +-- error-app-tag?   string
+      |  |  |  |  |     |  +-- ext-instance*
+      |  |  |  |  |     |     +-- module           yang:yang-identifier
+      |  |  |  |  |     |     +-- name             yang:yang-identifier
+      |  |  |  |  |     |     +-- argument?        string
+      |  |  |  |  |     |     +-- substatements?   anydata
+      |  |  |  |  |     +-- enum* [name]
+      |  |  |  |  |     |  +-- name            yang:yang-identifier
+      |  |  |  |  |     |  +-- if-feature*     string
+      |  |  |  |  |     |  +-- description?    string
+      |  |  |  |  |     |  +-- reference?      string
+      |  |  |  |  |     |  +-- value?          int32
+      |  |  |  |  |     |  +-- status          enumeration
+      |  |  |  |  |     |  +-- ext-instance*
+      |  |  |  |  |     |     +-- module           yang:yang-identifier
+      |  |  |  |  |     |     +-- name             yang:yang-identifier
+      |  |  |  |  |     |     +-- argument?        string
+      |  |  |  |  |     |     +-- substatements?   anydata
+      |  |  |  |  |     +-- bit* [name]
+      |  |  |  |  |     |  +-- name            yang:yang-identifier
+      |  |  |  |  |     |  +-- if-feature*     string
+      |  |  |  |  |     |  +-- description?    string
+      |  |  |  |  |     |  +-- reference?      string
+      |  |  |  |  |     |  +-- position?       uint32
+      |  |  |  |  |     |  +-- status          enumeration
+      |  |  |  |  |     |  +-- ext-instance*
+      |  |  |  |  |     |     +-- module           yang:yang-identifier
+      |  |  |  |  |     |     +-- name             yang:yang-identifier
+      |  |  |  |  |     |     +-- argument?        string
+      |  |  |  |  |     |     +-- substatements?   anydata
+      |  |  |  |  |     +-- path?               string
+      |  |  |  |  |     +-- require-instance?   boolean
+      |  |  |  |  |     +-- base*               string
+      |  |  |  |  |     +-- ext-instance*
+      |  |  |  |  |        +-- module           yang:yang-identifier
+      |  |  |  |  |        +-- name             yang:yang-identifier
+      |  |  |  |  |        +-- argument?        string
+      |  |  |  |  |        +-- substatements?   anydata
+      |  |  |  |  +-- units?          string
+      |  |  |  |  +-- unique*
+      |  |  |  |     +-- node*   yang:yang-identifier
+      |  |  |  +-- description?    string
+      |  |  |  +-- reference?      string
+      |  |  |  +-- ext-instance*
+      |  |  |     +-- module           yang:yang-identifier
+      |  |  |     +-- name             yang:yang-identifier
+      |  |  |     +-- argument?        string
+      |  |  |     +-- substatements?   anydata
+      |  |  +-- ext-instance!
+      |  |     +-- module           yang:yang-identifier
+      |  |     +-- name             yang:yang-identifier
+      |  |     +-- argument?        string
+      |  |     +-- substatements?   anydata
+      |  +-- new
+      |     +-- yang-version?   string
+      |     +-- prefix?         string
+      |     +-- import!
+      |     |  +-- module           yang:yang-identifier
+      |     |  +-- prefix           yang:yang-identifier
+      |     |  +-- revision-date?   yanglib:revision-identifier
+      |     |  +-- description?     string
+      |     |  +-- reference?       string
+      |     |  +-- ext-instance*
+      |     |     +-- module           yang:yang-identifier
+      |     |     +-- name             yang:yang-identifier
+      |     |     +-- argument?        string
+      |     |     +-- substatements?   anydata
+      |     +-- include!
+      |     |  +-- submodule        yang:yang-identifier
+      |     |  +-- revision-date?   yanglib:revision-identifier
+      |     |  +-- description?     string
+      |     |  +-- reference?       string
+      |     |  +-- ext-instance*
+      |     |     +-- module           yang:yang-identifier
+      |     |     +-- name             yang:yang-identifier
+      |     |     +-- argument?        string
+      |     |     +-- substatements?   anydata
+      |     +-- organization?   string
+      |     +-- contact?        string
+      |     +-- description?    string
+      |     +-- reference?      string
+      |     +-- extension!
+      |     |  +-- name            yang:yang-identifier
+      |     |  +-- argument?       string
+      |     |  +-- status          enumeration
+      |     |  +-- description?    string
+      |     |  +-- reference?      string
+      |     |  +-- ext-instance*
+      |     |     +-- module           yang:yang-identifier
+      |     |     +-- name             yang:yang-identifier
+      |     |     +-- argument?        string
+      |     |     +-- substatements?   anydata
+      |     +-- feature!
+      |     |  +-- name            yang:yang-identifier
+      |     |  +-- if-feature*     string
+      |     |  +-- status          enumeration
+      |     |  +-- description?    string
+      |     |  +-- reference?      string
+      |     |  +-- ext-instance*
+      |     |     +-- module           yang:yang-identifier
+      |     |     +-- name             yang:yang-identifier
+      |     |     +-- argument?        string
+      |     |     +-- substatements?   anydata
+      |     +-- identity
+      |     |  +-- name            yang:yang-identifier
+      |     |  +-- if-feature*     string
+      |     |  +-- base*           string
+      |     |  +-- ext-instance*
+      |     |     +-- module           yang:yang-identifier
+      |     |     +-- name             yang:yang-identifier
+      |     |     +-- argument?        string
+      |     |     +-- substatements?   anydata
+      |     +-- deviation!
+      |     |  +-- target          string
+      |     |  +-- deviate*
+      |     |  |  +-- argument        enumeration
+      |     |  |  +-- must*
+      |     |  |  |  +-- condition?       string
+      |     |  |  |  +-- description?     string
+      |     |  |  |  +-- reference?       string
+      |     |  |  |  +-- error-message?   string
+      |     |  |  |  +-- error-app-tag?   string
+      |     |  |  |  +-- ext-instance*
+      |     |  |  |     +-- module           yang:yang-identifier
+      |     |  |  |     +-- name             yang:yang-identifier
+      |     |  |  |     +-- argument?        string
+      |     |  |  |     +-- substatements?   anydata
+      |     |  |  +-- default*        string
+      |     |  |  +-- config?         boolean
+      |     |  |  +-- mandatory?      boolean
+      |     |  |  +-- min-elements?   uint32
+      |     |  |  +-- max-elements?   uint32
+      |     |  |  +-- type
+      |     |  |  |  +-- name?               string
+      |     |  |  |  +-- range
+      |     |  |  |  |  +-- restriction?     string
+      |     |  |  |  |  +-- description?     string
+      |     |  |  |  |  +-- reference?       string
+      |     |  |  |  |  +-- error-message?   string
+      |     |  |  |  |  +-- error-app-tag?   string
+      |     |  |  |  |  +-- ext-instance*
+      |     |  |  |  |     +-- module           yang:yang-identifier
+      |     |  |  |  |     +-- name             yang:yang-identifier
+      |     |  |  |  |     +-- argument?        string
+      |     |  |  |  |     +-- substatements?   anydata
+      |     |  |  |  +-- length
+      |     |  |  |  |  +-- restriction?     string
+      |     |  |  |  |  +-- description?     string
+      |     |  |  |  |  +-- reference?       string
+      |     |  |  |  |  +-- error-message?   string
+      |     |  |  |  |  +-- error-app-tag?   string
+      |     |  |  |  |  +-- ext-instance*
+      |     |  |  |  |     +-- module           yang:yang-identifier
+      |     |  |  |  |     +-- name             yang:yang-identifier
+      |     |  |  |  |     +-- argument?        string
+      |     |  |  |  |     +-- substatements?   anydata
+      |     |  |  |  +-- fraction-digits?    uint8
+      |     |  |  |  +-- pattern*
+      |     |  |  |  |  +-- expression?      string
+      |     |  |  |  |  +-- inverted?        boolean
+      |     |  |  |  |  +-- description?     string
+      |     |  |  |  |  +-- reference?       string
+      |     |  |  |  |  +-- error-message?   string
+      |     |  |  |  |  +-- error-app-tag?   string
+      |     |  |  |  |  +-- ext-instance*
+      |     |  |  |  |     +-- module           yang:yang-identifier
+      |     |  |  |  |     +-- name             yang:yang-identifier
+      |     |  |  |  |     +-- argument?        string
+      |     |  |  |  |     +-- substatements?   anydata
+      |     |  |  |  +-- enum* [name]
+      |     |  |  |  |  +-- name            yang:yang-identifier
+      |     |  |  |  |  +-- if-feature*     string
+      |     |  |  |  |  +-- description?    string
+      |     |  |  |  |  +-- reference?      string
+      |     |  |  |  |  +-- value?          int32
+      |     |  |  |  |  +-- status          enumeration
+      |     |  |  |  |  +-- ext-instance*
+      |     |  |  |  |     +-- module           yang:yang-identifier
+      |     |  |  |  |     +-- name             yang:yang-identifier
+      |     |  |  |  |     +-- argument?        string
+      |     |  |  |  |     +-- substatements?   anydata
+      |     |  |  |  +-- bit* [name]
+      |     |  |  |  |  +-- name            yang:yang-identifier
+      |     |  |  |  |  +-- if-feature*     string
+      |     |  |  |  |  +-- description?    string
+      |     |  |  |  |  +-- reference?      string
+      |     |  |  |  |  +-- position?       uint32
+      |     |  |  |  |  +-- status          enumeration
+      |     |  |  |  |  +-- ext-instance*
+      |     |  |  |  |     +-- module           yang:yang-identifier
+      |     |  |  |  |     +-- name             yang:yang-identifier
+      |     |  |  |  |     +-- argument?        string
+      |     |  |  |  |     +-- substatements?   anydata
+      |     |  |  |  +-- path?               string
+      |     |  |  |  +-- require-instance?   boolean
+      |     |  |  |  +-- base*               string
+      |     |  |  |  +-- ext-instance*
+      |     |  |  |  |  +-- module           yang:yang-identifier
+      |     |  |  |  |  +-- name             yang:yang-identifier
+      |     |  |  |  |  +-- argument?        string
+      |     |  |  |  |  +-- substatements?   anydata
+      |     |  |  |  +-- union-type*
+      |     |  |  |     +-- name?               string
+      |     |  |  |     +-- range
+      |     |  |  |     |  +-- restriction?     string
+      |     |  |  |     |  +-- description?     string
+      |     |  |  |     |  +-- reference?       string
+      |     |  |  |     |  +-- error-message?   string
+      |     |  |  |     |  +-- error-app-tag?   string
+      |     |  |  |     |  +-- ext-instance*
+      |     |  |  |     |     +-- module           yang:yang-identifier
+      |     |  |  |     |     +-- name             yang:yang-identifier
+      |     |  |  |     |     +-- argument?        string
+      |     |  |  |     |     +-- substatements?   anydata
+      |     |  |  |     +-- length
+      |     |  |  |     |  +-- restriction?     string
+      |     |  |  |     |  +-- description?     string
+      |     |  |  |     |  +-- reference?       string
+      |     |  |  |     |  +-- error-message?   string
+      |     |  |  |     |  +-- error-app-tag?   string
+      |     |  |  |     |  +-- ext-instance*
+      |     |  |  |     |     +-- module           yang:yang-identifier
+      |     |  |  |     |     +-- name             yang:yang-identifier
+      |     |  |  |     |     +-- argument?        string
+      |     |  |  |     |     +-- substatements?   anydata
+      |     |  |  |     +-- fraction-digits?    uint8
+      |     |  |  |     +-- pattern*
+      |     |  |  |     |  +-- expression?      string
+      |     |  |  |     |  +-- inverted?        boolean
+      |     |  |  |     |  +-- description?     string
+      |     |  |  |     |  +-- reference?       string
+      |     |  |  |     |  +-- error-message?   string
+      |     |  |  |     |  +-- error-app-tag?   string
+      |     |  |  |     |  +-- ext-instance*
+      |     |  |  |     |     +-- module           yang:yang-identifier
+      |     |  |  |     |     +-- name             yang:yang-identifier
+      |     |  |  |     |     +-- argument?        string
+      |     |  |  |     |     +-- substatements?   anydata
+      |     |  |  |     +-- enum* [name]
+      |     |  |  |     |  +-- name            yang:yang-identifier
+      |     |  |  |     |  +-- if-feature*     string
+      |     |  |  |     |  +-- description?    string
+      |     |  |  |     |  +-- reference?      string
+      |     |  |  |     |  +-- value?          int32
+      |     |  |  |     |  +-- status          enumeration
+      |     |  |  |     |  +-- ext-instance*
+      |     |  |  |     |     +-- module           yang:yang-identifier
+      |     |  |  |     |     +-- name             yang:yang-identifier
+      |     |  |  |     |     +-- argument?        string
+      |     |  |  |     |     +-- substatements?   anydata
+      |     |  |  |     +-- bit* [name]
+      |     |  |  |     |  +-- name            yang:yang-identifier
+      |     |  |  |     |  +-- if-feature*     string
+      |     |  |  |     |  +-- description?    string
+      |     |  |  |     |  +-- reference?      string
+      |     |  |  |     |  +-- position?       uint32
+      |     |  |  |     |  +-- status          enumeration
+      |     |  |  |     |  +-- ext-instance*
+      |     |  |  |     |     +-- module           yang:yang-identifier
+      |     |  |  |     |     +-- name             yang:yang-identifier
+      |     |  |  |     |     +-- argument?        string
+      |     |  |  |     |     +-- substatements?   anydata
+      |     |  |  |     +-- path?               string
+      |     |  |  |     +-- require-instance?   boolean
+      |     |  |  |     +-- base*               string
+      |     |  |  |     +-- ext-instance*
+      |     |  |  |        +-- module           yang:yang-identifier
+      |     |  |  |        +-- name             yang:yang-identifier
+      |     |  |  |        +-- argument?        string
+      |     |  |  |        +-- substatements?   anydata
+      |     |  |  +-- units?          string
+      |     |  |  +-- unique*
+      |     |  |     +-- node*   yang:yang-identifier
+      |     |  +-- description?    string
+      |     |  +-- reference?      string
+      |     |  +-- ext-instance*
+      |     |     +-- module           yang:yang-identifier
+      |     |     +-- name             yang:yang-identifier
+      |     |     +-- argument?        string
+      |     |     +-- substatements?   anydata
+      |     +-- ext-instance!
+      |        +-- module           yang:yang-identifier
+      |        +-- name             yang:yang-identifier
+      |        +-- argument?        string
+      |        +-- substatements?   anydata
+      +-- local-comparison*
+      |  +-- parent-path?   schema-stmt-path
+      |  +-- identifier     string
+      |  +-- stmt-type      enumeration
+      |  +-- changed* [stmt]
+      |  |  +-- stmt           stmt-type
+      |  |  +-- parent-stmt?   stmt-type
+      |  |  +-- change         enumeration
+      |  |  +-- conformance    enumeration
+      |  +-- old
+      |  |  +-- if-feature*     string
+      |  |  +-- when*
+      |  |  |  +-- condition?      string
+      |  |  |  +-- description?    string
+      |  |  |  +-- reference?      string
+      |  |  |  +-- status          enumeration
+      |  |  |  +-- ext-instance*
+      |  |  |     +-- module           yang:yang-identifier
+      |  |  |     +-- name             yang:yang-identifier
+      |  |  |     +-- argument?        string
+      |  |  |     +-- substatements?   anydata
+      |  |  +-- description?    string
+      |  |  +-- reference?      string
+      |  |  +-- status          enumeration
+      |  |  +-- must*
+      |  |  |  +-- condition?       string
+      |  |  |  +-- description?     string
+      |  |  |  +-- reference?       string
+      |  |  |  +-- error-message?   string
+      |  |  |  +-- error-app-tag?   string
+      |  |  |  +-- ext-instance*
+      |  |  |     +-- module           yang:yang-identifier
+      |  |  |     +-- name             yang:yang-identifier
+      |  |  |     +-- argument?        string
+      |  |  |     +-- substatements?   anydata
+      |  |  +-- default*        string
+      |  |  +-- config?         boolean
+      |  |  +-- mandatory?      boolean
+      |  |  +-- min-elements?   uint32
+      |  |  +-- max-elements?   uint32
+      |  |  +-- type
+      |  |  |  +-- name?               string
+      |  |  |  +-- range
+      |  |  |  |  +-- restriction?     string
+      |  |  |  |  +-- description?     string
+      |  |  |  |  +-- reference?       string
+      |  |  |  |  +-- error-message?   string
+      |  |  |  |  +-- error-app-tag?   string
+      |  |  |  |  +-- ext-instance*
+      |  |  |  |     +-- module           yang:yang-identifier
+      |  |  |  |     +-- name             yang:yang-identifier
+      |  |  |  |     +-- argument?        string
+      |  |  |  |     +-- substatements?   anydata
+      |  |  |  +-- length
+      |  |  |  |  +-- restriction?     string
+      |  |  |  |  +-- description?     string
+      |  |  |  |  +-- reference?       string
+      |  |  |  |  +-- error-message?   string
+      |  |  |  |  +-- error-app-tag?   string
+      |  |  |  |  +-- ext-instance*
+      |  |  |  |     +-- module           yang:yang-identifier
+      |  |  |  |     +-- name             yang:yang-identifier
+      |  |  |  |     +-- argument?        string
+      |  |  |  |     +-- substatements?   anydata
+      |  |  |  +-- fraction-digits?    uint8
+      |  |  |  +-- pattern*
+      |  |  |  |  +-- expression?      string
+      |  |  |  |  +-- inverted?        boolean
+      |  |  |  |  +-- description?     string
+      |  |  |  |  +-- reference?       string
+      |  |  |  |  +-- error-message?   string
+      |  |  |  |  +-- error-app-tag?   string
+      |  |  |  |  +-- ext-instance*
+      |  |  |  |     +-- module           yang:yang-identifier
+      |  |  |  |     +-- name             yang:yang-identifier
+      |  |  |  |     +-- argument?        string
+      |  |  |  |     +-- substatements?   anydata
+      |  |  |  +-- enum* [name]
+      |  |  |  |  +-- name            yang:yang-identifier
+      |  |  |  |  +-- if-feature*     string
+      |  |  |  |  +-- description?    string
+      |  |  |  |  +-- reference?      string
+      |  |  |  |  +-- value?          int32
+      |  |  |  |  +-- status          enumeration
+      |  |  |  |  +-- ext-instance*
+      |  |  |  |     +-- module           yang:yang-identifier
+      |  |  |  |     +-- name             yang:yang-identifier
+      |  |  |  |     +-- argument?        string
+      |  |  |  |     +-- substatements?   anydata
+      |  |  |  +-- bit* [name]
+      |  |  |  |  +-- name            yang:yang-identifier
+      |  |  |  |  +-- if-feature*     string
+      |  |  |  |  +-- description?    string
+      |  |  |  |  +-- reference?      string
+      |  |  |  |  +-- position?       uint32
+      |  |  |  |  +-- status          enumeration
+      |  |  |  |  +-- ext-instance*
+      |  |  |  |     +-- module           yang:yang-identifier
+      |  |  |  |     +-- name             yang:yang-identifier
+      |  |  |  |     +-- argument?        string
+      |  |  |  |     +-- substatements?   anydata
+      |  |  |  +-- path?               string
+      |  |  |  +-- require-instance?   boolean
+      |  |  |  +-- base*               string
+      |  |  |  +-- ext-instance*
+      |  |  |  |  +-- module           yang:yang-identifier
+      |  |  |  |  +-- name             yang:yang-identifier
+      |  |  |  |  +-- argument?        string
+      |  |  |  |  +-- substatements?   anydata
+      |  |  |  +-- union-type*
+      |  |  |     +-- name?               string
+      |  |  |     +-- range
+      |  |  |     |  +-- restriction?     string
+      |  |  |     |  +-- description?     string
+      |  |  |     |  +-- reference?       string
+      |  |  |     |  +-- error-message?   string
+      |  |  |     |  +-- error-app-tag?   string
+      |  |  |     |  +-- ext-instance*
+      |  |  |     |     +-- module           yang:yang-identifier
+      |  |  |     |     +-- name             yang:yang-identifier
+      |  |  |     |     +-- argument?        string
+      |  |  |     |     +-- substatements?   anydata
+      |  |  |     +-- length
+      |  |  |     |  +-- restriction?     string
+      |  |  |     |  +-- description?     string
+      |  |  |     |  +-- reference?       string
+      |  |  |     |  +-- error-message?   string
+      |  |  |     |  +-- error-app-tag?   string
+      |  |  |     |  +-- ext-instance*
+      |  |  |     |     +-- module           yang:yang-identifier
+      |  |  |     |     +-- name             yang:yang-identifier
+      |  |  |     |     +-- argument?        string
+      |  |  |     |     +-- substatements?   anydata
+      |  |  |     +-- fraction-digits?    uint8
+      |  |  |     +-- pattern*
+      |  |  |     |  +-- expression?      string
+      |  |  |     |  +-- inverted?        boolean
+      |  |  |     |  +-- description?     string
+      |  |  |     |  +-- reference?       string
+      |  |  |     |  +-- error-message?   string
+      |  |  |     |  +-- error-app-tag?   string
+      |  |  |     |  +-- ext-instance*
+      |  |  |     |     +-- module           yang:yang-identifier
+      |  |  |     |     +-- name             yang:yang-identifier
+      |  |  |     |     +-- argument?        string
+      |  |  |     |     +-- substatements?   anydata
+      |  |  |     +-- enum* [name]
+      |  |  |     |  +-- name            yang:yang-identifier
+      |  |  |     |  +-- if-feature*     string
+      |  |  |     |  +-- description?    string
+      |  |  |     |  +-- reference?      string
+      |  |  |     |  +-- value?          int32
+      |  |  |     |  +-- status          enumeration
+      |  |  |     |  +-- ext-instance*
+      |  |  |     |     +-- module           yang:yang-identifier
+      |  |  |     |     +-- name             yang:yang-identifier
+      |  |  |     |     +-- argument?        string
+      |  |  |     |     +-- substatements?   anydata
+      |  |  |     +-- bit* [name]
+      |  |  |     |  +-- name            yang:yang-identifier
+      |  |  |     |  +-- if-feature*     string
+      |  |  |     |  +-- description?    string
+      |  |  |     |  +-- reference?      string
+      |  |  |     |  +-- position?       uint32
+      |  |  |     |  +-- status          enumeration
+      |  |  |     |  +-- ext-instance*
+      |  |  |     |     +-- module           yang:yang-identifier
+      |  |  |     |     +-- name             yang:yang-identifier
+      |  |  |     |     +-- argument?        string
+      |  |  |     |     +-- substatements?   anydata
+      |  |  |     +-- path?               string
+      |  |  |     +-- require-instance?   boolean
+      |  |  |     +-- base*               string
+      |  |  |     +-- ext-instance*
+      |  |  |        +-- module           yang:yang-identifier
+      |  |  |        +-- name             yang:yang-identifier
+      |  |  |        +-- argument?        string
+      |  |  |        +-- substatements?   anydata
+      |  |  +-- units?          string
+      |  |  +-- key?            string
+      |  |  +-- unique*         string
+      |  |  +-- presence?       string
+      |  |  +-- ext-instance*
+      |  |     +-- module           yang:yang-identifier
+      |  |     +-- name             yang:yang-identifier
+      |  |     +-- argument?        string
+      |  |     +-- substatements?   anydata
+      |  +-- new
+      |     +-- if-feature*     string
+      |     +-- when*
+      |     |  +-- condition?      string
+      |     |  +-- description?    string
+      |     |  +-- reference?      string
+      |     |  +-- status          enumeration
+      |     |  +-- ext-instance*
+      |     |     +-- module           yang:yang-identifier
+      |     |     +-- name             yang:yang-identifier
+      |     |     +-- argument?        string
+      |     |     +-- substatements?   anydata
+      |     +-- description?    string
+      |     +-- reference?      string
+      |     +-- status          enumeration
+      |     +-- must*
+      |     |  +-- condition?       string
+      |     |  +-- description?     string
+      |     |  +-- reference?       string
+      |     |  +-- error-message?   string
+      |     |  +-- error-app-tag?   string
+      |     |  +-- ext-instance*
+      |     |     +-- module           yang:yang-identifier
+      |     |     +-- name             yang:yang-identifier
+      |     |     +-- argument?        string
+      |     |     +-- substatements?   anydata
+      |     +-- default*        string
+      |     +-- config?         boolean
+      |     +-- mandatory?      boolean
+      |     +-- min-elements?   uint32
+      |     +-- max-elements?   uint32
+      |     +-- type
+      |     |  +-- name?               string
+      |     |  +-- range
+      |     |  |  +-- restriction?     string
+      |     |  |  +-- description?     string
+      |     |  |  +-- reference?       string
+      |     |  |  +-- error-message?   string
+      |     |  |  +-- error-app-tag?   string
+      |     |  |  +-- ext-instance*
+      |     |  |     +-- module           yang:yang-identifier
+      |     |  |     +-- name             yang:yang-identifier
+      |     |  |     +-- argument?        string
+      |     |  |     +-- substatements?   anydata
+      |     |  +-- length
+      |     |  |  +-- restriction?     string
+      |     |  |  +-- description?     string
+      |     |  |  +-- reference?       string
+      |     |  |  +-- error-message?   string
+      |     |  |  +-- error-app-tag?   string
+      |     |  |  +-- ext-instance*
+      |     |  |     +-- module           yang:yang-identifier
+      |     |  |     +-- name             yang:yang-identifier
+      |     |  |     +-- argument?        string
+      |     |  |     +-- substatements?   anydata
+      |     |  +-- fraction-digits?    uint8
+      |     |  +-- pattern*
+      |     |  |  +-- expression?      string
+      |     |  |  +-- inverted?        boolean
+      |     |  |  +-- description?     string
+      |     |  |  +-- reference?       string
+      |     |  |  +-- error-message?   string
+      |     |  |  +-- error-app-tag?   string
+      |     |  |  +-- ext-instance*
+      |     |  |     +-- module           yang:yang-identifier
+      |     |  |     +-- name             yang:yang-identifier
+      |     |  |     +-- argument?        string
+      |     |  |     +-- substatements?   anydata
+      |     |  +-- enum* [name]
+      |     |  |  +-- name            yang:yang-identifier
+      |     |  |  +-- if-feature*     string
+      |     |  |  +-- description?    string
+      |     |  |  +-- reference?      string
+      |     |  |  +-- value?          int32
+      |     |  |  +-- status          enumeration
+      |     |  |  +-- ext-instance*
+      |     |  |     +-- module           yang:yang-identifier
+      |     |  |     +-- name             yang:yang-identifier
+      |     |  |     +-- argument?        string
+      |     |  |     +-- substatements?   anydata
+      |     |  +-- bit* [name]
+      |     |  |  +-- name            yang:yang-identifier
+      |     |  |  +-- if-feature*     string
+      |     |  |  +-- description?    string
+      |     |  |  +-- reference?      string
+      |     |  |  +-- position?       uint32
+      |     |  |  +-- status          enumeration
+      |     |  |  +-- ext-instance*
+      |     |  |     +-- module           yang:yang-identifier
+      |     |  |     +-- name             yang:yang-identifier
+      |     |  |     +-- argument?        string
+      |     |  |     +-- substatements?   anydata
+      |     |  +-- path?               string
+      |     |  +-- require-instance?   boolean
+      |     |  +-- base*               string
+      |     |  +-- ext-instance*
+      |     |  |  +-- module           yang:yang-identifier
+      |     |  |  +-- name             yang:yang-identifier
+      |     |  |  +-- argument?        string
+      |     |  |  +-- substatements?   anydata
+      |     |  +-- union-type*
+      |     |     +-- name?               string
+      |     |     +-- range
+      |     |     |  +-- restriction?     string
+      |     |     |  +-- description?     string
+      |     |     |  +-- reference?       string
+      |     |     |  +-- error-message?   string
+      |     |     |  +-- error-app-tag?   string
+      |     |     |  +-- ext-instance*
+      |     |     |     +-- module           yang:yang-identifier
+      |     |     |     +-- name             yang:yang-identifier
+      |     |     |     +-- argument?        string
+      |     |     |     +-- substatements?   anydata
+      |     |     +-- length
+      |     |     |  +-- restriction?     string
+      |     |     |  +-- description?     string
+      |     |     |  +-- reference?       string
+      |     |     |  +-- error-message?   string
+      |     |     |  +-- error-app-tag?   string
+      |     |     |  +-- ext-instance*
+      |     |     |     +-- module           yang:yang-identifier
+      |     |     |     +-- name             yang:yang-identifier
+      |     |     |     +-- argument?        string
+      |     |     |     +-- substatements?   anydata
+      |     |     +-- fraction-digits?    uint8
+      |     |     +-- pattern*
+      |     |     |  +-- expression?      string
+      |     |     |  +-- inverted?        boolean
+      |     |     |  +-- description?     string
+      |     |     |  +-- reference?       string
+      |     |     |  +-- error-message?   string
+      |     |     |  +-- error-app-tag?   string
+      |     |     |  +-- ext-instance*
+      |     |     |     +-- module           yang:yang-identifier
+      |     |     |     +-- name             yang:yang-identifier
+      |     |     |     +-- argument?        string
+      |     |     |     +-- substatements?   anydata
+      |     |     +-- enum* [name]
+      |     |     |  +-- name            yang:yang-identifier
+      |     |     |  +-- if-feature*     string
+      |     |     |  +-- description?    string
+      |     |     |  +-- reference?      string
+      |     |     |  +-- value?          int32
+      |     |     |  +-- status          enumeration
+      |     |     |  +-- ext-instance*
+      |     |     |     +-- module           yang:yang-identifier
+      |     |     |     +-- name             yang:yang-identifier
+      |     |     |     +-- argument?        string
+      |     |     |     +-- substatements?   anydata
+      |     |     +-- bit* [name]
+      |     |     |  +-- name            yang:yang-identifier
+      |     |     |  +-- if-feature*     string
+      |     |     |  +-- description?    string
+      |     |     |  +-- reference?      string
+      |     |     |  +-- position?       uint32
+      |     |     |  +-- status          enumeration
+      |     |     |  +-- ext-instance*
+      |     |     |     +-- module           yang:yang-identifier
+      |     |     |     +-- name             yang:yang-identifier
+      |     |     |     +-- argument?        string
+      |     |     |     +-- substatements?   anydata
+      |     |     +-- path?               string
+      |     |     +-- require-instance?   boolean
+      |     |     +-- base*               string
+      |     |     +-- ext-instance*
+      |     |        +-- module           yang:yang-identifier
+      |     |        +-- name             yang:yang-identifier
+      |     |        +-- argument?        string
+      |     |        +-- substatements?   anydata
+      |     +-- units?          string
+      |     +-- key?            string
+      |     +-- unique*         string
+      |     +-- presence?       string
+      |     +-- ext-instance*
+      |        +-- module           yang:yang-identifier
+      |        +-- name             yang:yang-identifier
+      |        +-- argument?        string
+      |        +-- substatements?   anydata
+      +-- node-comparison* [node]
+         +-- node         schema-node-path
+         +-- node-type    enumeration
+         +-- changed* [stmt]
+         |  +-- stmt           stmt-type
+         |  +-- parent-stmt?   stmt-type
+         |  +-- change         enumeration
+         |  +-- conformance    enumeration
+         +-- old
+         |  +-- if-feature*     string
+         |  +-- when*
+         |  |  +-- condition?      string
+         |  |  +-- description?    string
+         |  |  +-- reference?      string
+         |  |  +-- status          enumeration
+         |  |  +-- ext-instance*
+         |  |     +-- module           yang:yang-identifier
+         |  |     +-- name             yang:yang-identifier
+         |  |     +-- argument?        string
+         |  |     +-- substatements?   anydata
+         |  +-- description?    string
+         |  +-- reference?      string
+         |  +-- status          enumeration
+         |  +-- must*
+         |  |  +-- condition?       string
+         |  |  +-- description?     string
+         |  |  +-- reference?       string
+         |  |  +-- error-message?   string
+         |  |  +-- error-app-tag?   string
+         |  |  +-- ext-instance*
+         |  |     +-- module           yang:yang-identifier
+         |  |     +-- name             yang:yang-identifier
+         |  |     +-- argument?        string
+         |  |     +-- substatements?   anydata
+         |  +-- default*        string
+         |  +-- config?         boolean
+         |  +-- mandatory?      boolean
+         |  +-- min-elements?   uint32
+         |  +-- max-elements?   uint32
+         |  +-- key*            yang:yang-identifier
+         |  +-- ordered-by?     enumeration
+         |  +-- type
+         |  |  +-- name?               string
+         |  |  +-- range
+         |  |  |  +-- restriction?     string
+         |  |  |  +-- description?     string
+         |  |  |  +-- reference?       string
+         |  |  |  +-- error-message?   string
+         |  |  |  +-- error-app-tag?   string
+         |  |  |  +-- ext-instance*
+         |  |  |     +-- module           yang:yang-identifier
+         |  |  |     +-- name             yang:yang-identifier
+         |  |  |     +-- argument?        string
+         |  |  |     +-- substatements?   anydata
+         |  |  +-- length
+         |  |  |  +-- restriction?     string
+         |  |  |  +-- description?     string
+         |  |  |  +-- reference?       string
+         |  |  |  +-- error-message?   string
+         |  |  |  +-- error-app-tag?   string
+         |  |  |  +-- ext-instance*
+         |  |  |     +-- module           yang:yang-identifier
+         |  |  |     +-- name             yang:yang-identifier
+         |  |  |     +-- argument?        string
+         |  |  |     +-- substatements?   anydata
+         |  |  +-- fraction-digits?    uint8
+         |  |  +-- pattern*
+         |  |  |  +-- expression?      string
+         |  |  |  +-- inverted?        boolean
+         |  |  |  +-- description?     string
+         |  |  |  +-- reference?       string
+         |  |  |  +-- error-message?   string
+         |  |  |  +-- error-app-tag?   string
+         |  |  |  +-- ext-instance*
+         |  |  |     +-- module           yang:yang-identifier
+         |  |  |     +-- name             yang:yang-identifier
+         |  |  |     +-- argument?        string
+         |  |  |     +-- substatements?   anydata
+         |  |  +-- enum* [name]
+         |  |  |  +-- name            yang:yang-identifier
+         |  |  |  +-- if-feature*     string
+         |  |  |  +-- description?    string
+         |  |  |  +-- reference?      string
+         |  |  |  +-- value?          int32
+         |  |  |  +-- status          enumeration
+         |  |  |  +-- ext-instance*
+         |  |  |     +-- module           yang:yang-identifier
+         |  |  |     +-- name             yang:yang-identifier
+         |  |  |     +-- argument?        string
+         |  |  |     +-- substatements?   anydata
+         |  |  +-- bit* [name]
+         |  |  |  +-- name            yang:yang-identifier
+         |  |  |  +-- if-feature*     string
+         |  |  |  +-- description?    string
+         |  |  |  +-- reference?      string
+         |  |  |  +-- position?       uint32
+         |  |  |  +-- status          enumeration
+         |  |  |  +-- ext-instance*
+         |  |  |     +-- module           yang:yang-identifier
+         |  |  |     +-- name             yang:yang-identifier
+         |  |  |     +-- argument?        string
+         |  |  |     +-- substatements?   anydata
+         |  |  +-- path?               string
+         |  |  +-- require-instance?   boolean
+         |  |  +-- base*               string
+         |  |  +-- ext-instance*
+         |  |  |  +-- module           yang:yang-identifier
+         |  |  |  +-- name             yang:yang-identifier
+         |  |  |  +-- argument?        string
+         |  |  |  +-- substatements?   anydata
+         |  |  +-- union-type*
+         |  |     +-- name?               string
+         |  |     +-- range
+         |  |     |  +-- restriction?     string
+         |  |     |  +-- description?     string
+         |  |     |  +-- reference?       string
+         |  |     |  +-- error-message?   string
+         |  |     |  +-- error-app-tag?   string
+         |  |     |  +-- ext-instance*
+         |  |     |     +-- module           yang:yang-identifier
+         |  |     |     +-- name             yang:yang-identifier
+         |  |     |     +-- argument?        string
+         |  |     |     +-- substatements?   anydata
+         |  |     +-- length
+         |  |     |  +-- restriction?     string
+         |  |     |  +-- description?     string
+         |  |     |  +-- reference?       string
+         |  |     |  +-- error-message?   string
+         |  |     |  +-- error-app-tag?   string
+         |  |     |  +-- ext-instance*
+         |  |     |     +-- module           yang:yang-identifier
+         |  |     |     +-- name             yang:yang-identifier
+         |  |     |     +-- argument?        string
+         |  |     |     +-- substatements?   anydata
+         |  |     +-- fraction-digits?    uint8
+         |  |     +-- pattern*
+         |  |     |  +-- expression?      string
+         |  |     |  +-- inverted?        boolean
+         |  |     |  +-- description?     string
+         |  |     |  +-- reference?       string
+         |  |     |  +-- error-message?   string
+         |  |     |  +-- error-app-tag?   string
+         |  |     |  +-- ext-instance*
+         |  |     |     +-- module           yang:yang-identifier
+         |  |     |     +-- name             yang:yang-identifier
+         |  |     |     +-- argument?        string
+         |  |     |     +-- substatements?   anydata
+         |  |     +-- enum* [name]
+         |  |     |  +-- name            yang:yang-identifier
+         |  |     |  +-- if-feature*     string
+         |  |     |  +-- description?    string
+         |  |     |  +-- reference?      string
+         |  |     |  +-- value?          int32
+         |  |     |  +-- status          enumeration
+         |  |     |  +-- ext-instance*
+         |  |     |     +-- module           yang:yang-identifier
+         |  |     |     +-- name             yang:yang-identifier
+         |  |     |     +-- argument?        string
+         |  |     |     +-- substatements?   anydata
+         |  |     +-- bit* [name]
+         |  |     |  +-- name            yang:yang-identifier
+         |  |     |  +-- if-feature*     string
+         |  |     |  +-- description?    string
+         |  |     |  +-- reference?      string
+         |  |     |  +-- position?       uint32
+         |  |     |  +-- status          enumeration
+         |  |     |  +-- ext-instance*
+         |  |     |     +-- module           yang:yang-identifier
+         |  |     |     +-- name             yang:yang-identifier
+         |  |     |     +-- argument?        string
+         |  |     |     +-- substatements?   anydata
+         |  |     +-- path?               string
+         |  |     +-- require-instance?   boolean
+         |  |     +-- base*               string
+         |  |     +-- ext-instance*
+         |  |        +-- module           yang:yang-identifier
+         |  |        +-- name             yang:yang-identifier
+         |  |        +-- argument?        string
+         |  |        +-- substatements?   anydata
+         |  +-- units?          string
+         |  +-- unique*
+         |  |  +-- node*   yang:yang-identifier
+         |  +-- presence?       string
+         |  +-- ext-instance*
+         |     +-- module           yang:yang-identifier
+         |     +-- name             yang:yang-identifier
+         |     +-- argument?        string
+         |     +-- substatements?   anydata
+         +-- new
+            +-- if-feature*     string
+            +-- when*
+            |  +-- condition?      string
+            |  +-- description?    string
+            |  +-- reference?      string
+            |  +-- status          enumeration
+            |  +-- ext-instance*
+            |     +-- module           yang:yang-identifier
+            |     +-- name             yang:yang-identifier
+            |     +-- argument?        string
+            |     +-- substatements?   anydata
+            +-- description?    string
+            +-- reference?      string
+            +-- status          enumeration
+            +-- must*
+            |  +-- condition?       string
+            |  +-- description?     string
+            |  +-- reference?       string
+            |  +-- error-message?   string
+            |  +-- error-app-tag?   string
+            |  +-- ext-instance*
+            |     +-- module           yang:yang-identifier
+            |     +-- name             yang:yang-identifier
+            |     +-- argument?        string
+            |     +-- substatements?   anydata
+            +-- default*        string
+            +-- config?         boolean
+            +-- mandatory?      boolean
+            +-- min-elements?   uint32
+            +-- max-elements?   uint32
+            +-- key*            yang:yang-identifier
+            +-- ordered-by?     enumeration
+            +-- type
+            |  +-- name?               string
+            |  +-- range
+            |  |  +-- restriction?     string
+            |  |  +-- description?     string
+            |  |  +-- reference?       string
+            |  |  +-- error-message?   string
+            |  |  +-- error-app-tag?   string
+            |  |  +-- ext-instance*
+            |  |     +-- module           yang:yang-identifier
+            |  |     +-- name             yang:yang-identifier
+            |  |     +-- argument?        string
+            |  |     +-- substatements?   anydata
+            |  +-- length
+            |  |  +-- restriction?     string
+            |  |  +-- description?     string
+            |  |  +-- reference?       string
+            |  |  +-- error-message?   string
+            |  |  +-- error-app-tag?   string
+            |  |  +-- ext-instance*
+            |  |     +-- module           yang:yang-identifier
+            |  |     +-- name             yang:yang-identifier
+            |  |     +-- argument?        string
+            |  |     +-- substatements?   anydata
+            |  +-- fraction-digits?    uint8
+            |  +-- pattern*
+            |  |  +-- expression?      string
+            |  |  +-- inverted?        boolean
+            |  |  +-- description?     string
+            |  |  +-- reference?       string
+            |  |  +-- error-message?   string
+            |  |  +-- error-app-tag?   string
+            |  |  +-- ext-instance*
+            |  |     +-- module           yang:yang-identifier
+            |  |     +-- name             yang:yang-identifier
+            |  |     +-- argument?        string
+            |  |     +-- substatements?   anydata
+            |  +-- enum* [name]
+            |  |  +-- name            yang:yang-identifier
+            |  |  +-- if-feature*     string
+            |  |  +-- description?    string
+            |  |  +-- reference?      string
+            |  |  +-- value?          int32
+            |  |  +-- status          enumeration
+            |  |  +-- ext-instance*
+            |  |     +-- module           yang:yang-identifier
+            |  |     +-- name             yang:yang-identifier
+            |  |     +-- argument?        string
+            |  |     +-- substatements?   anydata
+            |  +-- bit* [name]
+            |  |  +-- name            yang:yang-identifier
+            |  |  +-- if-feature*     string
+            |  |  +-- description?    string
+            |  |  +-- reference?      string
+            |  |  +-- position?       uint32
+            |  |  +-- status          enumeration
+            |  |  +-- ext-instance*
+            |  |     +-- module           yang:yang-identifier
+            |  |     +-- name             yang:yang-identifier
+            |  |     +-- argument?        string
+            |  |     +-- substatements?   anydata
+            |  +-- path?               string
+            |  +-- require-instance?   boolean
+            |  +-- base*               string
+            |  +-- ext-instance*
+            |  |  +-- module           yang:yang-identifier
+            |  |  +-- name             yang:yang-identifier
+            |  |  +-- argument?        string
+            |  |  +-- substatements?   anydata
+            |  +-- union-type*
+            |     +-- name?               string
+            |     +-- range
+            |     |  +-- restriction?     string
+            |     |  +-- description?     string
+            |     |  +-- reference?       string
+            |     |  +-- error-message?   string
+            |     |  +-- error-app-tag?   string
+            |     |  +-- ext-instance*
+            |     |     +-- module           yang:yang-identifier
+            |     |     +-- name             yang:yang-identifier
+            |     |     +-- argument?        string
+            |     |     +-- substatements?   anydata
+            |     +-- length
+            |     |  +-- restriction?     string
+            |     |  +-- description?     string
+            |     |  +-- reference?       string
+            |     |  +-- error-message?   string
+            |     |  +-- error-app-tag?   string
+            |     |  +-- ext-instance*
+            |     |     +-- module           yang:yang-identifier
+            |     |     +-- name             yang:yang-identifier
+            |     |     +-- argument?        string
+            |     |     +-- substatements?   anydata
+            |     +-- fraction-digits?    uint8
+            |     +-- pattern*
+            |     |  +-- expression?      string
+            |     |  +-- inverted?        boolean
+            |     |  +-- description?     string
+            |     |  +-- reference?       string
+            |     |  +-- error-message?   string
+            |     |  +-- error-app-tag?   string
+            |     |  +-- ext-instance*
+            |     |     +-- module           yang:yang-identifier
+            |     |     +-- name             yang:yang-identifier
+            |     |     +-- argument?        string
+            |     |     +-- substatements?   anydata
+            |     +-- enum* [name]
+            |     |  +-- name            yang:yang-identifier
+            |     |  +-- if-feature*     string
+            |     |  +-- description?    string
+            |     |  +-- reference?      string
+            |     |  +-- value?          int32
+            |     |  +-- status          enumeration
+            |     |  +-- ext-instance*
+            |     |     +-- module           yang:yang-identifier
+            |     |     +-- name             yang:yang-identifier
+            |     |     +-- argument?        string
+            |     |     +-- substatements?   anydata
+            |     +-- bit* [name]
+            |     |  +-- name            yang:yang-identifier
+            |     |  +-- if-feature*     string
+            |     |  +-- description?    string
+            |     |  +-- reference?      string
+            |     |  +-- position?       uint32
+            |     |  +-- status          enumeration
+            |     |  +-- ext-instance*
+            |     |     +-- module           yang:yang-identifier
+            |     |     +-- name             yang:yang-identifier
+            |     |     +-- argument?        string
+            |     |     +-- substatements?   anydata
+            |     +-- path?               string
+            |     +-- require-instance?   boolean
+            |     +-- base*               string
+            |     +-- ext-instance*
+            |        +-- module           yang:yang-identifier
+            |        +-- name             yang:yang-identifier
+            |        +-- argument?        string
+            |        +-- substatements?   anydata
+            +-- units?          string
+            +-- unique*
+            |  +-- node*   yang:yang-identifier
+            +-- presence?       string
+            +-- ext-instance*
+               +-- module           yang:yang-identifier
+               +-- name             yang:yang-identifier
+               +-- argument?        string
+               +-- substatements?   anydata
+                </artwork>
+            </figure>
+        </section>
+    </section>
+    <section anchor="change_conformance_principles">
+        <name>Change Conformance Principles</name>
+        <t>
+            This appendix clarifies the general principles based on which
+            statement changes are categorized. They are not meant to replace
+            any specification but rather help with understanding it.
+        </t>
+        <section anchor="editorial_change">
+            <name>Editorial change</name>
+            <t>
+                An editorial change does not affect valid YANG data of the
+                semantics of the YANG module in any way. That is, it does not
+                make the valid data value space smaller or larger and it must
+                remain exactly the same as in the module revision without the
+                change. Also, for a change to be editorial, it must not affect
+                any YANG module importing the changed YANG module.
+            </t>
+            <t>
+                In addition to obvious editorial changes such as fixing a typo
+                in a "description", changing the local "prefix" of the module
+                is also categorized as editorial because it does not affect
+                importing modules. Or, replacing a "uses" statement directly
+                with the nodes in the referenced "grouping" without any other
+                changes.
+            </t>
+        </section>
+        <section anchor="bc_change">
+            <name>Backwards-compatible change</name>
+            <t>
+                For a change to be backwards-compatible, it has to expand the
+                value space of valid YANG data. That is, all the valid YANG
+                data nodes and values before the change must remain valid but
+                additional nodes or values can also become valid after the
+                change. Also, backwards-compatible changes may influence
+                importing modules but must not cause them to become invalid. In
+                other words, they may expose new statements whose removal would
+                then be considered a non-backwards-compatible change but
+                generally must not change the already exposed statements.
+            </t>
+            <t>
+                For some examples, the majority of possible
+                backwards-compatible changes are specifically mentioned
+                directly in Section 11 of <xref target="RFC7950"/>.
+            </t>
+        </section>
+        <section anchor="nbc_change">
+            <name>Non-backwards-compatible change</name>
+            <t>
+                If a change is not editorial nor backwards-compatible, it is
+                then categorized as non-backwards-compatible. Such changes
+                shrink the value space of valid YANG data, causing some
+                previously valid nodes or values to no longer be valid. Also,
+                any change that may cause an importing module to become invalid
+                according to the YANG specification must be non-backwards-compatible.
+            </t>
+            <t>
+                Examples of less common or less obvious compatibility-breaking
+                changes are changing the "yang-version" of a YANG module or
+                expanding the size of a "type". The former change may break
+                importing modules because of specific rules defined for the
+                "import" statement and the target module's YANG version.
+                Changing a "type" of a leaf from "uint32" to "uint64" may seem
+                to fit the definition of a backwards-compatible change, but it
+                may not be so for some data encodings that use a fixed binary
+                data chunk (which would grow in size) or even a text format
+                that may use a different encoding for the two types.
+                Specifically, the JSON YANG data format
+                <xref target="RFC7951"/> encodes a "uint32" value as a JSON
+                number but a "uint64" as a JSON string.
+            </t>
+        </section>
     </section>
     <section anchor="examples">
         <name>Comparison Examples</name>
         <t>
             This section provides several examples of the output from the
             comparison algorithm defined in this document to illustrate its
-            behavior on actual YANG modules.
+            behavior on actual YANG modules. The example YANG modules are
+            missing “description” or “reference” statements for better
+            readability. Changes are represented as JSON encoded
+            <xref target="RFC7951"/> YANG instance data following the
+            “ietf-yang-schema-comparison-output” module definition in
+            <xref target="yang_module_schema_cmp_out"/> for the output.
         </t>
         <section anchor="new_leaves_module" title="New Leaves Module">
             <t>
                 In this example, two new leaves are added to the module.
             </t>
             <t>
-                In the generated output, there are only compiled changes
-                because leaves are always found in the compiled schema tree.
-                The changes are backward-compatible because the new nodes are
-                added without affecting the order of the existing schema nodes.
+                In the generated output, there are changes in both locally
+                resolved module and fully resolved schema. The changes are
+                backward-compatible because the new nodes are added without
+                affecting the order of the existing schema nodes.
             </t>
-            <artwork name="" align="left" alt=""><![CDATA[
+            <figure>
+                <artwork name="" align="left" alt=""><![CDATA[
 module mod1 {
     namespace "urn:mod1";
     prefix m1;
@@ -2233,7 +3647,9 @@ module mod1 {
     }
 }
 ]]></artwork>
-            <artwork name="" align="left" alt=""><![CDATA[
+            </figure>
+            <figure>
+                <artwork name="" align="left" alt=""><![CDATA[
 module mod1 {
     namespace "urn:mod1";
     prefix m1;
@@ -2258,6 +3674,7 @@ module mod1 {
     }
 }
 ]]></artwork>
+            </figure>
             <sourcecode name="mod1_comparison.json" type=""
                     markers="false"><![CDATA[
 {
@@ -2322,19 +3739,20 @@ module mod1 {
         </section>
         <section anchor="relaxed_length_module" title="Relaxed Length Module">
             <t>
-                An example module comparison in which a typedef length restriction
-                is relaxed and a new leaf is added.
+                An example module comparison in which a typedef length
+                restriction is relaxed and a new leaf is added.
             </t>
             <t>
-                The generated diff includes both parsed and compiled changes.
-                In the parsed comparison, the specific range change is reported
-                as backward-compatible because the restriction was relaxed. In
-                the compiled node comparison, the exact same change is reported
-                because the leaf uses the same typedef, whose change also
-                affects the leaf. The newly added leaf is also reported and
-                marked as backward-compatible.
+                The generated diff includes both locally resolved and fully
+                resolved changes. In the local comparison, the specific range
+                change is reported as backward-compatible because the
+                restriction was relaxed. In the fully resolved node comparison,
+                the exact same change is reported because the leaf uses the
+                same typedef, whose change also affects the leaf. The newly
+                added leaf is also reported and marked as backward-compatible.
             </t>
-            <artwork name="" type="" align="left" alt=""><![CDATA[
+            <figure>
+                <artwork name="" type="" align="left" alt=""><![CDATA[
 module mod1 {
     namespace "urn:mod2";
     prefix m2;
@@ -2355,7 +3773,9 @@ module mod1 {
     }
 }
 ]]></artwork>
-            <artwork name="" type="" align="left" alt=""><![CDATA[
+            </figure>
+            <figure>
+                <artwork name="" type="" align="left" alt=""><![CDATA[
 module mod1 {
     namespace "urn:mod2";
     prefix m2;
@@ -2381,6 +3801,7 @@ module mod1 {
     }
 }
 ]]></artwork>
+            </figure>
             <sourcecode name="mod1_comparison.json" type=""
                     markers="false"><![CDATA[
 {

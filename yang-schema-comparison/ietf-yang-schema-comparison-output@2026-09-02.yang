@@ -1,7 +1,7 @@
 module ietf-yang-schema-comparison-output {
   yang-version 1.1;
   namespace "urn:ietf:params:xml:ns:yang:ietf-yang-schema-comparison-output";
-  prefix schema-cmp-out;
+  prefix yscmp-out;
 
   import ietf-yang-types {
     prefix yang;
@@ -18,11 +18,16 @@ module ietf-yang-schema-comparison-output {
     reference
       "RFC 8791: YANG Data Structure Extensions";
   }
+  import ietf-yang-semver {
+    prefix ysv;
+    reference
+      "RFC XXXX: YANG Semantic Versioning";
+  }
 
   organization
     "IETF NETMOD (Network Modeling) Working Group";
   contact
-    "WG List: NETCONF WG list <mailto:netmod@ietf.org>
+    "WG List: NETMOD WG list <mailto:netmod@ietf.org>
      WG Web:  https://datatracker.ietf.org/wg/netmod
 
      Author:  Michal Vaško
@@ -67,22 +72,11 @@ module ietf-yang-schema-comparison-output {
   // RFC Ed.: replace XXXX (inc above) with actual RFC number and
   // remove this note.
 
-  revision 2026-07-03 {
+  revision 2026-09-02 {
     description
       "Initial revision.";
     reference
       "RFC XXXX: YANG Schema Comparison";
-  }
-
-  feature parsed-schema {
-    description
-      "Compare also the statements removed from the compiled schema to
-       get all the backwards-compatible and non-backwards-compatible
-       changes possible for a YANG module.";
-    reference
-      "RFC 7950: The YANG 1.1 Data Modeling Language, section 11;
-       RFC 6020: YANG - A Data Modeling Language for the Network
-       Configuration Protocol (NETCONF), section 10";
   }
 
   typedef schema-node-path {
@@ -124,14 +118,6 @@ module ietf-yang-schema-comparison-output {
       enum description {
         description
           "YANG statement 'description'.";
-      }
-      enum deviate {
-        description
-          "YANG statement 'deviate'.";
-      }
-      enum deviation {
-        description
-          "YANG statement 'deviation'.";
       }
       enum enum {
         description
@@ -200,10 +186,10 @@ module ietf-yang-schema-comparison-output {
       enum node {
         description
           "YANG statement 'container', 'leaf', 'leaf-list', 'list',
-           'anydata', 'anyxml', 'rpc', 'action', or 'notification'. If
-           the parsed schema is also compared, it can additionally be
-           'choice', 'case', 'input', 'output', 'uses', 'augment', or
-           'grouping'.";
+           'anydata', 'anyxml', 'rpc', 'action', or 'notification'.
+           If the locally resolved module is also compared, it can
+           additionally be 'choice', 'case', 'input', 'output',
+           'uses', 'augment', or 'grouping'.";
       }
       enum ordered-by {
         description
@@ -288,8 +274,7 @@ module ietf-yang-schema-comparison-output {
       type yanglib:revision-identifier;
     }
     description
-      "Module or submodule revision. If it has none, an empty value is
-       used.";
+      "Module or submodule revision. If it has none, an empty value is used.";
   }
 
   grouping if-feature-stmts {
@@ -316,7 +301,7 @@ module ietf-yang-schema-comparison-output {
       type yang:yang-identifier;
       mandatory true;
       description
-        "Name of the extension defition of an extension instance.";
+        "Name of the extension definition of an extension instance.";
     }
     leaf argument {
       type string;
@@ -590,7 +575,8 @@ module ietf-yang-schema-comparison-output {
           "Enum statement name.";
       }
       uses if-feature-stmts {
-        if-feature "parsed-schema";
+        description
+          "Populated only for locally resolved module.";
       }
       leaf description {
         type string;
@@ -622,7 +608,8 @@ module ietf-yang-schema-comparison-output {
           "Bit statement name.";
       }
       uses if-feature-stmts {
-        if-feature "parsed-schema";
+        description
+          "Populated only for locally resolved module.";
       }
       leaf description {
         type string;
@@ -660,9 +647,9 @@ module ietf-yang-schema-comparison-output {
     uses ext-instance-stmts;
   }
 
-  grouping type-parsed-substmts {
+  grouping type-local-substmts {
     description
-      "Describes a parsed type statement change.";
+      "Describes a locally resolved module type statement change.";
     leaf name {
       type yang:yang-identifier;
       description
@@ -789,10 +776,10 @@ module ietf-yang-schema-comparison-output {
     uses ext-instance-stmts;
   }
 
-  grouping refine-deviate-node-substmts {
+  grouping refine-node-substmts {
     description
       "All substatements of a data-definition node that can be changed
-       by both a refine and deviate statement.";
+       by a refine statement.";
     uses must-stmts;
     leaf-list default {
       type string;
@@ -825,7 +812,7 @@ module ietf-yang-schema-comparison-output {
     description
       "All substatements of a data-definition node.";
     uses if-feature-stmts {
-      if-feature "parsed-schema";
+      when "../../locally-resolved";
     }
     uses when-stmts;
     leaf description {
@@ -839,7 +826,7 @@ module ietf-yang-schema-comparison-output {
         "Reference substatement value.";
     }
     uses status-stmt;
-    uses refine-deviate-node-substmts;
+    uses refine-node-substmts;
     leaf-list key {
       type yang:yang-identifier;
       description
@@ -888,8 +875,8 @@ module ietf-yang-schema-comparison-output {
       description
         "Indicates whether a presence substatement is defined for
          the container in the compiled schema. The textual argument
-         of 'presence' is reported via the parsed schema comparison
-         (see the 'presence' leaf in 'parsed-substmts').";
+         of 'presence' is reported via the locally resolved module
+         comparison (see the 'presence' leaf in 'local-substmts').";
     }
     uses ext-instance-stmts;
   }
@@ -903,13 +890,13 @@ module ietf-yang-schema-comparison-output {
         "YANG version substatement value.";
     }
     leaf prefix {
-      if-feature "parsed-schema";
+      when "../../../locally-resolved";
       type string;
       description
         "Prefix substatement value.";
     }
     container import {
-      if-feature "parsed-schema";
+      when "../../../locally-resolved";
       presence "Exists only when there is a difference in this import.";
       description
         "Import substatements.";
@@ -943,7 +930,7 @@ module ietf-yang-schema-comparison-output {
       uses ext-instance-stmts;
     }
     container include {
-      if-feature "parsed-schema";
+      when "../../../locally-resolved";
       presence
         "Exists only when there is a difference in this include.";
       description
@@ -992,7 +979,7 @@ module ietf-yang-schema-comparison-output {
         "Reference substatement value.";
     }
     container extension {
-      if-feature "parsed-schema";
+      when "../../../locally-resolved";
       presence
         "Exists only when there is a difference in this extension.";
       description
@@ -1022,7 +1009,7 @@ module ietf-yang-schema-comparison-output {
       uses ext-instance-stmts;
     }
     container feature {
-      if-feature "parsed-schema";
+      when "../../../locally-resolved";
       presence
         "Exists only when there is a difference in this feature.";
       description
@@ -1057,90 +1044,13 @@ module ietf-yang-schema-comparison-output {
           "Identity statement name.";
       }
       uses if-feature-stmts {
-        if-feature "parsed-schema";
+        when "../../../locally-resolved";
       }
       leaf-list base {
-        if-feature "parsed-schema";
+        when "../../../../locally-resolved";
         type yang:yang-identifier;
         description
           "List of bases of an identity.";
-      }
-      uses ext-instance-stmts;
-    }
-    container deviation {
-      if-feature "parsed-schema";
-      presence
-        "Exists only when there is a difference in this deviation.";
-      description
-        "Deviation substatements.";
-      leaf target {
-        type string;
-        mandatory true;
-        description
-          "Deviation target argument.";
-      }
-      list deviate {
-        min-elements 1;
-        description
-          "List of deviate substatements.";
-        leaf argument {
-          type enumeration {
-            enum not-supported {
-              description
-                "Deviate 'not-supported' argument value.";
-            }
-            enum add {
-              description
-                "Deviate 'add' argument value.";
-            }
-            enum replace {
-              description
-                "Deviate 'replace' argument value.";
-            }
-            enum delete {
-              description
-                "Deviate 'delete' argument value.";
-            }
-          }
-          mandatory true;
-          description
-            "Deviate argument value.";
-        }
-        uses refine-deviate-node-substmts;
-        container type {
-          description
-            "Type substatement.";
-          uses type-parsed-substmts;
-          list union-type {
-            description
-              "List of a union type substatements.";
-            uses type-parsed-substmts;
-          }
-        }
-        leaf units {
-          type string;
-          description
-            "Units substatement value.";
-        }
-        list unique {
-          description
-            "List of unique substatements.";
-          leaf-list node {
-            type yang:yang-identifier;
-            description
-              "List of nodes referenced by a unique substatement.";
-          }
-        }
-      }
-      leaf description {
-        type string;
-        description
-          "Description substatement value.";
-      }
-      leaf reference {
-        type string;
-        description
-          "Reference substatement value.";
       }
       uses ext-instance-stmts;
     }
@@ -1154,13 +1064,11 @@ module ietf-yang-schema-comparison-output {
     }
   }
 
-  grouping parsed-substmts {
+  grouping local-substmts {
     description
-      "All parsed-only statements that can be direct substatements of a
-       module or nested in a node.";
-    uses if-feature-stmts {
-      if-feature "parsed-schema";
-    }
+      "All locally-resolved-module-only statements that can be direct
+       substatements of a module or nested in a node.";
+    uses if-feature-stmts;
     uses when-stmts;
     leaf description {
       type string;
@@ -1173,15 +1081,15 @@ module ietf-yang-schema-comparison-output {
         "Reference substatement value.";
     }
     uses status-stmt;
-    uses refine-deviate-node-substmts;
+    uses refine-node-substmts;
     container type {
       description
         "Type substatement.";
-      uses type-parsed-substmts;
+      uses type-local-substmts;
       list union-type {
         description
           "List of a union type substatements.";
-        uses type-parsed-substmts;
+        uses type-local-substmts;
       }
     }
     leaf units {
@@ -1273,27 +1181,28 @@ module ietf-yang-schema-comparison-output {
       "Identification details of a processed YANG module.";
     leaf module {
       type yang:yang-identifier;
-      mandatory true;
       description
         "Compared module name.";
     }
     leaf revision {
       type revision-or-empty;
-      mandatory true;
       description
         "Compared module revision.";
+    }
+    leaf version {
+      type ysv:version;
+      description
+        "Compared module semantic version, if defined.";
     }
     list submodule {
       key "name revision";
       leaf name {
         type yang:yang-identifier;
-        mandatory true;
         description
           "Submodule name.";
       }
       leaf revision {
         type revision-or-empty;
-        mandatory true;
         description
           "Submodule revision.";
       }
@@ -1307,12 +1216,12 @@ module ietf-yang-schema-comparison-output {
     }
   }
 
-  grouping parsed-info {
+  grouping local-info {
     description
-      "Information about all the changed parsed-only statements.";
-    list parsed-comparison {
+      "Information about all the changed locally-resolved-module-only statements.";
+    list local-comparison {
       description
-        "Information about parsed-only statement changes.";
+        "Information about locally-resolved-module-only statement changes.";
       leaf parent-path {
         type schema-stmt-path;
         description
@@ -1371,22 +1280,22 @@ module ietf-yang-schema-comparison-output {
       uses change-info;
       container old {
         description
-          "Changed parsed statements in the older revision of the YANG
+          "Changed local statements in the older revision of the YANG
            module.";
-        uses parsed-substmts;
+        uses local-substmts;
       }
       container new {
         description
-          "Changed parsed statements in the newer revision of the YANG
+          "Changed local statements in the newer revision of the YANG
            module.";
-        uses parsed-substmts;
+        uses local-substmts;
       }
     }
   }
 
   grouping node-info {
     description
-      "Information about all the changed compiled nodes.";
+      "Information about all the changed nodes.";
     list node-comparison {
       key "node";
       ordered-by user;
@@ -1461,16 +1370,36 @@ module ietf-yang-schema-comparison-output {
   sx:structure schema-comparison {
     description
       "Schema comparison details.";
-    list schema {
+    list comparison {
+      must "locally-resolved or fully-resolved" {
+        description
+          "As the comparison input, locally resolved module, fully
+           resolved module, or both must be used.";
+      }
       description
         "Instance of a schema comparison of 2 YANG modules in different
          revisions with all their imports.";
+      leaf locally-resolved {
+        type empty;
+        description
+          "Locally resolved module has been used for the comparison.";
+        reference
+          "RFC XXXX Section 3.1.";
+      }
+      leaf fully-resolved {
+        type empty;
+        description
+          "Fully resolved schema has been used for the comparison.";
+        reference
+          "RFC XXXX Section 3.2.";
+      }
       container source {
         description
           "Source module information.";
         uses module-params;
       }
       list source-import {
+        when "../fully-resolved";
         key "module revision";
         description
           "List of source module imported modules information.";
@@ -1482,6 +1411,7 @@ module ietf-yang-schema-comparison-output {
         uses module-params;
       }
       list target-import {
+        when "../fully-resolved";
         key "module revision";
         description
           "List of target module imported modules information.";
@@ -1506,8 +1436,8 @@ module ietf-yang-schema-comparison-output {
           uses module-substmts;
         }
       }
-      uses parsed-info {
-        if-feature "parsed-schema";
+      uses local-info {
+        when "locally-resolved";
       }
       uses node-info;
     }
